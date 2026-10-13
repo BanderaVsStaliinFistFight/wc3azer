@@ -32,7 +32,7 @@ PLANTS = {'temperate': ['ZPfw', 'ZPsh'], 'farmland': ['ZPfw', 'ZPsh'], 'plains':
           'highland': ['ZPsh', 'ZPfw'], 'darkforest': ['ZPsh', 'APms'], 'nightelf': ['APms', 'ZPfw', 'ZPsh'],
           'worldtree': ['APms', 'ZPfw'], 'jungle': ['ZPsh', 'ZPfw'], 'swamp': ['ZPsh', 'APms'], 'grotto': ['APms', 'ZPsh'],
           'troll': ['ZPsh'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'], 'grizzly': ['ZPsh', 'ZPfw'], 'fjord': ['ZPsh', 'ZPfw'],
-          'savanna': ['ZPsh'], 'barren': ['ZPsh'], 'reddesert': ['ZPsh'], 'needles': ['ZPsh'], 'crystal': ['APms', 'ZPfw']}
+          'savanna': ['ZPsh'], 'barren': ['ZPsh'], 'tundra': ['ZPsh'], 'reddesert': ['ZPsh'], 'needles': ['ZPsh'], 'crystal': ['APms', 'ZPfw']}
 FACING = 270.0
 
 
@@ -288,19 +288,19 @@ def place(T, seed=7):
     for name, cx, cy, _ in geo.CAMPS:
         pool = RUINS.get(str(biome_of[int(cy), int(cx)]))
         if pool:
-            scatter_round(cx, cy, pool, int(rng.integers(5, 10)), 1.0, 7.0)
+            scatter_round(cx, cy, pool, int(rng.integers(2, 5)), 1.0, 7.0)
     # clutter round the towns
     for name, cx, cy, _ in geo.TOWNS:
         b = str(biome_of[int(cy), int(cx)])
         cold = B[b]['cold'] if b in B else False
         pool = VILLAGE_COLD if cold else VILLAGE_DRY if b in ('savanna', 'reddesert', 'needles', 'barren', 'desert', 'amber') else VILLAGE
-        scatter_round(cx, cy, pool, int(rng.integers(6, 11)), 2.5, 7.0, allow_reserved=True)
-        if pool is VILLAGE and rng.random() < 0.5:
+        scatter_round(cx, cy, pool, int(rng.integers(3, 6)), 2.5, 7.0, allow_reserved=True)
+        if pool is VILLAGE and rng.random() < 0.3:
             scatter_round(cx, cy, ['LSwl'], 1, 1.5, 4.0, allow_reserved=True)
-    # props over open country
+    # boulders, bushes, stumps and the odd relic over open country
     open_country = tile_ok & ~is_tree & ~reserved & ~dilate(occupied, 1) & (T.road_d > 2.5) & ~steep & ~by_cliff
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_country & (roll < 0.12)):
+    for ty, tx in np.argwhere(open_country & (roll < 0.07)):
         pool = SCATTER.get(str(biome_of[ty, tx]))
         if pool:
             ids, weights = zip(*pool)
@@ -318,6 +318,43 @@ def place(T, seed=7):
                     and T.road_d[int(ty), int(tx)] > 1.2:
                 add_detail(SIGNPOST, tx, ty, scale=(0.9, 1.1), variations=1)
                 break
+    # Stones line the roads: every few tiles along each road, on one side or the other, a rock
+    # with a pebble or two at the edge of the verge (closer together where the land is rough or
+    # too harsh for flowers). Each rock blocks its own tile, as the World Editor would make it.
+    road_tile = np.full((n, n), 1e9)        # distance from the middle of each tile to the nearest road
+    road_tile[:-1, :-1] = (T.road_d[:-1, :-1] + T.road_d[1:, :-1] + T.road_d[:-1, 1:] + T.road_d[1:, 1:]) / 4
+    verge_stones = tile_ok & (road_tile > 2.0) & (road_tile < 4.0) & ~reserved & ~occupied & ~is_tree & ~by_cliff & ~T.ramp_near
+    bare = ~np.isin(biome_of, list(PLANTS)) | (T.relief > 150)
+    for line in T.road_lines:
+        pts = np.array(line, float)
+        seg = np.hypot(*np.diff(pts, axis=0).T)
+        along = np.concatenate([[0.0], np.cumsum(seg)])
+        s_at = rng.uniform(0, 3)
+        while s_at < along[-1]:
+            i = min(int(np.searchsorted(along, s_at, side='right')) - 1, len(seg) - 1)
+            t = (s_at - along[i]) / max(seg[i], 1e-6)
+            (ax, ay), (bx, by_) = pts[i], pts[i + 1]
+            px, py = ax + (bx - ax) * t, ay + (by_ - ay) * t
+            nx, ny = -(by_ - ay) / max(seg[i], 1e-6), (bx - ax) / max(seg[i], 1e-6)
+            side = rng.choice([-1.0, 1.0])
+            rough = placed = False
+            for sd in (side, -side):
+                off = rng.uniform(2.4, 3.3)
+                tx, ty = int(px + nx * off * sd), int(py + ny * off * sd)
+                if not (0 < tx < n - 1 and 0 < ty < n - 1) or not verge_stones[ty, tx] \
+                        or blocked[ty - 1:ty + 2, tx - 1:tx + 2].any():
+                    continue
+                rough = bool(bare[ty, tx])
+                rock = ROCKS.get(str(biome_of[ty, tx]), ('LRrk', None))[0]
+                facing = 4.712389 if rock == 'ORrk' else None
+                d = add_detail(rock, tx + 0.5, ty + 0.5, scale=(0.45, 0.75), fixed=facing)
+                bake(d, tx + 0.5, ty + 0.5, 4)
+                for _ in range(int(rng.integers(0, 3))):
+                    add_detail(rock, tx + 0.5 + rng.uniform(-0.35, 0.35), ty + 0.5 + rng.uniform(-0.35, 0.35),
+                               scale=(0.22, 0.38), fixed=facing)
+                placed = True
+                break
+            s_at += (rng.uniform(1.4, 2.4) if rough else rng.uniform(1.8, 3.2)) if placed else 1.0
     # shells on the beaches, birds over woods and shores, bats in the dark places, flies over the swamps
     coast = T.land & dilate(T.sea, 1)
     roll = rng.random((n, n))
@@ -341,6 +378,17 @@ def place(T, seed=7):
         plants = PLANTS.get(str(biome_of[ty, tx]))
         if plants:
             add_detail(str(rng.choice(plants)), tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
+    # Wild flowers, shrubs and mushrooms grow thick along the roadsides, in patches that come
+    # and go along the way.
+    patches = Field(n, n, seed + 202).fbm(5, 2)
+    verge = tile_ok & (road_tile > 1.5) & (road_tile < 4.0) & ~is_tree & ~reserved & ~occupied
+    for ty, tx in np.argwhere(verge & (rng.random((n, n)) < np.clip(0.5 + patches * 0.9, 0.1, 0.9))):
+        plants = PLANTS.get(str(biome_of[ty, tx]))
+        if not plants:
+            continue
+        for _ in range(int(rng.integers(2, 5))):
+            plant = 'ZPfw' if 'ZPfw' in plants and rng.random() < 0.5 else str(rng.choice(plants))
+            add_detail(plant, tx + rng.uniform(0.1, 0.9), ty + rng.uniform(0.1, 0.9))
     for ty, tx in np.argwhere(near_water & tile_ok & ~is_tree & ~lush & (roll > 0.80)):
         add_detail('APct' if rng.random() < 0.6 else 'LPrs', tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
     lake_pts = T.lake & ~dilate(~T.lake, 1)

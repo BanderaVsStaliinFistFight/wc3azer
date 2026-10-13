@@ -40,10 +40,11 @@ The terrain follows the style of the big hand-made WoW maps for Warcraft III, su
   - About 99% of the walkable land can be reached from the start locations; what is left is small ledges high in the mountains.
 - **Forests.** Woods cover a share of each zone set by its climate. They grow thicker along rivers and lakes, climb the hillsides up to a treeline, break up into clumps and clearings, and fray into scattered trees at their edges. Inside, the trees stand with gaps between them rather than as a solid wall. Each climate grows a mix of 3–6 species (23 in all), and each species gathers in its own stands, so a wood shifts from one kind of tree to another as you cross it. Elwynn mixes summer oaks with autumn and winter trees and a few round-crowned ones; Duskwood is mostly gnarled ruin trees, with toadstools in the gloom; Ashenvale has its violet trees under wide canopy giants; the jungles grow palms and canopy trees, with the odd giant mushroom; the Barrens have acacias; the north has pines, snowy trees and frosted canopies. The ground under the woods is dark forest floor.
 - **Ground detail.** The ground follows the lie of the land: each zone's lusher ground gathers on wet valley floors and along the water, and its dirt and rock on slopes and high, dry ground. Zone borders fray into one another instead of meeting on a line. Roads wander a little, as roads do. Flowers, shrubs and mushrooms dot open ground, reeds and cattails line the water, lily pads float on the lakes, and boulders lie on steep slopes and below cliffs.
-- **Decorations.** Over 100 kinds of doodad are spread across the whole map:
-  - Each biome has its own props on open ground: hay and wheat on the farms, graves and skulls in the Plaguelands, bones, totems, cacti and rock pillars in the Barrens and deserts, broken columns and stumps in Ashenvale, ruins, mushrooms and vines in the jungles, fire pits and tombstones in Northrend, ice pillars in Icecrown, and magma rocks in the volcanic lands.
-  - Every named camp site has a cluster of ruins in its region's style.
-  - Every town has village clutter round its square: hay, lantern posts, weapon racks, carts, braziers and wells, with fire pits in the cold and totems in the Barrens.
+- **Roadsides.** Every road is lined with the land's own stones and wild flowers. Every few tiles there is a stone with a pebble or two at the edge of the verge, on one side or the other, and closer together in rough country and where it is too cold or dry for flowers. Patches of flowers, shrubs and mushrooms come and go along the way: flowers in Elwynn and Hillsbrad, shrubs in the Barrens, toadstools in Duskwood and Felwood.
+- **Decorations.** Over 100 kinds of doodad are spread across the whole map, mostly natural ones:
+  - Open ground in each biome is dotted with its own boulders, bushes, stumps, cacti, thorns and ice, and now and then a man-made piece: hay and wheat on the farms, a grave in the Plaguelands, bones or a totem in the Barrens, a broken column in Ashenvale, a fallen pillar in the jungle, a tombstone in Northrend.
+  - Every named camp site has a few ruins in its region's style.
+  - Every town has a little village clutter round its square: hay, lantern posts, weapon racks, carts, braziers and the odd well, with fire pits in the cold and totems in the Barrens.
   - Signposts stand at the forks in the roads and shells lie on the beaches.
   - Birds circle over woods and shores, bats over the dark places, and flies over the swamps.
 
@@ -71,7 +72,7 @@ Shallow straits that ground units can wade across link Teldrassil and Azuremyst 
 
 **What's placed.**
 - About 19,000 trees of 23 species.
-- About 8,700 decorations: ruins, props, boulders, plants, rock spires and ambient birds, bats and flies.
+- About 18,900 decorations, nearly all of them natural: flowers, shrubs and mushrooms (most along the roads), about 3,900 rocks and boulders, bushes, stumps and rock spires. Only about 1,000 are man-made props and ruins.
 - The landmark doodads.
 - The waygates.
 - Wildlife critters in every zone.
