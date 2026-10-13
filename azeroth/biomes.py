@@ -1,0 +1,120 @@
+"""Terrain recipes per biome: ground tiles, trees, relief and creeps."""
+
+# The 16 ground tiles the map uses (order = draw order, later tiles overlay earlier ones).
+GROUND_TILES = ['Ldrt', 'Bdrt', 'Bdsr', 'Zsan', 'Dlvc', 'Lrok', 'Bgrr', 'Lgrs',
+                'Fgrs', 'Agrs', 'Zgrs', 'Lgrd', 'Cpos', 'Wsng', 'Nsnw', 'Nice']
+TILE = {t: i for i, t in enumerate(GROUND_TILES)}
+
+# Cliff types; their ground tiles (Ldrt, Nsnw) are in GROUND_TILES as the game requires.
+CLIFF_TILES = ['CLdi', 'CNsn']
+CLIFF_DIRT, CLIFF_SNOW = 0, 1
+
+# Each biome:
+#   tiles    - [(tile, noise threshold)] painted in order; a tile wins where noise > threshold
+#   beach    - tile used on shores, seabed - tile visible under shallow water
+#   rock     - tile on steep slopes, peak - tile on high ground (None = rock)
+#   tree     - destructable id, density 0..1 of forest cover, clump - forest patch size (tiles)
+#   base     - ground height above sea, hills - hill amplitude, mountains - ridge amplitude
+#   creeps   - (low, mid, high) creep unit ids used for camps in this biome
+#   cold / blight / mm - snow on peaks, blighted ground, minimap tint (r, g, b)
+B = {}
+
+
+def biome(name, **kw):
+    kw.setdefault('beach', 'Zsan')
+    kw.setdefault('seabed', 'Zsan')
+    kw.setdefault('rock', 'Lrok')
+    kw.setdefault('peak', None)
+    kw.setdefault('tree', None)
+    kw.setdefault('density', 0.0)
+    kw.setdefault('clump', 14)
+    kw.setdefault('base', 40)
+    kw.setdefault('hills', 60)
+    kw.setdefault('mountains', 0)
+    kw.setdefault('cold', False)
+    kw.setdefault('blight', False)
+    kw.setdefault('cliff', CLIFF_DIRT)
+    kw.setdefault('critters', [])
+    B[name] = kw
+
+
+biome('temperate', tiles=[('Lgrs', -2), ('Lgrd', 0.25), ('Ldrt', 0.55)], tree='LTlt', density=0.46,
+      hills=70, creeps=(['ngno', 'nkob', 'nmrl', 'nwlt'], ['ngnb', 'nkog', 'nmrr', 'nfsp'], ['ngnv', 'nkol', 'nogm', 'nwld']),
+      critters=['nder', 'nshe', 'necr'], mm=(78, 120, 52))
+biome('darkforest', tiles=[('Lgrd', -2), ('Ldrt', 0.45), ('Lgrs', 0.6)], tree='LTlt', density=0.70, clump=18,
+      hills=80, creeps=(['nwlt', 'nspb', 'ngh1', 'nske'], ['nwlg', 'nspg', 'nskg', 'ngh1'], ['nwld', 'ngh2', 'nsgt', 'nskm']),
+      critters=['nder', 'nrat'], mm=(46, 82, 40))
+biome('autumn', tiles=[('Fgrs', -2), ('Lgrd', 0.35), ('Ldrt', 0.55)], tree='FTtw', density=0.52,
+      hills=70, creeps=(['ngno', 'nkob', 'nmrl', 'nspr'], ['ngnb', 'nftr', 'nmrr', 'nspg'], ['ngnv', 'nftk', 'nmrm', 'nfsh']),
+      critters=['nder', 'necr'], mm=(150, 118, 50))
+biome('farmland', tiles=[('Lgrs', -2), ('Bgrr', 0.0), ('Ldrt', 0.5)], tree='LTlt', density=0.14, clump=8,
+      hills=40, creeps=(['ngna', 'nban', 'nmrl', 'nkob'], ['ngnb', 'nbrg', 'nmrr', 'nrog'], ['ngnv', 'nass', 'nenf', 'nbld']),
+      critters=['nshe', 'npig', 'nech'], mm=(128, 140, 66))
+biome('highland', tiles=[('Lgrs', -2), ('Lrok', 0.45), ('Ldrt', 0.3)], tree='LTlt', density=0.32,
+      hills=150, mountains=120, creeps=(['nftr', 'nogr', 'nwlt', 'nhar'], ['nftb', 'nogm', 'nwlg', 'nhrr'], ['nftk', 'nogl', 'nwld', 'nhrq']),
+      critters=['nder', 'nrac'], mm=(88, 116, 64))
+biome('nightelf', tiles=[('Agrs', -2), ('Lgrd', 0.3), ('Ldrt', 0.6)], tree='ATtr', density=0.62, clump=16,
+      hills=70, creeps=(['nfrl', 'nsat', 'nwlt', 'nspg'], ['nfrs', 'nsty', 'nwlg', 'nenp'], ['nfrg', 'nsts', 'nfre', 'nstl']),
+      critters=['nder', 'nrac', 'nsno'], mm=(54, 92, 98))
+biome('fel', tiles=[('Cpos', -2), ('Lgrd', 0.2), ('Ldrt', 0.5)], tree='CTtr', density=0.50,
+      hills=70, creeps=(['nsat', 'nenc', 'nspb', 'nslm'], ['nsts', 'nenp', 'nslf', 'nfgu'], ['nstl', 'nepl', 'nsln', 'npfm']),
+      critters=['nfbr', 'nrat'], mm=(86, 98, 44))
+biome('plague', tiles=[('Ldrt', -2), ('Cpos', 0.0), ('Lgrd', 0.55)], tree='CTtr', density=0.20, clump=10,
+      hills=60, blight=True, creeps=(['nzom', 'nske', 'ngh1', 'nska'], ['nskg', 'nskm', 'nslf', 'nfgb'], ['nsoc', 'ngh2', 'nfgl', 'nsln']),
+      critters=['nrat'], mm=(92, 84, 70))
+biome('savanna', tiles=[('Bdrt', -2), ('Bgrr', 0.05), ('Ldrt', 0.55)], tree='BTtw', density=0.08, clump=6,
+      hills=40, creeps=(['nrzt', 'ncea', 'nhar', 'nrzs'], ['nrzb', 'ncer', 'nhrr', 'nqbh'], ['nrzm', 'ncen', 'nhrw', 'nrzg']),
+      critters=['nvul', 'nskk'], mm=(158, 136, 72))
+biome('plains', tiles=[('Lgrs', -2), ('Bgrr', 0.3), ('Ldrt', 0.65)], tree='BTtw', density=0.10, clump=8,
+      hills=50, creeps=(['nrzt', 'nqbh', 'nwlt', 'nhar'], ['nrzb', 'nwlg', 'ncer', 'nhrr'], ['nrzm', 'nwld', 'ncen', 'nhrw']),
+      critters=['nder', 'necr'], mm=(110, 140, 64))
+biome('reddesert', tiles=[('Bdrt', -2), ('Ldrt', 0.3), ('Lrok', 0.55)], tree='BTtw', density=0.04, clump=5,
+      hills=90, creeps=(['nrzt', 'nhar', 'nsc2', 'nkob'], ['nrzb', 'nhrr', 'nsc3', 'nkog'], ['nrzg', 'nhrq', 'ntrg', 'nkol']),
+      critters=['nskk', 'nvul'], mm=(150, 88, 60))
+biome('barren', tiles=[('Ldrt', -2), ('Bdrt', 0.2), ('Lrok', 0.5)], tree='CTtr', density=0.05, clump=5,
+      hills=80, creeps=(['ncea', 'nsat', 'nkob', 'nhar'], ['ncer', 'nsty', 'ngst', 'nhrr'], ['ncks', 'nsts', 'nggr', 'ncnk']),
+      critters=['nvul'], mm=(120, 104, 84))
+biome('desert', tiles=[('Bdsr', -2), ('Bdrt', 0.4), ('Zsan', 0.65)], tree='BTtw', density=0.02, clump=4,
+      hills=70, seabed='Zsan', creeps=(['nscb', 'nanb', 'nsc2', 'nban'], ['nanw', 'nsc3', 'nbrg', 'nslh'], ['nano', 'nane', 'nslr', 'nbld']),
+      critters=['ndwm', 'nskk', 'nvul'], mm=(200, 170, 106))
+biome('jungle', tiles=[('Zgrs', -2), ('Lgrd', 0.25), ('Ldrt', 0.6)], tree='ZTtw', density=0.66, clump=16,
+      hills=90, creeps=(['nftr', 'njg1', 'nmrl', 'nspg'], ['nfsp', 'njg1', 'nmrr', 'nftb'], ['nftk', 'njga', 'nmrm', 'nfsh']),
+      critters=['nfro', 'nskk', 'nrac'], mm=(60, 112, 44))
+biome('swamp', tiles=[('Lgrd', -2), ('Zgrs', 0.15), ('Ldrt', 0.5)], tree='ZTtw', density=0.40, clump=10,
+      hills=25, seabed='Ldrt', creeps=(['nmrl', 'nslm', 'nspb', 'nlpr'], ['nmrr', 'nslf', 'nltc', 'nhyh'], ['nmrm', 'nsln', 'nlds', 'nhyd']),
+      critters=['nfro', 'nskk'], mm=(56, 84, 50))
+biome('volcanic', tiles=[('Bdrt', -2), ('Dlvc', 0.05), ('Lrok', 0.5)], tree='CTtr', density=0.03, clump=4,
+      hills=100, creeps=(['nrdk', 'nrvf', 'nkob', 'nfgu'], ['nrdk', 'nrvf', 'nkog', 'ninc'], ['nrdr', 'nrwm', 'ninf', 'nkol']),
+      critters=['nskk'], mm=(110, 58, 40))
+biome('snow', tiles=[('Nsnw', -2), ('Wsng', 0.35), ('Lrok', 0.65)], tree='WTst', density=0.30, clump=10,
+      hills=110, mountains=160, cold=True, beach='Nsnw', seabed='Ldrt', cliff=1,
+      creeps=(['nitr', 'nwwf', 'nfpl', 'nkob'], ['nits', 'nwwg', 'nfps', 'nitp'], ['nitw', 'nwwd', 'nfpc', 'nith']),
+      critters=['npng', 'nsea', 'nsno'], mm=(214, 222, 232))
+biome('tundra', tiles=[('Wsng', -2), ('Nsnw', 0.2), ('Ldrt', 0.55)], tree='NTtw', density=0.16, clump=8,
+      hills=60, cold=True, beach='Nsnw', seabed='Ldrt', cliff=1,
+      creeps=(['ntkf', 'nwwf', 'nmam', 'nanb'], ['ntka', 'nwwg', 'nmit', 'ntkh'], ['ntkw', 'nmdr', 'ntks', 'ntkc']),
+      critters=['nsea', 'npng'], mm=(170, 178, 160))
+biome('icecrown', tiles=[('Nsnw', -2), ('Nice', 0.0), ('Lrok', 0.55)], tree='ITtw', density=0.10, clump=6,
+      hills=110, mountains=180, cold=True, blight=True, beach='Nice', seabed='Nice', cliff=1,
+      creeps=(['nske', 'nnwa', 'nska', 'nzom'], ['nnwl', 'nskg', 'nnws', 'nrvs'], ['nnwq', 'nsoc', 'nfgl', 'nrvi']),
+      critters=['npng'], mm=(170, 184, 206))
+biome('needles', tiles=[('Bdrt', -2), ('Ldrt', 0.2), ('Bdsr', 0.6)], tree='BTtw', density=0.03, clump=4,
+      hills=30, creeps=(['ncea', 'nhar', 'nrzt', 'nkob'], ['ncer', 'nhrr', 'nrzb', 'nhrw'], ['ncen', 'nhrq', 'ncks', 'ncnk']),
+      critters=['nvul'], mm=(176, 120, 80))
+biome('rocky', tiles=[('Lrok', -2), ('Ldrt', 0.1)], hills=110, mountains=120, creeps=(['ngrk', 'nkob', 'nhar', 'nsc2'], ['ngst', 'nkog', 'nhrr', 'nsc3'], ['nggr', 'nkol', 'nhrq', 'nsgb']),
+      critters=['nalb'], mm=(112, 104, 96))
+biome('fjord', tiles=[('Lgrs', -2), ('Fgrs', 0.25), ('Lrok', 0.6)], tree='NTtw', density=0.38, clump=12,
+      hills=140, mountains=90, cold=True, beach='Ldrt', seabed='Ldrt', creeps=(['ntkf', 'nwlt', 'nmrl', 'nfrl'], ['ntka', 'nwlg', 'nmrr', 'nfrs'], ['ntkw', 'nwld', 'nmrm', 'nfrg']),
+      critters=['nsea', 'nder'], mm=(90, 122, 76))
+biome('grizzly', tiles=[('Lgrs', -2), ('Lgrd', 0.0), ('Ldrt', 0.6)], tree='NTtw', density=0.62, clump=16,
+      hills=90, cold=True, beach='Ldrt', seabed='Ldrt', creeps=(['nfrl', 'nwlt', 'ntkf', 'nftr'], ['nfrs', 'nwlg', 'nftb', 'nfrb'], ['nfrg', 'nwld', 'nfre', 'nftk']),
+      critters=['nder', 'nrac'], mm=(58, 96, 52))
+biome('crystal', tiles=[('Agrs', -2), ('Nsnw', 0.25), ('Lgrd', 0.55)], tree='ATtr', density=0.50, clump=14,
+      hills=60, cold=True, beach='Nsnw', seabed='Ldrt', creeps=(['nadw', 'nfpl', 'nwiz', 'nwwf'], ['nadk', 'nfps', 'nwzr', 'nwwg'], ['nadr', 'nfpc', 'nwzg', 'nwzd']),
+      critters=['nsno'], mm=(110, 140, 170))
+biome('amber', tiles=[('Bdsr', -2), ('Cpos', 0.15), ('Bdrt', 0.5)], tree='CTtr', density=0.07, clump=6,
+      hills=90, creeps=(['nanb', 'nanc', 'nspr', 'nslm'], ['nanw', 'nsc3', 'nssp', 'nslf'], ['nano', 'nane', 'nsbm', 'nsln']),
+      critters=['nskk'], mm=(170, 150, 70))
+biome('worldtree', tiles=[('Agrs', -2), ('Lgrd', 0.2), ('Lgrs', 0.55)], tree='ATtr', density=0.66, clump=18,
+      hills=90, creeps=(['nfrl', 'nsat', 'nwlt', 'nowb'], ['nfrs', 'nsty', 'nowb', 'nwlg'], ['nfrg', 'nsts', 'nowe', 'nfre']),
+      critters=['nder', 'nsno'], mm=(70, 110, 96))

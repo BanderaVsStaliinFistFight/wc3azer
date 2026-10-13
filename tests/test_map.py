@@ -1,0 +1,111 @@
+"""End-to-end checks of the generated map. Run: python3 -m unittest discover tests"""
+import os
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+import unittest
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.dirname(HERE))
+
+import build  # noqa: E402
+from game_ids import DESTRUCTABLE_IDS, DOODAD_IDS, UNIT_IDS  # noqa: E402
+from readers import MPQ, read_doodads, read_units, read_w3e, read_w3i  # noqa: E402
+
+EXPECTED_FILES = {'war3map.w3i', 'war3map.w3e', 'war3map.wpm', 'war3map.shd', 'war3map.doo', 'war3mapUnits.doo',
+                  'war3map.j', 'war3map.mmp', 'war3mapMap.blp', 'war3map.w3r', 'war3map.w3c', 'war3map.wtg', 'war3map.wct'}
+
+
+class MapTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp()
+        cls.path = os.path.join(cls.tmp, 'Azeroth.w3x')
+        build.build(1, cls.path, None)
+        with open(cls.path, 'rb') as fh:
+            cls.raw = fh.read()
+        cls.mpq = MPQ(cls.raw)
+        cls.files = {n: cls.mpq.read(n) for n in cls.mpq.names()}
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp)
+
+    def test_archive(self):
+        self.assertEqual(self.raw[:4], b'HM3W')
+        self.assertTrue(EXPECTED_FILES <= set(self.files))
+        for name, data in self.files.items():
+            self.assertIsNotNone(data, name)
+
+    def test_info(self):
+        info = read_w3i(self.files['war3map.w3i'])
+        self.assertEqual(info['version'], 25)
+        self.assertEqual((info['pw'], info['ph']), (468, 468))
+        self.assertEqual(len(info['players']), 12)
+        self.assertTrue(info['flags'] & 0x4, 'melee flag')
+
+    def test_terrain(self):
+        w = read_w3e(self.files['war3map.w3e'])
+        self.assertEqual((w['w'], w['h']), (481, 481))   # 480 x 480 tiles, the maximum map size
+        self.assertLessEqual(len(w['tiles']), 16)
+        self.assertLessEqual(len(w['cliffs']), 2)
+        pts = np.frombuffer(w['data'], dtype=np.dtype([('h', '<u2'), ('w', '<u2'), ('t', 'u1'), ('v', 'u1'), ('c', 'u1')]))
+        pts = pts.reshape(w['h'], w['w'])
+        self.assertLess(int((pts['t'] & 15).max()), len(w['tiles']))
+        cliff = pts['c'] >> 4
+        self.assertTrue(((cliff < len(w['cliffs'])) | (cliff == 15)).all())
+        layer = (pts['c'] & 15).astype(int)
+        corners = [layer[:-1, :-1], layer[1:, :-1], layer[:-1, 1:], layer[1:, 1:]]
+        spread = np.maximum.reduce(corners) - np.minimum.reduce(corners)
+        self.assertLessEqual(int(spread.max()), 2, 'a tile needs a cliff model that does not exist')
+        self.assertTrue((pts['h'] < 0x4000).all())
+
+    def test_pathing_and_shadow(self):
+        wpm = self.files['war3map.wpm']
+        self.assertEqual(wpm[:4], b'MP3W')
+        self.assertEqual(struct.unpack_from('<iii', wpm, 4), (0, 1920, 1920))
+        self.assertEqual(len(wpm), 16 + 1920 * 1920)
+        self.assertEqual(len(self.files['war3map.shd']), 1920 * 1920)
+
+    def test_objects_exist_in_game_data(self):
+        _, _, doodads, special = read_doodads(self.files['war3map.doo'])
+        self.assertGreater(len(doodads), 15000)
+        for d in doodads:
+            self.assertIn(d['id'], DESTRUCTABLE_IDS | DOODAD_IDS)
+            self.assertTrue(-29952 < d['x'] < 29952 and -30208 < d['y'] < 29696)
+        _, _, units = read_units(self.files['war3mapUnits.doo'])
+        for u in units:
+            self.assertTrue(u['id'] == 'sloc' or u['id'] in UNIT_IDS, u['id'])
+        script = self.files['war3map.j'].decode('utf-8')
+        for uid in set(re.findall(r"CreateUnit\(p, '(\w{4})'", script)):
+            self.assertIn(uid, UNIT_IDS)
+        self.assertEqual(sum(u['id'] == 'sloc' for u in units), 12)
+
+    def test_script_structure(self):
+        script = self.files['war3map.j'].decode('utf-8')
+        defined = set(re.findall(r'^function (\w+) takes', script, re.M))
+        self.assertTrue({'main', 'config'} <= defined)
+        for name in re.findall(r'call (\w+)\(', script):
+            if name.startswith(('Create', 'Init', 'Unit_', 'Trig_')) and name not in ('CreateUnit', 'CreateTrigger', 'InitBlizzard', 'InitGenericPlayerSlots'):
+                self.assertIn(name, defined, name)
+        self.assertEqual(script.count('\nfunction '), script.count('\nendfunction'))
+
+    @unittest.skipUnless(os.environ.get('PJASS') and os.environ.get('COMMON_J') and os.environ.get('BLIZZARD_J'),
+                         'set PJASS, COMMON_J and BLIZZARD_J to run the JASS syntax checker')
+    def test_pjass(self):
+        path = os.path.join(self.tmp, 'war3map.j')
+        with open(path, 'wb') as fh:
+            fh.write(self.files['war3map.j'])
+        res = subprocess.run([os.environ['PJASS'], os.environ['COMMON_J'], os.environ['BLIZZARD_J'], path],
+                             capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+
+if __name__ == '__main__':
+    unittest.main()

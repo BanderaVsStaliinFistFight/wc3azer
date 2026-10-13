@@ -1,0 +1,91 @@
+"""Renders overview images of the generated map (for the repo and the minimap)."""
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+
+from . import geography as geo
+from .biomes import GROUND_TILES
+
+TILE_COLOURS = {
+    'Ldrt': (128, 100, 68), 'Bdrt': (156, 98, 62), 'Bdsr': (206, 176, 116), 'Zsan': (222, 204, 152),
+    'Dlvc': (118, 48, 28), 'Lrok': (118, 112, 104), 'Bgrr': (150, 148, 78), 'Lgrs': (84, 132, 52),
+    'Fgrs': (174, 132, 54), 'Agrs': (58, 104, 92), 'Zgrs': (58, 122, 44), 'Lgrd': (46, 86, 40),
+    'Cpos': (98, 116, 38), 'Wsng': (188, 198, 186), 'Nsnw': (236, 240, 246), 'Nice': (168, 200, 226),
+}
+TREE_COLOURS = {'LTlt': (30, 70, 28), 'FTtw': (150, 80, 26), 'ATtr': (40, 60, 90), 'CTtr': (60, 70, 30), 'BTtw': (100, 110, 40),
+                'ZTtw': (24, 80, 20), 'WTst': (200, 214, 220), 'NTtw': (50, 80, 60), 'ITtw': (120, 140, 170)}
+
+
+def colour_map(T):
+    pal = np.array([TILE_COLOURS[t] for t in GROUND_TILES], dtype=np.float64)
+    rgb = pal[T.tex]
+    # hill shading from the final ground heights
+    g = T.ground_z
+    gx = np.zeros_like(g); gy = np.zeros_like(g)
+    gx[:, 1:-1] = g[:, 2:] - g[:, :-2]
+    gy[1:-1, :] = g[2:, :] - g[:-2, :]
+    shade = np.clip(1.0 + (-gx + gy) / 600.0, 0.55, 1.4)
+    rgb = rgb * shade[..., None]
+    depth = -89.6 - g
+    wet = T.water_flag & (depth > 0)
+    shallow = np.array([70, 140, 170.0]); deep = np.array([16, 44, 92.0])
+    t = np.clip(depth / 250.0, 0, 1)[..., None]
+    water_rgb = shallow * (1 - t) + deep * t
+    rgb = np.where(wet[..., None], water_rgb * 0.85 + rgb * 0.15, rgb)
+    cliff = np.zeros(g.shape, bool)
+    cliff[:-1, :-1] = T.cliff_tile
+    rgb = np.where(cliff[..., None], rgb * 0.55, rgb)
+    rgb = np.where(T.edge[..., None], rgb * 0.25, rgb)
+    return np.clip(rgb, 0, 255).astype(np.uint8)
+
+
+def render(T, path, scale=3, objects=None, labels=True):
+    rgb = colour_map(T)
+    img = Image.fromarray(rgb[::-1], 'RGB').resize((rgb.shape[1] * scale, rgb.shape[0] * scale), Image.NEAREST)
+    draw = ImageDraw.Draw(img)
+    H = rgb.shape[0]
+
+    def px(x, y):
+        return x * scale, (H - 1 - y) * scale
+
+    if objects:
+        for d in objects.get('trees', []):
+            x, y = px(d['tx'], d['ty'])
+            draw.point((x, y), fill=TREE_COLOURS.get(d['id'], (0, 60, 0)))
+        for u in objects.get('mines', []):
+            x, y = px(*u)
+            draw.rectangle((x - 3, y - 3, x + 3, y + 3), fill=(255, 215, 0), outline=(0, 0, 0))
+        for u in objects.get('creeps', []):
+            x, y = px(*u)
+            draw.ellipse((x - 2, y - 2, x + 2, y + 2), fill=(200, 30, 30))
+        for u in objects.get('shops', []):
+            x, y = px(*u)
+            draw.rectangle((x - 3, y - 3, x + 3, y + 3), fill=(255, 255, 255), outline=(0, 0, 0))
+        for a, b in objects.get('portals', []):
+            draw.line((*px(*a), *px(*b)), fill=(200, 120, 255), width=1)
+    try:
+        font = ImageFont.truetype('DejaVuSans.ttf', 4 * scale)
+        big = ImageFont.truetype('DejaVuSans-Bold.ttf', 5 * scale)
+    except OSError:
+        font = big = ImageFont.load_default()
+    if labels:
+        seen = set()
+        for z in geo.ZONES:
+            if z['name'] in seen:
+                continue
+            seen.add(z['name'])
+            x, y = px(z['cx'], z['cy'])
+            draw.text((x, y), z['name'], fill=(255, 255, 255), font=font, anchor='mm', stroke_width=1, stroke_fill=(0, 0, 0))
+        for idx, name, cx, cy, race in geo.CAPITALS:
+            x, y = px(cx, cy)
+            draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=(255, 40, 40), outline=(255, 255, 255))
+            draw.text((x, y + 10), name, fill=(255, 230, 120), font=big, anchor='mt', stroke_width=1, stroke_fill=(0, 0, 0))
+    img.save(path)
+    return img
+
+
+def minimap_rgb(T, size=256):
+    """Image for war3mapMap.blp: the playable area, north up."""
+    from .terrain import MARGIN_L, MARGIN_R, MARGIN_B, MARGIN_T, MAP_W, MAP_H
+    rgb = colour_map(T)[MARGIN_B:MAP_H - MARGIN_T + 1, MARGIN_L:MAP_W - MARGIN_R + 1]
+    img = Image.fromarray(rgb[::-1], 'RGB').resize((size, size), Image.LANCZOS)
+    return np.asarray(img)
