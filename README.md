@@ -23,9 +23,11 @@ The terrain follows the style of the big hand-made WoW maps for Warcraft III, su
 
 - **Cliff coastlines.** Shores are cliff walls rising out of a pale shelf of shallows. Beaches stay where units need to reach the water: along the wading straits and river mouths, at every shipyard, round the small islands, and on a few stretches of open coast.
 - **Raised and sunken zones.** Highland zones stand one cliff level above their neighbours: Winterspring, Mount Hyjal, Stonetalon, Alterac, the Hinterlands, Dun Morogh, Searing Gorge, Icecrown, the Storm Peaks, Zul'Drak and Drustvar. Un'Goro Crater sinks one level below. Wherever a road crosses one of these edges it climbs a ramp, built the way the World Editor builds them.
-- **Terraced mountains.** High ridges and peaks become stacked cliff terraces. Roads keep their passes open, and nothing that matters ends up on a cut-off plateau.
+- **Mountain ranges.** Each range is a broad massif rising out of foothills, broken into peaks, saddles and spurs, and stepped by ragged cliff ledges, with summits up to about 1,200 units high. The high ground turns to bare rock and scree, with snow on the summits. Roads keep their passes open, settlements stand in levelled clearings away from the slopes, and nothing that matters ends up on a cut-off plateau.
+- **Forests.** Woods cover a share of each zone set by its climate. They grow thicker along rivers and lakes, climb the hillsides up to a treeline, break up into clumps and clearings, and fray into scattered trees at their edges. A second species is mixed in here and there: autumn trees among summer ones, pines in the snow, canopy giants in the jungles and Ashenvale. The ground under them is dark forest floor.
+- **Ground detail.** Zone borders fray into one another instead of meeting on a line. Flowers, shrubs and mushrooms dot open ground, reeds and cattails line the water, lily pads float on the lakes, and boulders lie on steep slopes and below cliffs. Boulders on walkable ground are written into the pathing map, and none of them is allowed to cut off a path.
 - **Instances.** Each dungeon has a vestibule round its waygate, a pillared hall, a guard camp halfway, and its boss on a raised dais at the far end, reached up a ramp. Floors are themed: lava cracks in Molten Core and Onyxia's Lair, sand and brick in the desert temples, brick and poison in the crypts, ice in the Northrend raids, and moss in the caverns.
-- **Paved capitals** in Cityscape brick.
+- **Paved capitals:** a brick square with streets leading out along the roads.
 
 There are 93 zones in all, counting the instances. Each zone has its own ground textures, tree type, relief and creeps: jungle in Stranglethorn, blight in the Plaguelands, lava cracks in the Burning Steppes, cliff mesas in Thousand Needles and at Thunder Bluff, the crater rim around Un'Goro, and the Greymane Wall, a cliff rampart whose gate is the only way into Gilneas on foot. A few landmark doodads are placed too: the World Trees at Teldrassil and Hyjal, the Sunwell, the Frozen Throne, the ruins of Dalaran, the Dark Portal, and volcanoes at Blackrock and Un'Goro.
 
@@ -45,7 +47,7 @@ There are 93 zones in all, counting the instances. Each zone has its own ground 
 
 Goblin shipyards sit at the ports (Booty Bay, Ratchet, Theramore, Menethil, Auberdine, Valiance Keep, Vengeance Landing and others), and goblin laboratories sell zeppelins. Teldrassil connects to Darkshore through a shallow strait that ground units can wade across.
 
-**Neutral content.** About 100 gold mines, roughly 290 creep camps (each camp leader drops an item), 60 shops (taverns, merchants, mercenary camps, marketplaces, dragon roosts, fountains), critters, and about 17,000 trees. Every instance holds a guard camp and a raid boss whose retinue drops a level-7 artifact and a level-6 permanent item.
+**Neutral content.** About 100 gold mines, roughly 290 creep camps (each camp leader drops an item), 60 shops (taverns, merchants, mercenary camps, marketplaces, dragon roosts, fountains), critters, about 28,000 trees, and some 2,200 boulders and plants. Every instance holds a guard camp and a raid boss whose retinue drops a level-7 artifact and a level-6 permanent item.
 
 ## Playing it
 

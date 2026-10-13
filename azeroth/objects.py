@@ -10,7 +10,22 @@ from .terrain import MAP_W, MAP_H, ground_z_at, world_xy
 
 NEUTRAL_HOSTILE, NEUTRAL_PASSIVE = 12, 15     # classic (12 player) numbering used by war3mapUnits.doo
 ITEM_CLASS = {'permanent': 'i', 'charged': 'j', 'powerup': 'k', 'artifact': 'l'}
-TREE_VARIATIONS = {'LTlt': 10, 'FTtw': 10, 'ATtr': 5, 'CTtr': 5, 'BTtw': 10, 'ZTtw': 10, 'WTst': 10, 'NTtw': 10, 'ITtw': 10}
+TREE_VARIATIONS = {'LTlt': 10, 'FTtw': 10, 'ATtr': 5, 'CTtr': 5, 'BTtw': 10, 'ZTtw': 10, 'WTst': 10, 'NTtw': 10, 'ITtw': 10,
+                   'ATtc': 3, 'ZTtc': 3, 'CTtc': 3}
+DETAIL_VARIATIONS = {'LRrk': 10, 'ARrk': 10, 'CRrk': 10, 'BRrk': 10, 'BRsp': 8, 'ZRrk': 10, 'ZRsp': 8, 'NRrk': 10, 'IRrs': 10,
+                     'ORrk': 10, 'DRrk': 10, 'ZPfw': 5, 'ZPsh': 3, 'APms': 4, 'CPms': 4, 'APct': 1, 'LPrs': 4, 'LPfp': 3}
+# per biome: (rock, rock spire or None) scattered over steep slopes
+ROCKS = {'nightelf': ('ARrk', None), 'worldtree': ('ARrk', None), 'crystal': ('ARrk', None), 'fel': ('CRrk', None),
+         'savanna': ('BRrk', None), 'reddesert': ('BRrk', 'BRsp'), 'needles': ('BRrk', 'BRsp'), 'barren': ('BRrk', None),
+         'desert': ('BRrk', 'BRsp'), 'amber': ('BRrk', 'BRsp'), 'jungle': ('ZRrk', 'ZRsp'), 'swamp': ('ZRrk', None),
+         'snow': ('NRrk', None), 'tundra': ('NRrk', None), 'icecrown': ('IRrs', None), 'frozen': ('IRrs', None),
+         'volcanic': ('ORrk', None), 'lava': ('ORrk', None), 'halls': ('DRrk', None), 'crypt': ('DRrk', None)}
+# per biome: small plants without pathing, dotted over open ground
+PLANTS = {'temperate': ['ZPfw', 'ZPsh'], 'farmland': ['ZPfw', 'ZPsh'], 'plains': ['ZPfw', 'ZPsh'], 'autumn': ['ZPsh', 'ZPfw'],
+          'highland': ['ZPsh', 'ZPfw'], 'darkforest': ['ZPsh', 'APms'], 'nightelf': ['APms', 'ZPfw', 'ZPsh'],
+          'worldtree': ['APms', 'ZPfw'], 'jungle': ['ZPsh', 'ZPfw'], 'swamp': ['ZPsh', 'APms'], 'grotto': ['APms', 'ZPsh'],
+          'troll': ['ZPsh'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'], 'grizzly': ['ZPsh', 'ZPfw'], 'fjord': ['ZPsh', 'ZPfw'],
+          'savanna': ['ZPsh'], 'barren': ['ZPsh'], 'reddesert': ['ZPsh'], 'needles': ['ZPsh'], 'crystal': ['APms', 'ZPfw']}
 FACING = 270.0
 
 
@@ -35,6 +50,9 @@ def place(T, seed=7):
     tile_ok[:-1, :-1] = ok
     tile_ok &= ~T.edge
     reserved = np.zeros((n, n), bool)     # no trees here
+    label, sizes = walkable_regions(T)
+    main_ground = main_regions(T, label, sizes)
+    tile_ok &= main_ground
     occupied = np.zeros((n, n), bool)     # no buildings/units here
 
     def area_ok(tx, ty, r, allow_occupied=False):
@@ -154,7 +172,7 @@ def place(T, seed=7):
     sea_dist = distance_field(deep_sea, 12)
     for name, tx, ty, building in geo.TOWNS:
         if building == 'nshp':
-            spot = find_spot(tx, ty, 2.0, max_search=14, accept=lambda x, y: sea_dist[int(y), int(x)] <= 4.5)
+            spot = find_spot(tx, ty, 2.0, max_search=16, accept=lambda x, y: sea_dist[int(y), int(x)] <= 6)
         else:
             spot = find_spot(tx, ty, 2.0, max_search=10)
         if spot is None:
@@ -230,9 +248,8 @@ def place(T, seed=7):
 
     # ---- roaming camps spread over every zone ---------------------------------------------
     # (only on ground big enough to be part of the world, not on sealed-off plateaus)
-    region = walkable_regions(T)
     zone_tiles = {}
-    land_tiles = np.argwhere(tile_ok & ~occupied & (region >= 600))
+    land_tiles = np.argwhere(tile_ok & ~occupied)
     for ty, tx in land_tiles[rng.permutation(len(land_tiles))]:
         zi = T.zone_of[ty, tx]
         zone_tiles.setdefault(zi, []).append((tx + 0.5, ty + 0.5))
@@ -263,23 +280,21 @@ def place(T, seed=7):
     O.camp_count = camp_count
 
     # ---- trees ----------------------------------------------------------------------------
-    f = T.field
-    forest_noise = (f.fbm(16, 4) + f.fbm(7, 3) * 0.5) / 1.5
-    density = np.array([z.get('density', B[z['biome']]['density']) for z in geo.ZONES])[T.zone_of]
+    # Woods come from the terrain's forest mask (T.forest_score > 0 inside a wood).
+    # They grow on slopes too (anything but cliffs and water), stand a little
+    # thinner inside, and fray at the edges into scattered trees.
+    score = T.forest_score
     tree_ids = np.array([B[z['biome']]['tree'] or '' for z in geo.ZONES])[T.zone_of]
-    # per-zone threshold = the noise quantile that turns `density` of the land into forest
-    land_noise = np.sort(forest_noise[T.land])
-    q = np.clip(1.0 - density, 0.0, 1.0)
-    thresh = land_noise[np.minimum((q * (len(land_noise) - 1)).astype(int), len(land_noise) - 1)]
-    thresh = np.where(density <= 0, np.inf, thresh)
-    forest = forest_noise > thresh
+    mix = [B[z['biome']].get('tree2') for z in geo.ZONES]
     clear = reserved | dilate(occupied, 1) | (T.road_d < 2.2)
+    ground = np.zeros((n, n), bool)
+    ground[:-1, :-1] = ~T.cliff_tile & ~T.ramp_tile & T.land[:-1, :-1] & T.land[1:, 1:] & T.land[:-1, 1:] & T.land[1:, :-1]
+    ground[:-1, :-1] &= ~T.water_flag[:-1, :-1] & ~T.water_flag[1:, 1:] & ~T.water_flag[:-1, 1:] & ~T.water_flag[1:, :-1]
+    ground &= ~T.edge
     land_dry = tile_ok & (T.slope < 70)
     near_shore = ~T.land | dilate(~T.land, 1)
-    candidates = forest & land_dry & ~clear & ~near_shore & (tree_ids != '')
-    # thin out the interior of forests a little so they are not solid walls everywhere
-    keep_prob = np.where(forest_noise > thresh + 0.12, 0.95, 0.8)
-    candidates &= rng.random((n, n)) < keep_prob
+    keep_prob = np.select([score > 0.12, score > 0, score > -0.04, score > -0.12], [0.96, 0.86, 0.32, 0.05], 0.0)
+    candidates = (rng.random((n, n)) < keep_prob) & ground & ~clear & ~near_shore & (tree_ids != '')
     # groves behind each start location
     for sx, sy, ang, zdef in O.groves:
         tid = B[zdef['biome']]['tree'] or 'LTlt'
@@ -293,12 +308,66 @@ def place(T, seed=7):
     trees = []
     for ty, tx in np.argwhere(candidates):
         tid = str(tree_ids[ty, tx])
-        x, y = world_xy(tx + 0.5, ty + 0.5)
+        other = mix[T.zone_of[ty, tx]]
+        if other and rng.random() < other[1]:
+            tid = other[0]
+        jx, jy = rng.uniform(-0.2, 0.2, 2)
+        x, y = world_xy(tx + 0.5 + jx, ty + 0.5 + jy)
         trees.append(dict(id=tid, var=int(rng.integers(0, TREE_VARIATIONS[tid])), x=x, y=y,
-                          z=ground_z_at(T, tx + 0.5, ty + 0.5), angle=4.712389,
+                          z=ground_z_at(T, tx + 0.5 + jx, ty + 0.5 + jy), angle=4.712389,
                           scale=float(rng.uniform(0.8, 1.2)), state=2, life=100, tx=tx + 0.5, ty=ty + 0.5))
     O.trees = trees
     O.doodads = O.doodads + [{k: v for k, v in t.items() if k not in ('tx', 'ty')} for t in trees]
+
+    # ---- ground detail -----------------------------------------------------------------------
+    # Rocks only where the ground is already impassable (steep slopes), so the baked
+    # pathing map stays true; flowers, shrubs, mushrooms and reeds have no pathing.
+    detail = []
+    biome_of = np.array([z['biome'] for z in geo.ZONES])[T.zone_of]
+    is_tree = candidates
+    steep = np.zeros((n, n), bool)
+    steep[:-1, :-1] = T.steep_tile & ~T.cliff_tile
+    near_water = dilate(T.lake | T.river, 2) & ~(T.lake | T.river)
+
+    def add_detail(did, tx, ty, scale=(0.8, 1.2), z=None, fixed=None):
+        x, y = world_xy(tx, ty)
+        detail.append(dict(id=did, var=int(rng.integers(0, DETAIL_VARIATIONS[did])), x=x, y=y,
+                           z=ground_z_at(T, tx, ty) if z is None else z,
+                           angle=fixed if fixed is not None else float(rng.uniform(0, 2 * math.pi)),
+                           scale=float(rng.uniform(*scale)), state=2, life=255))
+
+    roll = rng.random((n, n))
+    # rubble at the foot and brow of mountain cliffs: walkable ground, so its tile is blocked in the pathing map
+    by_cliff = np.zeros((n, n), bool)
+    by_cliff[:-1, :-1] = T.cliff_tile
+    by_cliff = dilate(by_cliff, 1) & tile_ok & (T.relief > 120) & (T.road_d > 5) & ~T.ramp_near
+    rubble = by_cliff & ~is_tree & ~clear & (roll < 0.10)
+    for ty, tx in np.argwhere((steep & ground & ~clear & (roll < 0.2)) | rubble):
+        rock, spire = ROCKS.get(str(biome_of[ty, tx]), ('LRrk', None))
+        if spire and rng.random() < 0.25:
+            add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.28, 0.42))
+        else:
+            add_detail(rock, tx + 0.5, ty + 0.5, scale=(0.8, 1.4), fixed=4.712389 if rock == 'ORrk' else None)
+        if rubble[ty, tx]:
+            detail[-1]['tile'] = (ty, tx)
+            T.pathing[ty * 4:ty * 4 + 4, tx * 4:tx * 4 + 4] = 0xCA
+            occupied[ty, tx] = True
+    unblock_rubble(T, label, sizes, rubble, detail)
+    lush = dilate(occupied, 1) | (T.road_d < 1.6)
+    open_ground = tile_ok & ~is_tree & ~lush & ~steep
+    roll = rng.random((n, n))
+    for ty, tx in np.argwhere(open_ground & (roll < 0.09)):
+        plants = PLANTS.get(str(biome_of[ty, tx]))
+        if plants:
+            add_detail(str(rng.choice(plants)), tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
+    for ty, tx in np.argwhere(near_water & tile_ok & ~is_tree & ~lush & (roll > 0.80)):
+        add_detail('APct' if rng.random() < 0.6 else 'LPrs', tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
+    lake_pts = T.lake & ~dilate(~T.lake, 1)
+    for ty, tx in np.argwhere(lake_pts & (roll < 0.05)):
+        add_detail('LPfp', tx + rng.uniform(-0.3, 0.3), ty + rng.uniform(-0.3, 0.3), z=-89.6)
+    detail = [{k: v for k, v in d.items() if k != 'tile'} for d in detail]
+    O.details = detail
+    O.doodads = O.doodads + detail
     O.mines, O.creeps, O.shops = mines, creeps, shops
 
     # world coordinates and heights for every unit
@@ -309,10 +378,10 @@ def place(T, seed=7):
 
 
 def walkable_regions(T):
-    """Size (in tiles) of the walkable area each tile belongs to; 0 for unwalkable tiles."""
+    """Label the walkable areas (tile resolution); returns (label map, area sizes), label -1 = unwalkable."""
     cells = T.pathing.reshape(MAP_H, 4, MAP_W, 4)
     walk = ((cells & 0x02) == 0).mean(axis=(1, 3)) >= 0.5
-    label = -np.ones((MAP_H, MAP_W), np.int64)
+    label = -np.ones((MAP_H + 1, MAP_W + 1), np.int64)
     sizes = []
     for sy, sx in np.argwhere(walk):
         if label[sy, sx] >= 0:
@@ -327,6 +396,31 @@ def walkable_regions(T):
                     label[yy, xx] = cid
                     stack.append((yy, xx))
         sizes.append(count)
-    out = np.zeros((MAP_H + 1, MAP_W + 1), np.int64)
-    out[:-1, :-1] = np.where(label >= 0, np.array(sizes + [0])[label], 0)
-    return out
+    return label, np.array(sizes + [0])
+
+
+def main_regions(T, label, sizes):
+    """Tiles on the main walkable area of their landmass (its largest), as opposed to sealed-off plateaus."""
+    owner = np.where(T.land, T.land_id, -1)
+    sel = (owner >= 0) & (label >= 0)
+    keys, counts = np.unique(owner[sel] * (len(sizes) + 1) + label[sel], return_counts=True)
+    best = {}
+    for key, count in zip(keys, counts):
+        land, lab = divmod(int(key), len(sizes) + 1)
+        if count > best.get(land, (0, -1))[0]:
+            best[land] = (count, lab)
+    return np.isin(label, [lab for _, lab in best.values()]) & (label >= 0)
+
+
+def unblock_rubble(T, label, sizes, rubble, detail):
+    """Take away rubble that cut off part of an area that used to be connected."""
+    for _ in range(6):
+        new_label, new_sizes = walkable_regions(T)
+        cut = (label >= 0) & (new_label >= 0) & (sizes[label] >= 600) & (new_sizes[new_label] < 0.9 * sizes[label])
+        culprits = dilate(cut, 1) & rubble
+        if not culprits.any():
+            return
+        for ty, tx in np.argwhere(culprits):
+            T.pathing[ty * 4:ty * 4 + 4, tx * 4:tx * 4 + 4] = 0x40
+            rubble[ty, tx] = False
+        detail[:] = [d for d in detail if not ('tile' in d and not rubble[d['tile']])]

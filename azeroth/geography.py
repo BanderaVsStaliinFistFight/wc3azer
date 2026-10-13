@@ -85,7 +85,7 @@ zone('Winterspring', 'Kalimdor', 146, 380, 24, 20, 'snow', base=50, level=1)
 zone('Mount Hyjal', 'Kalimdor', 136, 338, 18, 15, 'worldtree', base=60, hills=110, level=1)
 zone('Azshara', 'Kalimdor', 182, 318, 16, 22, 'autumn', hills=90)
 zone('Ashenvale', 'Kalimdor', 100, 290, 55, 17, 'nightelf')
-zone('Stonetalon Mountains', 'Kalimdor', 46, 240, 22, 24, 'rocky', base=30, mountains=260, level=1)
+zone('Stonetalon Mountains', 'Kalimdor', 46, 240, 22, 24, 'rocky', base=30, mountains=360, level=1)
 zone('Northern Barrens', 'Kalimdor', 120, 232, 26, 24, 'savanna')
 zone('Durotar', 'Kalimdor', 164, 238, 13, 32, 'reddesert')
 zone('Desolace', 'Kalimdor', 38, 180, 22, 24, 'barren')
@@ -116,7 +116,7 @@ zone('Arathi Highlands', 'Eastern Kingdoms', 410, 302, 24, 13, 'farmland', base=
 zone('Wetlands', 'Eastern Kingdoms', 394, 270, 18, 14, 'swamp', base=20)
 zone('Twilight Highlands', 'Eastern Kingdoms', 452, 272, 17, 22, 'highland')
 zone('Dun Morogh', 'Eastern Kingdoms', 368, 236, 18, 16, 'snow', base=40, level=1)
-zone('Loch Modan', 'Eastern Kingdoms', 420, 240, 14, 13, 'highland', base=90, mountains=60)
+zone('Loch Modan', 'Eastern Kingdoms', 420, 240, 14, 13, 'highland', base=90, mountains=100)
 zone('Badlands', 'Eastern Kingdoms', 434, 212, 17, 13, 'reddesert')
 zone('Searing Gorge', 'Eastern Kingdoms', 392, 210, 14, 9, 'volcanic', base=20, level=1)
 zone('Burning Steppes', 'Eastern Kingdoms', 404, 191, 22, 8, 'volcanic', base=90)
@@ -153,6 +153,9 @@ RIDGES = [
     ([(70, 104), (84, 104), (98, 98), (100, 84), (96, 68), (82, 64), (68, 70), (64, 86), (70, 104)], 4, 380),  # Un'Goro rim
     ([(138, 112), (150, 104), (160, 112)], 4, 300),                                # Onyxia's lair hills
     ([(26, 96), (40, 92), (60, 96)], 3, 220),                                      # Silithus / Feralas border
+    ([(64, 318), (66, 336), (64, 356), (66, 372)], 3, 380),                        # Darkshore's eastern range
+    ([(186, 304), (192, 320), (194, 334)], 3, 340),                                # the mountains of Azshara
+    ([(66, 134), (70, 118), (68, 104)], 3, 360),                                   # Feralas / Thousand Needles wall
     # Eastern Kingdoms
     ([(376, 336), (384, 346), (394, 352), (404, 346)], 5, 560),                    # Alterac Mountains
     ([(408, 318), (420, 322), (432, 318)], 4, 300),                                # Hinterland hills
@@ -167,6 +170,8 @@ RIDGES = [
     ([(382, 120), (396, 116), (410, 120)], 3, 260),                                # Duskwood / STV ridge
     ([(368, 70), (376, 80), (388, 84)], 3, 220),                                   # STV hills
     ([(430, 256), (440, 248), (448, 236)], 3, 280),                                # Grim Batol hills
+    ([(440, 222), (452, 214), (458, 202)], 4, 360),                                # Badlands peaks
+    ([(414, 160), (426, 156), (440, 160)], 3, 360),                                # Redridge peaks
 ]
 
 # Lakes: (cx, cy, rx, ry) or polygon.
@@ -475,11 +480,11 @@ def _nr_zone(name, u, v, ru, rv, biome, **kw):
 
 _nr_zone('Borean Tundra', 0.13, 0.25, 0.13, 0.18, 'tundra')
 _nr_zone('Sholazar Basin', 0.13, 0.64, 0.12, 0.17, 'jungle', base=30)
-_nr_zone('Wintergrasp', 0.32, 0.50, 0.08, 0.09, 'snow', base=110, mountains=60)
+_nr_zone('Wintergrasp', 0.32, 0.50, 0.08, 0.09, 'snow', base=110, mountains=100)
 _nr_zone('Icecrown', 0.38, 0.80, 0.17, 0.16, 'icecrown', base=40, level=1)
 _nr_zone('Crystalsong Forest', 0.50, 0.52, 0.06, 0.08, 'crystal', base=90)
 _nr_zone('Dragonblight', 0.43, 0.28, 0.16, 0.17, 'snow', base=60, mountains=30, density=0.06)
-_nr_zone('The Storm Peaks', 0.74, 0.82, 0.20, 0.16, 'snow', base=100, mountains=320, level=1)
+_nr_zone('The Storm Peaks', 0.74, 0.82, 0.20, 0.16, 'snow', base=100, mountains=460, level=1)
 _nr_zone("Zul'Drak", 0.73, 0.53, 0.14, 0.10, 'tundra', base=50, hills=90, density=0.04, level=1)
 _nr_zone('Grizzly Hills', 0.70, 0.30, 0.10, 0.11, 'grizzly', base=70)
 _nr_zone('Howling Fjord', 0.87, 0.17, 0.12, 0.15, 'fjord', base=80)
