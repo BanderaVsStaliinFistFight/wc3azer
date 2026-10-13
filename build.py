@@ -14,9 +14,9 @@ from azeroth.terrain import LEFT, BOTTOM, MAP_W, MAP_H, MARGIN_L, MARGIN_R, MARG
 
 MAP_NAME = 'Azeroth'
 AUTHOR = 'Azeroth map generator (wc3azer)'
-DESCRIPTION = ('The whole world of Azeroth on the largest map Warcraft III allows (480x480): Kalimdor, the Eastern '
-               'Kingdoms, Northrend, Pandaria, the Broken Isles, Kul Tiras, Zandalar and the Maelstrom. Twelve capitals, '
-               'mage portals between the continents, goblin shipyards and zeppelins.')
+DESCRIPTION = ('The world of Azeroth on the largest map Warcraft III allows (480x480): Kalimdor, the Eastern Kingdoms, '
+               'a vast Northrend, Kul Tiras, Kezan and the Maelstrom. Twelve capitals, mage portals between the '
+               'continents, goblin shipyards and zeppelins.')
 PLAYER_COLOURS = [(255, 3, 3), (0, 66, 255), (28, 230, 185), (84, 0, 129), (255, 252, 0), (254, 138, 14),
                   (32, 192, 0), (229, 91, 176), (149, 150, 151), (126, 191, 241), (16, 98, 70), (78, 42, 4)]
 RACE_ID = {'human': 1, 'orc': 2, 'undead': 3, 'nightelf': 4, 'random': 0}

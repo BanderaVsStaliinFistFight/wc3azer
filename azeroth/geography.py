@@ -2,9 +2,9 @@
 
 Coordinates are in tiles with (0, 0) at the south-west corner of the map and
 y growing northwards. The playable area is x 6..474, y 4..472.
-Kalimdor lies to the west, the Eastern Kingdoms to the east, Northrend to the
-north, the Maelstrom in the middle of the Great Sea, Pandaria to the south and
-the Broken Isles, Kul Tiras and Zandalar around the Maelstrom.
+Kalimdor lies to the west, the Eastern Kingdoms to the east and a greatly
+enlarged Northrend across the north. The Maelstrom sits in the middle of the
+Great Sea with the goblin isle of Kezan below it and Kul Tiras to the east.
 """
 
 # ---------------------------------------------------------------------------
@@ -37,22 +37,12 @@ EASTERN_KINGDOMS = [
 ]
 
 NORTHREND = [
-    (190, 394), (194, 404), (188, 414), (192, 424), (187, 436), (191, 448), (198, 458), (208, 464), (224, 469),
-    (244, 470), (264, 470), (282, 469), (298, 466), (308, 460), (315, 450), (316, 438), (319, 426), (316, 414),
-    (319, 402), (316, 392), (310, 384), (304, 380), (298, 385), (294, 392), (290, 385), (282, 384), (276, 388),
-    (268, 384), (260, 380), (250, 381), (242, 386), (236, 392), (230, 388), (226, 380), (218, 378), (208, 380),
-    (200, 384),
-]
-
-PANDARIA = [
-    (200, 64), (198, 80), (204, 94), (214, 104), (228, 112), (244, 116), (260, 116), (274, 112), (286, 104),
-    (296, 96), (304, 84), (308, 70), (306, 56), (300, 44), (292, 34), (280, 26), (266, 20), (250, 18),
-    (236, 20), (224, 26), (214, 34), (206, 44), (202, 54),
-]
-
-BROKEN_ISLES = [
-    (258, 318), (253, 330), (256, 342), (260, 352), (268, 358), (278, 362), (290, 360), (298, 352), (304, 342),
-    (306, 330), (302, 318), (296, 310), (288, 307), (282, 302), (274, 300), (266, 304), (260, 310),
+    (76, 432), (71, 444), (75, 456), (86, 463), (102, 466), (122, 464), (142, 467), (164, 465), (186, 467),
+    (208, 466), (230, 468), (254, 466), (278, 467), (302, 465), (326, 467), (350, 466), (372, 464), (390, 459),
+    (398, 449), (395, 437), (389, 427), (380, 421), (368, 418), (355, 416), (343, 413), (332, 407), (324, 397),
+    (321, 384), (320, 370), (317, 356), (311, 344), (303, 333), (297, 321), (291, 310), (281, 302), (269, 298),
+    (257, 300), (247, 307), (240, 318), (236, 330), (231, 342), (225, 353), (214, 362), (204, 372), (197, 384),
+    (192, 396), (188, 409), (182, 421), (170, 427), (156, 429), (140, 426), (124, 430), (108, 427), (92, 430),
 ]
 
 KUL_TIRAS = [
@@ -60,20 +50,12 @@ KUL_TIRAS = [
     (300, 192), (294, 183), (284, 184), (278, 190),
 ]
 
-ZANDALAR = [
-    (196, 160), (198, 172), (206, 180), (218, 182), (230, 178), (236, 168), (234, 156), (230, 146), (222, 140),
-    (212, 138), (204, 142), (198, 150),
-]
-
 # name: shape. Polygons are lists of points; ellipses are ('ellipse', cx, cy, rx, ry).
 LANDMASSES = {
     'Kalimdor': KALIMDOR,
     'Eastern Kingdoms': EASTERN_KINGDOMS,
     'Northrend': NORTHREND,
-    'Pandaria': PANDARIA,
-    'Broken Isles': BROKEN_ISLES,
     'Kul Tiras': KUL_TIRAS,
-    'Zandalar': ZANDALAR,
     'Teldrassil': ('ellipse', 37, 413, 13, 11),
     'Azuremyst Isle': ('ellipse', 22, 366, 8, 12),
     'Bloodmyst Isle': ('ellipse', 18, 392, 7, 7),
@@ -82,11 +64,7 @@ LANDMASSES = {
     'Theramore Isle': ('ellipse', 179, 133, 3, 3),
     'Alcaz Island': ('ellipse', 182, 152, 4, 3),
     'Tol Barad': ('ellipse', 338, 274, 5, 4),
-    'Broken Shore': ('ellipse', 292, 293, 9, 5),
-    'Kezan': ('ellipse', 258, 210, 6, 5),
-    'Lost Isles': ('ellipse', 230, 226, 6, 5),
-    'Timeless Isle': ('ellipse', 316, 26, 5, 4),
-    'Isle of Thunder': ('ellipse', 194, 114, 6, 5),
+    'Kezan': ('ellipse', 250, 202, 9, 6),
 }
 
 # The Maelstrom: a ring of jagged rocks around a bottomless whirlpool.
@@ -165,42 +143,22 @@ zone('Northern Stranglethorn', 'Eastern Kingdoms', 366, 98, 26, 20, 'jungle')
 zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
 zone('Tol Barad', 'Tol Barad', 338, 274, 5, 4, 'barren')
 # Northrend
-zone('Borean Tundra', 'Northrend', 208, 398, 16, 14, 'tundra')
-zone('Sholazar Basin', 'Northrend', 204, 436, 14, 16, 'jungle', base=30)
-zone('Icecrown', 'Northrend', 236, 452, 24, 14, 'icecrown', base=150)
-zone('Wintergrasp', 'Northrend', 232, 422, 10, 10, 'snow', base=110, mountains=60)
-zone('Dragonblight', 'Northrend', 252, 398, 22, 13, 'snow', base=60, mountains=40, density=0.06)
-zone('Crystalsong Forest', 'Northrend', 262, 425, 8, 8, 'crystal', base=90)
-zone('The Storm Peaks', 'Northrend', 282, 452, 26, 14, 'snow', base=220, mountains=320)
-zone("Zul'Drak", 'Northrend', 294, 424, 18, 12, 'tundra', base=170, hills=90, density=0.04)
-zone('Grizzly Hills', 'Northrend', 288, 398, 14, 10, 'grizzly', base=70)
-zone('Howling Fjord', 'Northrend', 308, 396, 11, 14, 'fjord', base=80)
-# Pandaria
-zone('The Dread Wastes', 'Pandaria', 214, 56, 12, 18, 'amber')
-zone('Townlong Steppes', 'Pandaria', 218, 92, 14, 12, 'savanna', base=90)
-zone('Kun-Lai Summit', 'Pandaria', 254, 102, 26, 12, 'snow', base=180, mountains=280)
-zone('The Jade Forest', 'Pandaria', 290, 72, 14, 26, 'jungle', hills=110)
-zone('Vale of Eternal Blossoms', 'Pandaria', 256, 70, 14, 11, 'autumn', base=90, density=0.25)
-zone('Valley of the Four Winds', 'Pandaria', 244, 44, 18, 11, 'farmland')
-zone('Krasarang Wilds', 'Pandaria', 262, 26, 26, 8, 'jungle')
-zone('Timeless Isle', 'Timeless Isle', 316, 26, 5, 4, 'jungle')
-zone('Isle of Thunder', 'Isle of Thunder', 194, 114, 6, 5, 'swamp')
-# Broken Isles
-zone('Azsuna', 'Broken Isles', 264, 312, 10, 10, 'autumn')
-zone("Val'sharah", 'Broken Isles', 262, 336, 10, 11, 'nightelf')
-zone('Highmountain', 'Broken Isles', 280, 353, 14, 9, 'highland', base=120, mountains=160)
-zone('Stormheim', 'Broken Isles', 298, 336, 9, 15, 'tundra', base=80, hills=120)
-zone('Suramar', 'Broken Isles', 282, 324, 11, 9, 'nightelf', base=60)
-zone('Broken Shore', 'Broken Shore', 292, 293, 9, 5, 'volcanic')
-# Kul Tiras, Zandalar, the Maelstrom
+zone('Borean Tundra', 'Northrend', 112, 442, 34, 13, 'tundra')
+zone('Sholazar Basin', 'Northrend', 166, 450, 20, 16, 'jungle', base=30)
+zone('Icecrown', 'Northrend', 214, 452, 24, 16, 'icecrown', base=150)
+zone('Wintergrasp', 'Northrend', 222, 416, 14, 12, 'snow', base=110, mountains=60)
+zone('Crystalsong Forest', 'Northrend', 260, 420, 12, 10, 'crystal', base=90)
+zone('The Storm Peaks', 'Northrend', 302, 455, 44, 12, 'snow', base=220, mountains=320)
+zone("Zul'Drak", 'Northrend', 306, 424, 18, 12, 'tundra', base=170, hills=90, density=0.04)
+zone('Dragonblight', 'Northrend', 256, 380, 30, 20, 'snow', base=60, mountains=40, density=0.06)
+zone('Dragonblight', 'Northrend', 262, 330, 26, 22, 'tundra', base=40, density=0.14)
+zone('Grizzly Hills', 'Northrend', 304, 374, 16, 22, 'grizzly', base=70)
+zone('Howling Fjord', 'Northrend', 360, 436, 34, 16, 'fjord', base=80)
+# Kul Tiras, Kezan, the Maelstrom
 zone('Drustvar', 'Kul Tiras', 284, 207, 10, 11, 'autumn', base=110, hills=110)
 zone('Stormsong Valley', 'Kul Tiras', 306, 219, 11, 9, 'farmland', base=50)
 zone('Tiragarde Sound', 'Kul Tiras', 302, 195, 10, 9, 'temperate')
-zone("Vol'dun", 'Zandalar', 204, 162, 9, 12, 'desert')
-zone('Nazmir', 'Zandalar', 224, 172, 10, 9, 'swamp')
-zone('Zuldazar', 'Zandalar', 220, 150, 12, 11, 'jungle', base=60, hills=110)
-zone('Kezan', 'Kezan', 258, 210, 6, 5, 'jungle')
-zone('Lost Isles', 'Lost Isles', 230, 226, 6, 5, 'jungle')
+zone('Kezan', 'Kezan', 250, 202, 9, 6, 'jungle')
 zone('The Maelstrom', 'Maelstrom Rock 0', 252, 246, 30, 30, 'rocky')
 for i in range(1, len(MAELSTROM_ROCKS)):
     zone('The Maelstrom', 'Maelstrom Rock %d' % i, 252, 246, 30, 30, 'rocky')
@@ -239,19 +197,15 @@ RIDGES = [
     ([(368, 70), (376, 80), (388, 84)], 3, 220),                                   # STV hills
     ([(430, 256), (440, 248), (448, 236)], 3, 280),                                # Grim Batol hills
     # Northrend
-    ([(220, 470), (232, 460), (246, 462), (258, 468)], 6, 520),                    # Icecrown glacier
-    ([(262, 446), (276, 458), (296, 462), (310, 452)], 7, 640),                    # Storm Peaks
-    ([(192, 424), (204, 422), (214, 428)], 3, 320),                                # Sholazar rim
-    ([(272, 436), (284, 436), (300, 440)], 3, 300),                                # Zul'Drak cliffs
-    # Pandaria
-    ([(226, 104), (246, 108), (268, 104), (280, 98)], 6, 600),                     # Kun-Lai peaks
-    ([(236, 84), (248, 90), (262, 88), (272, 80)], 3, 300),                        # Vale wall
-    ([(222, 74), (226, 62), (226, 48)], 3, 260),                                   # Serpent's Spine (west)
-    # Broken Isles / Kul Tiras / Zandalar
-    ([(266, 350), (278, 358), (292, 354)], 5, 480),                                # Highmountain
-    ([(300, 348), (302, 334), (298, 322)], 3, 300),                                # Stormheim
+    ([(200, 467), (214, 464), (230, 467), (246, 465)], 5, 520),                    # Icecrown glacier
+    ([(270, 456), (292, 462), (318, 464), (342, 460), (360, 465)], 7, 640),        # Storm Peaks
+    ([(148, 436), (160, 434), (176, 438), (186, 448)], 3, 320),                    # Sholazar rim
+    ([(286, 410), (298, 416), (318, 414)], 3, 300),                                # Zul'Drak cliffs
+    ([(204, 400), (214, 392), (226, 392)], 3, 260),                                # Wintergrasp foothills
+    ([(330, 400), (338, 412), (334, 424)], 3, 300),                                # Grizzly Hills / Howling Fjord divide
+    ([(244, 330), (256, 322), (270, 318)], 3, 240),                                # Dragonblight coast hills
+    # Kul Tiras
     ([(280, 212), (286, 202), (284, 192)], 3, 300),                                # Drustvar
-    ([(214, 152), (220, 156), (226, 152)], 3, 280),                                # Dazar'alor hill
 ]
 
 # Lakes: (cx, cy, rx, ry) or polygon.
@@ -269,10 +223,9 @@ LAKES = [
     (402, 270, 4, 3),        # Wetlands marsh
     (390, 276, 3, 2),
     (446, 152, 4, 3),        # Swamp of Sorrows
-    (226, 176, 4, 3),        # Nazmir marsh
-    (246, 400, 3, 2),        # Dragonblight lake
-    (208, 432, 3, 3),        # Sholazar lake
-    (254, 54, 3, 2),         # Valley of Four Winds pond
+    (248, 360, 3, 2),        # Dragonblight lake
+    (168, 452, 3, 3),        # Sholazar lake
+    (296, 384, 3, 2),        # Grizzly Hills lake
 ]
 
 # Rivers: polyline, half-width. Rivers are shallow (walkable) water.
@@ -285,8 +238,7 @@ RIVERS = [
     [(398, 352), (404, 362), (420, 372), (440, 374), (458, 372)],            # Thondroril / Darrowmere
     [(414, 234), (420, 226), (430, 218)],                                    # Loch Modan outflow
     [(380, 176), (372, 168), (360, 166), (344, 170)],                        # Elwynn river
-    [(232, 52), (244, 56), (256, 54), (270, 44), (282, 34)],                 # Pandaria river
-    [(216, 168), (224, 172), (232, 176)],                                    # Nazmir
+    [(168, 452), (160, 442), (154, 432), (152, 426)],                        # Sholazar river
 ]
 
 # Shallow straits that ground units can wade across: polyline, half-width.
@@ -306,8 +258,8 @@ MESAS = [
     (116, 122, 2.6, 2), (92, 116, 2.0, 1), (100, 140, 1.8, 1), (120, 132, 2.0, 2), (86, 140, 2.0, 1),
     # Durotar / Badlands buttes
     (170, 226, 1.8, 1), (156, 218, 1.6, 1), (440, 206, 2.4, 1), (426, 218, 2.0, 1),
-    # Howling Fjord cliffs, Zul'Drak plateau, Kun-Lai shelves
-    (314, 404, 2.5, 1), (300, 428, 3.0, 1), (286, 420, 2.6, 1),
+    # Howling Fjord cliffs, Zul'Drak plateau
+    (378, 446, 2.5, 1), (392, 440, 2.0, 1), (316, 430, 3.0, 1), (300, 426, 2.6, 1),
     # Desolace
     (30, 170, 2.0, 1),
 ]
@@ -315,8 +267,7 @@ MESAS = [
 # Basins (bowls): (cx, cy, radius, depth)
 BASINS = [
     (82, 84, 12, 180),       # Un'Goro crater floor
-    (204, 436, 9, 60),       # Sholazar basin
-    (254, 70, 8, 40),        # Vale
+    (166, 452, 10, 60),      # Sholazar basin
 ]
 
 # ---------------------------------------------------------------------------
@@ -331,12 +282,12 @@ CAPITALS = [
     (3, 'Darnassus', 33, 418, 'nightelf'),
     (4, 'Ironforge', 372, 236, 'human'),
     (5, 'Thunder Bluff', 86, 196, 'orc'),
-    (6, 'Icecrown Citadel', 238, 446, 'undead'),
+    (6, 'Icecrown Citadel', 216, 452, 'undead'),
     (7, 'Silvermoon City', 438, 428, 'human'),
-    (8, 'Shrine of Seven Stars', 258, 68, 'random'),
-    (9, 'Suramar City', 284, 324, 'nightelf'),
+    (8, 'Dalaran', 260, 420, 'random'),
+    (9, 'Warsong Hold', 112, 440, 'orc'),
     (10, 'Boralus', 300, 196, 'human'),
-    (11, "Dazar'alor", 220, 150, 'orc'),
+    (11, 'Valgarde', 360, 428, 'human'),
 ]
 
 TOWNS = [
@@ -351,16 +302,17 @@ TOWNS = [
     ('Gadgetzan Market', 130, 72, 'ngme'), ('Cenarion Hold', 44, 72, 'nmoo'), ("Marshal's Refuge", 86, 92, 'nfoh'),
     ('Freewind Post', 100, 128, 'nmr4'), ('Camp Mojache', 58, 126, 'ntav'), ("Nijel's Point", 40, 198, 'ngme'),
     ('Sun Rock Retreat', 52, 230, 'nmer'), ('Camp Taurajo', 114, 182, 'nmr4'), ('Ramkahen', 78, 40, 'nmrk'),
-    ('Valiance Keep', 206, 390, 'nshp'), ('Warsong Hold', 198, 404, 'ngad'), ('Dalaran', 262, 426, 'nmr7'),
-    ('Wyrmrest Temple', 252, 402, 'ndru'), ('Valgarde', 306, 388, 'nshp'), ("K3", 288, 452, 'nmr7'),
-    ('Shrine of Two Moons', 252, 74, 'ntav'), ('Halfhill', 240, 46, 'nmrk'), ('Dawn\'s Blossom', 288, 74, 'nmrc'),
-    ('Dalaran (Broken Isles)', 270, 326, 'nmr9'), ('Stormwind Harbor', 344, 186, 'nshp'),
-    ('Port of Zandalar', 228, 146, 'nshp'), ('Brennadam', 306, 220, 'ntav'), ('Arathor', 404, 300, 'nmrk'),
+    ('Stormwind Harbor', 344, 186, 'nshp'), ('Brennadam', 306, 220, 'ntav'), ('Arathor', 404, 300, 'nmrk'),
     ('Aerie Peak', 422, 334, 'nmer'), ('Hammerfall', 428, 300, 'ntav'), ("Thorium Point", 390, 214, 'ngme'),
     ('Morgan\'s Vigil', 418, 190, 'ndrk'), ('Sentinel Hill', 342, 146, 'ntav'), ('Sepulcher', 346, 352, 'nmr2'),
     ('Brill', 370, 384, 'ngme'), ('Chillwind Camp', 404, 360, 'nfoh'), ('Tanaris Caverns of Time', 150, 70, 'ndrz'),
     ('Onyxia\'s Lair', 150, 106, 'ndrk'), ('Feathermoon', 26, 118, 'nshp'), ('Rut\'theran', 44, 404, 'nshp'),
-    ('Splintertree Post', 140, 282, 'nmr5'), ('Razor Hill', 166, 232, 'ngme'), ('Kezan Trade', 258, 210, 'ngad'),
+    ('Splintertree Post', 140, 282, 'nmr5'), ('Razor Hill', 166, 232, 'ngme'), ('Kezan Trade', 250, 202, 'ngad'),
+    # Northrend
+    ('Valiance Keep', 136, 430, 'nshp'), ('Fizzcrank Airstrip', 92, 448, 'ngad'), ("River's Heart", 168, 444, 'nmoo'),
+    ('Wyrmrest Temple', 262, 362, 'ndru'), ("Moa'ki Harbor", 262, 306, 'nshp'), ("Agmar's Hammer", 238, 372, 'ntav'),
+    ('Amberpine Lodge', 304, 390, 'ngme'), ('K3', 300, 460, 'nmr7'), ("Zim'Torga", 326, 420, 'nfoh'),
+    ('Vengeance Landing', 384, 432, 'nshp'), ('Argent Tournament Grounds', 238, 464, 'nmrk'), ('Violet Gate Market', 244, 420, 'nmr9'),
 ]
 
 CAMPS = [
@@ -383,29 +335,29 @@ CAMPS = [
     ('Shimmering Flats', 116, 116, 1), ('Brackenwall Village', 140, 150, 1), ('Fire Plume Ridge', 82, 82, 2), ('Ahn\'Qiraj', 30, 56, 2),
     ('Zul\'Farrak', 120, 92, 2), ('Lost City of the Tol\'vir', 96, 32, 2), ('Steamwheedle Port', 160, 90, 0), ('Ruins of Ahn\'Qiraj', 46, 52, 1),
     ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 18, 392, 0),
-    ('Coldarra', 196, 412, 1), ('Naxxramas', 270, 410, 2), ('Ulduar', 296, 458, 2), ('Gundrak', 306, 428, 2), ('Utgarde Keep', 312, 402, 1),
-    ('Drak\'Tharon', 280, 412, 1), ('Wintergrasp Fortress', 232, 424, 1), ('Nesingwary Base Camp', 210, 440, 1), ('Azjol-Nerub', 240, 396, 2),
-    ('Amber Ledge', 216, 392, 0), ('Pinnacle of Naxx', 222, 450, 2),
-    ('Temple of the Jade Serpent', 296, 66, 1), ('Mogu\'shan Palace', 252, 62, 2), ('Niuzao Temple', 214, 98, 1), ('Klaxxi\'vess', 212, 56, 1),
-    ('Temple of the White Tiger', 268, 102, 2), ('Zhu\'s Watch', 270, 24, 0), ('Stormstout Brewery', 236, 40, 0),
-    ('Black Rook Hold', 262, 342, 1), ('Thunder Totem', 282, 350, 1), ('Halls of Valor', 300, 340, 2), ('Nar\'thalas', 266, 312, 1),
-    ('Tomb of Sargeras', 292, 293, 2), ('Waycrest Manor', 284, 210, 1), ('Shrine of the Storm', 312, 220, 1), ('Freehold', 290, 188, 1),
-    ('Atal\'Dazar', 214, 156, 1), ('Temple of Sethraliss', 204, 166, 1), ('The Underrot', 224, 174, 1),
-    ('Maelstrom Rock', 252, 268, 2), ('Kezan', 260, 212, 0), ('Lost Isles', 230, 226, 1),
-    ('Isle of Thunder', 194, 114, 2), ('Timeless Isle', 316, 26, 2), ('Tol Barad', 338, 274, 1),
+    ('Coldarra', 82, 448, 1), ('Amber Ledge', 94, 432, 0), ('Kaskala', 140, 438, 0), ("Bor'gorok Outpost", 126, 458, 0),
+    ('Nesingwary Base Camp', 150, 452, 1), ('Rainspeaker Canopy', 176, 458, 1), ('Frenzyheart Hill', 182, 440, 0),
+    ('Ymirheim', 238, 446, 1), ('The Shadow Vault', 194, 462, 2), ('Argent Vanguard', 236, 432, 1), ('Wintergrasp Fortress', 222, 412, 1),
+    ('Azjol-Nerub', 240, 384, 2), ('Naxxramas', 288, 368, 2), ("Star's Rest", 236, 348, 0), ('New Hearthglen', 284, 338, 1),
+    ('Icemist Village', 252, 396, 1), ("Moa'ki Ruins", 274, 314, 0), ("Drak'Tharon Keep", 296, 404, 1), ('Grizzlemaw', 312, 380, 1),
+    ('Gundrak', 328, 432, 2), ("Drak'Sotra", 292, 432, 1), ('Ulduar', 318, 460, 2), ('Dun Niffelem', 282, 458, 1),
+    ('Brunnhildar Village', 346, 458, 1), ('Utgarde Keep', 352, 448, 1), ('Utgarde Pinnacle', 388, 452, 2), ('Kamagua', 386, 426, 0),
+    ('Fort Wildervar', 336, 440, 0),
+    ('Waycrest Manor', 284, 210, 1), ('Shrine of the Storm', 312, 220, 1), ('Freehold', 290, 188, 1),
+    ('Maelstrom Rock', 252, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 338, 274, 1),
 ]
 
 # Waygates (mage portals): pairs of (name, x, y) linking far-apart lands.
 PORTALS = [
     (('Stormwind Portal', 362, 180), ('Darnassus Portal', 38, 412)),
     (('Orgrimmar Portal', 152, 262), ('Undercity Portal', 356, 382)),
-    (('Ironforge Portal', 378, 244), ('Dalaran Portal (Northrend)', 266, 430)),
+    (('Ironforge Portal', 378, 244), ('Dalaran Portal', 276, 404)),
     (('Thunder Bluff Portal', 78, 202), ('Silvermoon Portal', 432, 420)),
     (('Stormwind Harbor Portal', 350, 190), ('Boralus Portal', 306, 202)),
-    (('Orgrimmar Gate', 166, 262), ("Dazar'alor Portal", 214, 146)),
-    (('Ratchet Portal', 152, 206), ('Shrine Portal', 262, 76)),
-    (('Undercity Gate', 368, 370), ('Icecrown Portal', 230, 440)),
-    (('Silvermoon Gate', 444, 432), ('Suramar Portal', 278, 318)),
+    (('Undercity Gate', 368, 370), ('Icecrown Portal', 236, 438)),
+    (('Orgrimmar Gate', 166, 262), ('Warsong Hold Portal', 132, 432)),
+    (('Menethil Harbor Portal', 378, 280), ('Valgarde Portal', 340, 424)),
+    (('Ratchet Portal', 152, 206), ('Kezan Portal', 250, 202)),
 ]
 
 # Roads (polylines of tiles). Painted as dirt paths and kept free of trees.
@@ -433,12 +385,15 @@ ROADS = [
     [(96, 254), (70, 246), (52, 230), (44, 210), (40, 198), (36, 176), (46, 150), (58, 126)],
     [(140, 150), (150, 140), (166, 134), (176, 133)],
     [(118, 206), (130, 196), (140, 170), (140, 150)],
-    # Northrend, Pandaria, isles
-    [(206, 390), (208, 400), (198, 404)], [(206, 396), (228, 396), (252, 402), (270, 410), (288, 404), (306, 390)],
-    [(252, 402), (260, 414), (262, 426)], [(262, 426), (250, 438), (238, 446)], [(262, 426), (278, 436), (288, 452)],
-    [(258, 68), (252, 74), (240, 82), (226, 92)], [(258, 68), (276, 72), (288, 74)], [(258, 68), (248, 56), (240, 46), (262, 30)],
-    [(284, 324), (270, 326), (264, 336)], [(284, 324), (290, 340), (282, 350)], [(284, 324), (268, 312)],
-    [(300, 196), (290, 206), (306, 220)], [(220, 150), (206, 162)], [(220, 150), (224, 172)],
+    # Northrend
+    [(112, 440), (130, 438), (150, 444), (170, 446), (190, 440), (208, 430), (230, 422), (260, 420)],
+    [(260, 420), (262, 392), (262, 362), (262, 330), (262, 306)],
+    [(260, 420), (240, 438), (216, 452)],
+    [(260, 420), (284, 424), (306, 426), (330, 432), (360, 428)],
+    [(262, 392), (286, 390), (306, 388), (326, 404), (344, 420), (360, 428)],
+    [(260, 420), (280, 440), (300, 458)],
+    # Kul Tiras
+    [(300, 196), (290, 206), (306, 220)],
 ]
 
 # Landmark doodads: (doodad id, x, y, scale, angle radians)
@@ -446,7 +401,7 @@ LANDMARKS = [
     ('ASwt', 37, 414, 1.0, 4.71),        # Teldrassil
     ('ASwt', 138, 343, 1.0, 4.71),       # Nordrassil on Mount Hyjal
     ('YOsw', 441, 457, 0.9, 4.71),       # The Sunwell
-    ('IZft', 240, 450, 1.0, 4.71),       # The Frozen Throne
+    ('IZft', 232, 458, 1.0, 4.71),       # The Frozen Throne
     ('ZOvr', 378, 344, 0.9, 4.71),       # Ruined Violet Citadel (Dalaran crater)
     ('OZsp', 446, 92, 1.0, 4.71),        # The Dark Portal
     ('LZth', 162, 246, 1.0, 4.71),       # Thrall's hut
@@ -460,5 +415,4 @@ LANDMARKS = [
 DESTRUCTABLE_LANDMARKS = [
     ('Volc', 82, 82, 1.0),      # Fire Plume Ridge
     ('Volc', 392, 202, 1.1),    # Blackrock Mountain
-    ('Volc', 290, 296, 0.8),    # Broken Shore
 ]
