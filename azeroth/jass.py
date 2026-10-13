@@ -1,11 +1,10 @@
-"""Generates war3map.j in the same shape the World Editor produces for melee maps."""
+"""Generates war3map.j in the same shape the World Editor produces for a map without triggers."""
 import math
 
 from .terrain import LEFT, BOTTOM, MAP_W, MAP_H, MARGIN_L, MARGIN_R, MARGIN_B, MARGIN_T
 
 RACE_PREF = {'human': 'RACE_PREF_HUMAN', 'orc': 'RACE_PREF_ORC', 'undead': 'RACE_PREF_UNDEAD',
              'nightelf': 'RACE_PREF_NIGHTELF', 'random': 'RACE_PREF_RANDOM'}
-ITEM_TYPE = {'i': 'ITEM_TYPE_PERMANENT', 'j': 'ITEM_TYPE_CHARGED', 'k': 'ITEM_TYPE_POWERUP', 'l': 'ITEM_TYPE_ARTIFACT'}
 CHUNK = 150   # units per creation function, keeps each function small
 
 
@@ -26,45 +25,6 @@ def rect_var(region):
     return 'gg_rct_' + ''.join(c if c.isalnum() else '_' for c in region['name'])
 
 
-def drop_function(code):
-    item_type, level = ITEM_TYPE[code[1]], int(code[3])
-    return '''function Unit_DropItems_%s takes nothing returns nothing
-    local widget trigWidget= null
-    local unit trigUnit= null
-    local integer itemID= 0
-    local boolean canDrop= true
-
-    set trigWidget=bj_lastDyingWidget
-    if ( trigWidget == null ) then
-        set trigUnit=GetTriggerUnit()
-    endif
-
-    if ( trigUnit != null ) then
-        set canDrop=not IsUnitHidden(trigUnit)
-        if ( canDrop and GetChangingUnit() != null ) then
-            set canDrop=( GetChangingUnitPrevOwner() == Player(PLAYER_NEUTRAL_AGGRESSIVE) )
-        endif
-    endif
-
-    if ( canDrop ) then
-        // Item set 0
-        call RandomDistReset()
-        call RandomDistAddItem(ChooseRandomItemEx(%s, %d), 100)
-        set itemID=RandomDistChoose()
-        if ( trigUnit != null ) then
-            call UnitDropItem(trigUnit, itemID)
-        else
-            call WidgetDropItem(trigWidget, itemID)
-        endif
-
-    endif
-
-    set bj_lastDyingWidget=null
-    call DestroyTrigger(GetTriggeringTrigger())
-endfunction
-''' % (code, item_type, level)
-
-
 def generate(info, objects):
     regions = objects.regions
     units = objects.units
@@ -75,7 +35,6 @@ def generate(info, objects):
     w('    // Generated')
     for reg in regions:
         w('rect %s= null' % rect_var(reg))
-    w('trigger gg_trg_Melee_Initialization= null')
     w('endglobals')
     w('')
     w('//===========================================================================')
@@ -91,9 +50,6 @@ def generate(info, objects):
     w('function InitGlobals takes nothing returns nothing')
     w('endfunction')
     w('')
-    drop_codes = sorted({u['drops'][0][0][0] for u in units if u.get('drops')})
-    for code in drop_codes:
-        L.append(drop_function(code))
 
     def creation_functions(prefix, owner, selected, body):
         names = []
@@ -111,20 +67,10 @@ def generate(info, objects):
             w('')
         return names
 
-    def hostile(u):
-        w("    set u=CreateUnit(p, '%s', %s, %s, %.3f)" % (u['id'], r(u['x']), r(u['y']), u['angle']))
-        if u.get('drops'):
-            w('    set t=CreateTrigger()')
-            w('    call TriggerRegisterUnitEvent(t, u, EVENT_UNIT_DEATH)')
-            w('    call TriggerRegisterUnitEvent(t, u, EVENT_UNIT_CHANGE_OWNER)')
-            w('    call TriggerAddAction(t, function Unit_DropItems_%s)' % u['drops'][0][0][0])
-
     region_by_index = {reg['index']: reg for reg in regions}
 
     def passive_building(u):
         w("    set u=CreateUnit(p, '%s', %s, %s, %.3f)" % (u['id'], r(u['x']), r(u['y']), u['angle']))
-        if u['id'] == 'ngol':
-            w('    call SetResourceAmount(u, %d)' % u.get('gold', 12500))
         if u.get('waygate', -1) >= 0:
             rv = rect_var(region_by_index[u['waygate']])
             w('    call WaygateSetDestination(u, GetRectCenterX(%s), GetRectCenterY(%s))' % (rv, rv))
@@ -133,15 +79,13 @@ def generate(info, objects):
     def passive(u):
         w("    set u=CreateUnit(p, '%s', %s, %s, %.3f)" % (u['id'], r(u['x']), r(u['y']), u['angle']))
 
-    buildings = [u for u in units if u['kind'] in ('mine', 'shop', 'waygate')]
-    hostiles = [u for u in units if u['kind'] == 'creep']
+    buildings = [u for u in units if u['kind'] == 'waygate']
     critters = [u for u in units if u['kind'] == 'critter']
     f_build = creation_functions('CreateNeutralPassiveBuildings', 'PLAYER_NEUTRAL_PASSIVE', buildings, passive_building)
-    f_host = creation_functions('CreateNeutralHostile', 'PLAYER_NEUTRAL_AGGRESSIVE', hostiles, hostile)
     f_pass = creation_functions('CreateNeutralPassive', 'PLAYER_NEUTRAL_PASSIVE', critters, passive)
 
     w('function CreateAllUnits takes nothing returns nothing')
-    for name in f_build + f_host + f_pass:
+    for name in f_build + f_pass:
         w('    call %s()' % name)
     w('endfunction')
     w('')
@@ -153,30 +97,7 @@ def generate(info, objects):
     w('endfunction')
     w('')
     w('//===========================================================================')
-    w('// Trigger: Melee Initialization')
-    w('//')
-    w('// Default melee game initialization for all players')
-    w('//===========================================================================')
-    w('function Trig_Melee_Initialization_Actions takes nothing returns nothing')
-    for action in ('MeleeStartingVisibility', 'MeleeStartingHeroLimit', 'MeleeGrantHeroItems', 'MeleeStartingResources',
-                   'MeleeClearExcessUnits', 'MeleeStartingUnits', 'MeleeStartingAI', 'MeleeInitVictoryDefeat'):
-        w('    call %s()' % action)
-    w('endfunction')
-    w('')
-    w('//===========================================================================')
-    w('function InitTrig_Melee_Initialization takes nothing returns nothing')
-    w('    set gg_trg_Melee_Initialization=CreateTrigger()')
-    w('    call TriggerAddAction(gg_trg_Melee_Initialization, function Trig_Melee_Initialization_Actions)')
-    w('endfunction')
-    w('')
-    w('//===========================================================================')
     w('function InitCustomTriggers takes nothing returns nothing')
-    w('    call InitTrig_Melee_Initialization()')
-    w('endfunction')
-    w('')
-    w('//===========================================================================')
-    w('function RunInitializationTriggers takes nothing returns nothing')
-    w('    call ConditionalTriggerExecute(gg_trg_Melee_Initialization)')
     w('endfunction')
     w('')
     w('function InitCustomPlayerSlots takes nothing returns nothing')
@@ -225,7 +146,6 @@ def generate(info, objects):
     w('    call InitBlizzard()')
     w('    call InitGlobals()')
     w('    call InitCustomTriggers()')
-    w('    call RunInitializationTriggers()')
     w('endfunction')
     w('')
     w('//===========================================================================')

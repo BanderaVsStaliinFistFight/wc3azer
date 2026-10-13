@@ -48,7 +48,7 @@ class MapTest(unittest.TestCase):
         self.assertEqual(info['version'], 25)
         self.assertEqual((info['pw'], info['ph']), (468, 468))
         self.assertEqual(len(info['players']), 12)
-        self.assertTrue(info['flags'] & 0x4, 'melee flag')
+        self.assertFalse(info['flags'] & 0x4, 'a custom scenario, not a melee map')
 
     def test_terrain(self):
         w = read_w3e(self.files['war3map.w3e'])
@@ -113,6 +113,21 @@ class MapTest(unittest.TestCase):
         for uid in set(re.findall(r"CreateUnit\(p, '(\w{4})'", script)):
             self.assertIn(uid, UNIT_IDS)
         self.assertEqual(sum(u['id'] == 'sloc' for u in units), 12)
+
+    def test_no_melee_content(self):
+        """Terrain only: no gold mines, creeps, shops or item drops, and no melee setup."""
+        _, _, units = read_units(self.files['war3mapUnits.doo'])
+        ids = {u['id'] for u in units}
+        self.assertNotIn('ngol', ids)
+        self.assertEqual(ids - {'sloc', 'nwgt'}, {u['id'] for u in units if u['owner'] == 15 and u['id'] != 'nwgt'})
+        self.assertFalse([u for u in units if u['owner'] == 12], 'no neutral hostile units')
+        script = self.files['war3map.j'].decode('utf-8')
+        self.assertNotIn('Melee', script)
+        self.assertNotIn('ngol', script)
+        self.assertNotIn('PLAYER_NEUTRAL_AGGRESSIVE', script)
+        self.assertNotIn('DropItem', script)
+        wtg = self.files['war3map.wtg']
+        self.assertEqual(struct.unpack_from('<i', wtg, len(wtg) - 4)[0], 0, 'no triggers')
 
     def test_script_structure(self):
         script = self.files['war3map.j'].decode('utf-8')

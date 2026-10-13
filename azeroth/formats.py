@@ -105,7 +105,6 @@ def write_units(units):
 # Map info (war3map.w3i, format 25)
 # --------------------------------------------------------------------------
 MAP_FLAGS = (0x0002    # modify ally priorities
-             | 0x0004  # melee map
              | 0x0008  # playable map size was large
              | 0x0010  # masked areas are partially visible
              | 0x0400  # map properties menu opened
@@ -141,7 +140,7 @@ def write_w3i(name, author, description, players_text, camera_bounds, margins, p
 # --------------------------------------------------------------------------
 # Minimap preview icons (war3map.mmp) and minimap image (war3mapMap.blp)
 # --------------------------------------------------------------------------
-ICON_GOLDMINE, ICON_NEUTRAL, ICON_START = 0, 1, 2
+ICON_NEUTRAL, ICON_START = 1, 2
 
 
 def write_mmp(icons):
@@ -187,24 +186,15 @@ def write_w3c():
     return struct.pack('<ii', 0, 0)
 
 
-MELEE_ACTIONS = ['MeleeStartingVisibility', 'MeleeStartingHeroLimit', 'MeleeGrantHeroItems', 'MeleeStartingResources',
-                 'MeleeClearExcessUnits', 'MeleeStartingUnits', 'MeleeStartingAI', 'MeleeInitVictoryDefeat']
-
-
 def write_wtg():
-    """Trigger data (TFT format 7) holding the standard 'Melee Initialization' trigger."""
+    """Trigger data (TFT format 7): the 'Initialization' category and no triggers."""
     out = [b'WTG!', struct.pack('<ii', 7, 1), struct.pack('<i', 0), cstr('Initialization'), struct.pack('<i', 0)]
     out.append(struct.pack('<ii', 2, 0))                        # unknown (always 2), variable count
-    out.append(struct.pack('<i', 1))                            # trigger count
-    out.append(cstr('Melee Initialization') + cstr('Default melee game initialization for all players'))
-    out.append(struct.pack('<7i', 0, 1, 0, 0, 0, 0, 1 + len(MELEE_ACTIONS)))
-    out.append(struct.pack('<i', 0) + cstr('MapInitializationEvent') + struct.pack('<ii', 1, 0))
-    for action in MELEE_ACTIONS:
-        out.append(struct.pack('<i', 2) + cstr(action) + struct.pack('<ii', 1, 0))
+    out.append(struct.pack('<i', 0))                            # trigger count
     return b''.join(out)
 
 
 def write_wct():
     comment = ('Enter map-specific custom script code below.  This text will be included in the map script '
                'after variables are declared and before any trigger code.')
-    return struct.pack('<i', 1) + cstr(comment) + struct.pack('<iii', 0, 1, 0)
+    return struct.pack('<i', 1) + cstr(comment) + struct.pack('<ii', 0, 0)     # no custom code, no triggers

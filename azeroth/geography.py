@@ -243,7 +243,7 @@ BASINS = [
 
 # ---------------------------------------------------------------------------
 # Settlements and points of interest (tile coordinates)
-# kind: 'capital' (player start), 'town' (neutral shop), 'camp' (expansion: gold mine + creeps)
+# Capitals hold the player start locations; towns and camps are named sites, levelled clearings on the roads.
 # ---------------------------------------------------------------------------
 CAPITALS = [
     # (start index, name, x, y, preferred race, faction colour hint)
@@ -258,7 +258,7 @@ CAPITALS = [
 ]
 
 TOWNS = [
-    # name, x, y, building
+    # name, x, y, the town's kind as a building id ('nshp': a harbour, so its shore is kept a beach)
     ('Goldshire', 372, 166, 'ntav'), ('Booty Bay', 360, 24, 'nshp'), ('Booty Bay Market', 364, 28, 'ngme'),
     ('Ratchet', 156, 200, 'nshp'), ('Gadgetzan', 134, 76, 'ngad'), ('Everlook', 142, 382, 'ngad'),
     ('Theramore', 179, 133, 'nshp'), ('Menethil Harbor', 372, 272, 'nshp'), ('Auberdine', 44, 344, 'nshp'),
@@ -278,7 +278,7 @@ TOWNS = [
 ]
 
 CAMPS = [
-    # name, x, y, creep strength (0 weak, 1 medium, 2 strong); each gets a gold mine
+    # name, x, y, how dangerous the place is in lore (0 low, 1 medium, 2 high; not used by the build)
     ('Northshire', 384, 178, 0), ('Jerod\'s Landing', 392, 160, 0), ('Moonbrook', 336, 136, 1), ('Jangolode Mine', 348, 160, 0),
     ('Raven Hill', 368, 136, 1), ('Karazhan', 418, 136, 2), ('Stonard', 456, 146, 1), ('Dark Portal', 446, 94, 2),
     ('Zul\'Gurub', 384, 104, 2), ('Nesingwary\'s Camp', 362, 112, 1), ('Gurubashi Arena', 360, 64, 1), ('Ruins of Jubuwal', 376, 40, 1),
@@ -675,8 +675,8 @@ BEACHES = []
 # ---------------------------------------------------------------------------
 # Instances: dungeons and raids as walled, cliff-edged islands in the corners
 # of the Great Sea, each reached through a waygate from its entrance on the
-# continents (the camp or town named here). Inside: a pillared hall, a guard
-# camp halfway and the boss on a raised dais at the far end. Tile coordinates.
+# continents (the camp or town named here). Inside: a pillared hall and a
+# raised dais at the far end. Tile coordinates.
 # (name, (x0, y0, x1, y1), biome, entrance camp/town, side of the waygate)
 # ---------------------------------------------------------------------------
 INSTANCES = [
@@ -711,18 +711,16 @@ INSTANCES = [
 
 # Raised rectangles (x0, y0, x1, y1, extra cliff levels): the instances' pillars.
 BLOCKS = []
-# Creep camps without a gold mine: (name, x, y, strength); strength 3 is a raid boss.
-DUNGEON_CAMPS = []
 INSTANCE_NAMES = set()
 
 
 def _instance_layout(name, box, side):
-    """Outline, waygate, guard and boss positions, raised blocks and corridor of an instance.
+    """Outline, waygate position, raised blocks and corridor of an instance.
 
     Laid out along the hall: `a` runs from the waygate end (0) to the far end (L),
     `c` across it. The two corners beside the waygate are cut away into a
-    vestibule, pillars line the hall and the boss waits on a raised dais at
-    the far end, reached by a ramp where the corridor climbs onto it.
+    vestibule, pillars line the hall and a raised dais stands at the far end,
+    reached by a ramp where the corridor climbs onto it.
     """
     x0, y0, x1, y1 = box
     cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
@@ -741,14 +739,14 @@ def _instance_layout(name, box, side):
     na, nl = 4 + h % 3, 5 + (h // 3) % 3                         # vestibule notch: across, along
     outline = [world(a, c) for a, c in [(0, -W / 2 + na), (0, W / 2 - na), (nl, W / 2 - na), (nl, W / 2), (L, W / 2),
                                         (L, -W / 2), (nl, -W / 2), (nl, -W / 2 + na)]]
-    gate, mid, boss = world(4.5, 0), world(L * 0.45, 0), world(L - 5, 0)
-    blocks = [rect(L - 9, L - 1, -W / 2 + 3, W / 2 - 3, 1)]       # the boss's dais
+    gate, boss = world(4.5, 0), world(L - 5, 0)
+    blocks = [rect(L - 9, L - 1, -W / 2 + 3, W / 2 - 3, 1)]       # the dais
     a = nl + 5
     while a <= L - 15:
         for c in (-(W / 2 - 4), W / 2 - 4):
             blocks.append(rect(a - 1, a + 1, c - 1, c + 1, 1))
         a += 5
-    return outline, gate, mid, boss, blocks, [gate, boss]
+    return outline, gate, blocks, [gate, boss]
 
 
 def _find_site(ref):
@@ -761,7 +759,7 @@ def _find_site(ref):
 _WORLD_ROADS = list(ROADS)          # the roads of the world, before the instance corridors join them
 for _name, _box, _biome, _ref, _side in INSTANCES:
     _x0, _y0, _x1, _y1 = _box
-    _outline, _gate, _mid, _boss, _blocks, _corridor = _instance_layout(_name, _box, _side)
+    _outline, _gate, _blocks, _corridor = _instance_layout(_name, _box, _side)
     LANDMASSES[_name] = _outline
     COAST_NOISE[_name] = 0.0
     INSTANCE_NAMES.add(_name)
@@ -769,7 +767,6 @@ for _name, _box, _biome, _ref, _side in INSTANCES:
     BLOCKS += _blocks
     ROADS.append(_corridor)
     PORTALS.append(((_name + ' Entrance',) + _find_site(_ref), (_name + ' Portal',) + _gate))
-    DUNGEON_CAMPS += [(_name + ' Guards', _mid[0], _mid[1], 2), (_name, _boss[0], _boss[1], 3)]
 
 
 # ---------------------------------------------------------------------------

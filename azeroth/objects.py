@@ -1,4 +1,4 @@
-"""Places trees, landmarks, start locations, gold mines, creeps, shops and waygates."""
+"""Places trees, doodads, landmarks, start locations, waygates and critters."""
 import math
 
 import numpy as np
@@ -8,8 +8,7 @@ from .biomes import B
 from .raster import dilate, label_regions
 from .terrain import MAP_W, MAP_H, ground_z_at, world_xy
 
-NEUTRAL_HOSTILE, NEUTRAL_PASSIVE = 12, 15     # classic (12 player) numbering used by war3mapUnits.doo
-ITEM_CLASS = {'permanent': 'i', 'charged': 'j', 'powerup': 'k', 'artifact': 'l'}
+NEUTRAL_PASSIVE = 15                          # classic (12 player) numbering used by war3mapUnits.doo
 TREE_VARIATIONS = {'LTlt': 10, 'FTtw': 10, 'ATtr': 5, 'CTtr': 5, 'BTtw': 10, 'ZTtw': 10, 'WTst': 10, 'NTtw': 10, 'ITtw': 10,
                    'ATtc': 3, 'ZTtc': 3, 'CTtc': 3}
 DETAIL_VARIATIONS = {'LRrk': 10, 'ARrk': 10, 'CRrk': 10, 'BRrk': 10, 'BRsp': 8, 'ZRrk': 10, 'ZRsp': 8, 'NRrk': 10, 'IRrs': 10,
@@ -104,42 +103,18 @@ def place(T, seed=7):
         O.doodads.append(dict(id=did, var=0, x=x, y=y, z=ground_z_at(T, tx, ty), angle=4.712389, scale=scale, state=2, life=100))
         mark(reserved, tx, ty, 6); mark(occupied, tx, ty, 5)
 
-    # ---- player start locations, each with a main gold mine ---------------------
-    mines = []
-    def mine_spot_for(sx, sy):
-        for dist in (7.5, 8.5, 9.5, 10.5, 11.5, 12.5):
-            for ang in np.linspace(0, 2 * math.pi, 24, endpoint=False):
-                mx, my = sx + dist * math.cos(ang), sy + dist * math.sin(ang)
-                mx, my = round(mx * 2) / 2, round(my * 2) / 2
-                if area_ok(mx, my, 2.5):
-                    return mx, my, ang
-        return None
-
+    # ---- player start locations, one in each capital -----------------------------
     for idx, name, cx, cy, race in geo.CAPITALS:
-        placed = None
-        for base_r in (5, 4.5, 4):                     # prefer a roomy base, settle for a tighter one
-            for rad in np.arange(0, 24, 0.5):
-                for k in range(max(1, int(rad * 6))):
-                    a = 2 * math.pi * k / max(1, int(rad * 6))
-                    sx, sy = round((cx + rad * math.cos(a)) * 2) / 2, round((cy + rad * math.sin(a)) * 2) / 2
-                    if area_ok(sx, sy, base_r):
-                        placed = mine_spot_for(sx, sy)
-                        if placed:
-                            break
-                if placed:
-                    break
-            if placed:
+        spot = None
+        for base_r in (5, 4.5, 4):                     # prefer a roomy square, settle for a tighter one
+            spot = find_spot(cx, cy, base_r, max_search=24)
+            if spot:
                 break
-        assert placed, 'no room for start location %s' % name
+        assert spot, 'no room for start location %s' % name
+        sx, sy = spot
         O.starts.append((idx, name, sx, sy, race))
         add_unit('sloc', sx, sy, idx, 'start')
         mark(occupied, sx, sy, 6); mark(reserved, sx, sy, 11)
-        mx, my, ang = placed
-        add_unit('ngol', mx, my, NEUTRAL_PASSIVE, 'mine', gold=15000)
-        mines.append((mx, my))
-        mark(occupied, mx, my, 3); mark(reserved, mx, my, 4)
-        # a grove behind the base guarantees lumber
-        O.__dict__.setdefault('groves', []).append((sx, sy, ang + math.pi, zone_at(sx, sy)))
 
     capital_xy = [(s[2], s[3]) for s in O.starts]
 
@@ -168,119 +143,21 @@ def place(T, seed=7):
         portals.append(((spots[0][1], spots[0][2]), (spots[1][1], spots[1][2])))
     O.portals = portals
 
-    # ---- towns: neutral shops ------------------------------------------------------
-    shops = []
-    deep_sea = T.water & (T.h_rel < -60)
-    from .raster import distance_field
-    sea_dist = distance_field(deep_sea, 12)
+    # ---- town sites stay open ground, free of trees, for whatever is built there ---------
     for name, tx, ty, building in geo.TOWNS:
-        if building == 'nshp':
-            spot = find_spot(tx, ty, 2.0, max_search=16, accept=lambda x, y: sea_dist[int(y), int(x)] <= 6)
-        else:
-            spot = find_spot(tx, ty, 2.0, max_search=10)
-        if spot is None:
-            continue
-        add_unit(building, spot[0], spot[1], NEUTRAL_PASSIVE, 'shop', label=name)
-        mark(occupied, spot[0], spot[1], 3); mark(reserved, spot[0], spot[1], 4)
-        shops.append(spot)
+        mark(reserved, tx, ty, 4)
 
-    # ---- expansions: gold mine guarded by a creep camp -------------------------------
-    creeps = []
-    camp_count = 0
-
-    def creep_camp(tx, ty, strength, zdef, guard_of=None, label=''):
-        biome = B[zdef['biome']]
-        low, mid, high = biome['creeps']
-        if strength == 0:
-            roster = [rng.choice(mid)] + [rng.choice(low) for _ in range(rng.integers(1, 3))]
-            drop = ('powerup' if rng.random() < 0.6 else 'permanent', int(rng.integers(1, 3)))
-        elif strength == 1:
-            roster = [rng.choice(high)] + [rng.choice(mid) for _ in range(2)]
-            drop = ('permanent' if rng.random() < 0.6 else 'charged', int(rng.integers(2, 5)))
-        elif strength == 2:
-            roster = [rng.choice(high) for _ in range(2)] + [rng.choice(mid) for _ in range(2)]
-            drop = ('permanent' if rng.random() < 0.7 else 'artifact', int(rng.integers(5, 8)))
-        else:                                   # a raid boss and its retinue
-            roster = [rng.choice(high) for _ in range(3)] + [rng.choice(mid) for _ in range(2)]
-            drop = ('artifact', 7)
-        placed = 0
-        for k, uid in enumerate(roster):
-            a = rng.uniform(0, 2 * math.pi)
-            ux, uy = tx + rng.uniform(0.6, 2.2) * math.cos(a), ty + rng.uniform(0.6, 2.2) * math.sin(a)
-            if not area_ok(ux, uy, 0.5, allow_occupied=True):
-                ux, uy = tx, ty
-                if not area_ok(ux, uy, 0.5, allow_occupied=True):
-                    continue
-            facing = math.degrees(math.atan2(ty - uy, tx - ux)) % 360 if (ux, uy) != (tx, ty) else rng.uniform(0, 360)
-            if guard_of:
-                facing = math.degrees(math.atan2(guard_of[1] - uy, guard_of[0] - ux)) % 360
-            kw = {}
-            if k == 0:
-                kw['drops'] = [[('Y%sI%d' % (ITEM_CLASS[drop[0]], drop[1]), 100)]]
-            elif k == 1 and strength == 3:
-                kw['drops'] = [[('YiI6', 100)]]
-            add_unit(str(uid), ux, uy, NEUTRAL_HOSTILE, 'creep', angle=facing, **kw)
-            creeps.append((ux, uy))
-            placed += 1
-        return placed
-
-    for name, tx, ty, strength in geo.CAMPS:
-        spot = find_spot(tx, ty, 2.5, max_search=10)
-        if spot is None or not far_from_capitals(spot[0], spot[1], 16):
-            continue
-        mx, my = spot
-        add_unit('ngol', mx, my, NEUTRAL_PASSIVE, 'mine', gold=[8000, 12500, 15000][strength], label=name)
-        mines.append((mx, my))
-        mark(occupied, mx, my, 3); mark(reserved, mx, my, 5)
-        # camp sits between the mine and open ground
-        for ang in rng.permutation(np.linspace(0, 2 * math.pi, 12, endpoint=False)):
-            cx, cy = mx + 4.5 * math.cos(ang), my + 4.5 * math.sin(ang)
-            if area_ok(cx, cy, 1.5) and far_from_capitals(cx, cy, 14):
-                creep_camp(cx, cy, strength, zone_at(cx, cy), guard_of=(mx, my), label=name)
-                mark(occupied, cx, cy, 2); mark(reserved, cx, cy, 3)
-                camp_count += 1
-                break
-
-    # ---- instances: guards and bosses without a gold mine ------------------------------------
-    for name, tx, ty, strength in geo.DUNGEON_CAMPS:
-        spot = find_spot(tx, ty, 1.5, max_search=6)
-        assert spot, 'no room for %s' % name
-        if creep_camp(spot[0], spot[1], strength, zone_at(*spot), label=name):
-            mark(occupied, spot[0], spot[1], 2.5); mark(reserved, spot[0], spot[1], 3)
-            camp_count += 1
-
-    # ---- roaming camps spread over every zone ---------------------------------------------
-    # (only on ground big enough to be part of the world, not on sealed-off plateaus)
+    # ---- critters: a few of each zone's wildlife ------------------------------------------
     zone_tiles = {}
     land_tiles = np.argwhere(tile_ok & ~occupied)
     for ty, tx in land_tiles[rng.permutation(len(land_tiles))]:
-        zi = T.zone_of[ty, tx]
-        zone_tiles.setdefault(zi, []).append((tx + 0.5, ty + 0.5))
+        zone_tiles.setdefault(T.zone_of[ty, tx], []).append((tx + 0.5, ty + 0.5))
     for zi, tiles in zone_tiles.items():
-        zdef = geo.ZONES[zi]
-        if zdef.get('instance'):
-            continue
-        want = max(1, min(5, len(tiles) // 340))
-        made = 0
-        for tx, ty in tiles:
-            if made >= want:
-                break
-            if not far_from_capitals(tx, ty, 22) or not area_ok(tx, ty, 1.5):
-                continue
-            if any(math.hypot(tx - cx, ty - cy) < 9 for cx, cy in creeps[-40:]):
-                continue
-            strength = int(rng.choice([0, 0, 1, 1, 2]))
-            if creep_camp(tx, ty, strength, zdef):
-                mark(occupied, tx, ty, 2); mark(reserved, tx, ty, 2)
-                made += 1
-                camp_count += 1
-        # critters
-        critters = B[zdef['biome']]['critters']
+        critters = B[geo.ZONES[zi]['biome']]['critters']
         if critters:
             for tx, ty in tiles[-min(len(tiles), 40)::max(1, min(len(tiles), 40) // 4)][:4]:
                 if area_ok(tx, ty, 0.5) and far_from_capitals(tx, ty, 12):
                     add_unit(str(rng.choice(critters)), tx, ty, NEUTRAL_PASSIVE, 'critter', angle=float(rng.uniform(0, 360)))
-    O.camp_count = camp_count
 
     # ---- trees ----------------------------------------------------------------------------
     # Woods come from the terrain's forest mask (T.forest_score > 0 inside a wood).
@@ -294,20 +171,9 @@ def place(T, seed=7):
     ground[:-1, :-1] = ~T.cliff_tile & ~T.ramp_tile & T.land[:-1, :-1] & T.land[1:, 1:] & T.land[:-1, 1:] & T.land[1:, :-1]
     ground[:-1, :-1] &= ~T.water_flag[:-1, :-1] & ~T.water_flag[1:, 1:] & ~T.water_flag[:-1, 1:] & ~T.water_flag[1:, :-1]
     ground &= ~T.edge
-    land_dry = tile_ok & (T.slope < 70)
     near_shore = ~T.land | dilate(~T.land, 1)
     keep_prob = np.select([score > 0.12, score > 0, score > -0.04, score > -0.12], [0.96, 0.86, 0.32, 0.05], 0.0)
     candidates = (rng.random((n, n)) < keep_prob) & ground & ~clear & ~near_shore & (tree_ids != '')
-    # groves behind each start location
-    for sx, sy, ang, zdef in O.groves:
-        tid = B[zdef['biome']]['tree'] or 'LTlt'
-        for r in np.arange(13, 19.5, 1.0):
-            for a in np.linspace(ang - 1.3, ang + 1.3, int(r * 2.6)):
-                gx, gy = int(sx + r * math.cos(a)), int(sy + r * math.sin(a))
-                if 0 <= gx < MAP_W and 0 <= gy < MAP_H and land_dry[gy, gx] and not occupied[gy, gx] and not near_shore[gy, gx]:
-                    candidates[gy, gx] = True
-                    if tree_ids[gy, gx] == '':
-                        tree_ids[gy, gx] = tid
     trees = []
     for ty, tx in np.argwhere(candidates):
         tid = str(tree_ids[ty, tx])
@@ -377,7 +243,6 @@ def place(T, seed=7):
     detail = [{k: v for k, v in d.items() if k != 'tile'} for d in detail]
     O.details = detail
     O.doodads = O.doodads + detail
-    O.mines, O.creeps, O.shops = mines, creeps, shops
 
     # world coordinates and heights for every unit
     for u in O.units:

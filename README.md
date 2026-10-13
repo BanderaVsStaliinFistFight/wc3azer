@@ -1,10 +1,10 @@
 # Azeroth for Warcraft III
 
-**[`dist/(12)Azeroth.w3x`](dist/(12)Azeroth.w3x)** is a 12-player melee map of the whole world of Azeroth. It is built at **480 × 480 tiles**, the largest size Warcraft III supports. The playable area is 468 × 468 tiles, about 60,000 × 60,000 world units.
+**[`dist/(12)Azeroth.w3x`](dist/(12)Azeroth.w3x)** is a 12-player map of the whole world of Azeroth: terrain only, with no melee setup, gold mines, creeps or shops, ready to build a game on. It is built at **480 × 480 tiles**, the largest size Warcraft III supports. The playable area is 468 × 468 tiles, about 60,000 × 60,000 world units.
 
 ![Overview of the map](dist/preview.png)
 
-*Overview render: capitals in red, gold mines in yellow, shops and waygates in white, creep camps as red dots, portal links between the continents in purple (the instance waygates are left unlinked to keep it readable). Cliff edges are drawn dark.*
+*Overview render: capitals in red, waygates in violet, portal links between the continents in purple (the instance waygates are left unlinked to keep it readable). Cliff edges are drawn dark.*
 
 ## What's on the map
 
@@ -33,12 +33,12 @@ The terrain follows the style of the big hand-made WoW maps for Warcraft III, su
   - About 99% of the walkable land can be reached from the start locations, against 95% before; what is left is small ledges.
 - **Forests.** Woods cover a share of each zone set by its climate. They grow thicker along rivers and lakes, climb the hillsides up to a treeline, break up into clumps and clearings, and fray into scattered trees at their edges. A second species is mixed in here and there: autumn trees among summer ones, pines in the snow, canopy giants in the jungles and Ashenvale. The ground under them is dark forest floor.
 - **Ground detail.** The ground follows the lie of the land: each zone's lusher ground gathers on wet valley floors and along the water, and its dirt and rock on slopes and high, dry ground. Zone borders fray into one another instead of meeting on a line. Roads wander a little, as roads do. Flowers, shrubs and mushrooms dot open ground, reeds and cattails line the water, lily pads float on the lakes, and boulders lie on steep slopes and below cliffs. Boulders on walkable ground are written into the pathing map, and none of them is allowed to cut off a path.
-- **Instances.** Each dungeon has a vestibule round its waygate, a pillared hall, a guard camp halfway, and its boss on a raised dais at the far end, reached up a ramp. Floors are themed: lava cracks in Molten Core and Onyxia's Lair, sand and brick in the desert temples, brick and poison in the crypts, ice in the Northrend raids, and moss in the caverns.
+- **Instances.** Each dungeon has a vestibule round its waygate, a pillared hall, and a raised dais at the far end, reached up a ramp. Floors are themed: lava cracks in Molten Core and Onyxia's Lair, sand and brick in the desert temples, brick and poison in the crypts, ice in the Northrend raids, and moss in the caverns.
 - **Paved capitals:** a brick square with streets leading out along the roads.
 
-There are 93 zones in all, counting the instances. Each zone has its own ground textures, tree type, relief and creeps: jungle in Stranglethorn, blight in the Plaguelands, lava cracks in the Burning Steppes, cliff mesas in Thousand Needles and at Thunder Bluff, the crater rim around Un'Goro, and the Greymane Wall, a cliff rampart whose gate is the only way into Gilneas on foot. A few landmark doodads are placed too: the World Trees at Teldrassil and Hyjal, the Sunwell, the Frozen Throne, the ruins of Dalaran, the Dark Portal, and volcanoes at Blackrock and Un'Goro.
+There are 93 zones in all, counting the instances. Each zone has its own ground textures, tree type, relief and wildlife: jungle in Stranglethorn, blight in the Plaguelands, lava cracks in the Burning Steppes, cliff mesas in Thousand Needles and at Thunder Bluff, the crater rim around Un'Goro, and the Greymane Wall, a cliff rampart whose gate is the only way into Gilneas on foot. A few landmark doodads are placed too: the World Trees at Teldrassil and Hyjal, the Sunwell, the Frozen Throne, the ruins of Dalaran, the Dark Portal, and volcanoes at Blackrock and Un'Goro.
 
-**Start locations** (one per player slot): Stormwind, Orgrimmar, Undercity, Darnassus, Ironforge, Thunder Bluff, Silvermoon City and Boralus, plus four in Northrend: Icecrown Citadel, Dalaran, Warsong Hold and Valgarde. Each one gets a 15,000-gold mine and a grove of trees for lumber.
+**Start locations** (one per player slot): Stormwind, Orgrimmar, Undercity, Darnassus, Ironforge, Thunder Bluff, Silvermoon City and Boralus, plus four in Northrend: Icecrown Citadel, Dalaran, Warsong Hold and Valgarde. Each stands in its capital's paved square.
 
 **Getting between continents.** Nine pairs of mage portals (waygates) link the landmasses, and 24 more pairs lead into the instances. They sit about 17 tiles outside each capital, so no portal opens directly into a base:
 
@@ -52,15 +52,22 @@ There are 93 zones in all, counting the instances. Each zone has its own ground 
 - Stormwind Harbor ↔ Boralus
 - Ratchet ↔ Kezan
 
-Goblin shipyards sit at the ports (Booty Bay, Ratchet, Theramore, Menethil, Auberdine, Valiance Keep, Vengeance Landing and others), and goblin laboratories sell zeppelins. Shallow straits that ground units can wade across link Teldrassil and Azuremyst to Darkshore, Bloodmyst to Azuremyst, Tol Barad to Gilneas, and Alcaz Island, Theramore and the Echo Isles to the mainland.
+Shallow straits that ground units can wade across link Teldrassil and Azuremyst to Darkshore, Bloodmyst to Azuremyst, Tol Barad to Gilneas, and Alcaz Island, Theramore and the Echo Isles to the mainland.
 
-**Neutral content.** About 100 gold mines, roughly 290 creep camps (each camp leader drops an item), 60 shops (taverns, merchants, mercenary camps, marketplaces, dragon roosts, fountains), critters, about 25,000 trees, and some 2,700 boulders, plants and rock spires. Every instance holds a guard camp and a raid boss whose retinue drops a level-7 artifact and a level-6 permanent item.
+**What's placed.**
+- About 30,000 trees and some 3,400 boulders, plants and rock spires.
+- The landmark doodads.
+- The waygates.
+- Wildlife critters in every zone.
+- The 12 start locations.
 
-## Playing it
+There are no gold mines, creeps, shops or item drops. The ~60 towns and ~100 camp sites from the geography (Goldshire, Booty Bay, Crossroads, Gadgetzan, Dire Maul, Stratholme and the rest) are levelled clearings joined to the road network, left empty for you to fill. The towns are kept free of trees.
 
-You need **patch 1.29 or later** (Reforged included), because older patches cap maps at 256 × 256. Copy the `.w3x` into your maps folder, for example `Documents/Warcraft III/Maps/`. It is flagged as a melee map, so it appears in the normal custom/melee game list with free race choice, the standard melee setup and computer players.
+## Using it
 
-The map also includes the World Editor files: preplaced units, regions, and the Melee Initialization trigger. You can open it in the World Editor and keep building on it.
+You need **patch 1.29 or later** (Reforged included), because older patches cap maps at 256 × 256. Copy the `.w3x` into your maps folder, for example `Documents/Warcraft III/Maps/`.
+
+It is a custom scenario, not a melee map. It has no triggers, so a game starts with no units, no resources and no victory conditions. It is a world to build on: open it in the World Editor and add your own triggers, units and gameplay. The World Editor files are included: preplaced units (start locations, waygates, critters), the waygates' destination regions, and an empty trigger list.
 
 ## Building it yourself
 
@@ -69,17 +76,17 @@ The map is generated entirely from code. Nothing is copied from Blizzard files.
 ```
 pip install numpy pillow
 python3 build.py                 # writes dist/(12)Azeroth.w3x and dist/preview.png
-python3 build.py --seed 5        # same geography, different noise, forests and creep rolls
+python3 build.py --seed 5        # same geography, different noise and forests
 python3 -m unittest discover tests
 ```
 
 | File | Purpose |
 |---|---|
-| `azeroth/geography.py` | Hand-placed continent outlines, zones, mountain ridges, lakes, rivers, roads, towns, camps and portals, in tile coordinates |
-| `azeroth/biomes.py` | Per-biome ground tiles, trees, relief and creep rosters |
+| `azeroth/geography.py` | Hand-placed continent outlines, zones, mountain ridges, lakes, rivers, roads, town and camp sites, and portals, in tile coordinates |
+| `azeroth/biomes.py` | Per-biome ground tiles, trees, relief and critters |
 | `azeroth/terrain.py` | Rasterises everything into heights, water, cliffs, textures, blight and the pathing map |
-| `azeroth/objects.py` | Places start locations, mines, creep camps, shops, waygates, critters and trees |
-| `azeroth/jass.py` | Writes `war3map.j` in the same shape the World Editor generates for melee maps |
+| `azeroth/objects.py` | Places start locations, waygates, critters, trees and doodads |
+| `azeroth/jass.py` | Writes `war3map.j` in the same shape the World Editor generates for a map without triggers |
 | `azeroth/formats.py` | Writers for `w3e`, `wpm`, `shd`, `doo`, units `doo`, `w3i`, `mmp`, `blp`, `w3r`, `w3c`, `wtg` and `wct` |
 | `azeroth/mpq.py` | MPQ archive writer (zlib sectors, encrypted hash and block tables, HM3W header) |
 | `tests/` | Independent MPQ and map-file readers, plus end-to-end checks |
@@ -90,8 +97,9 @@ python3 -m unittest discover tests
 - `war3map.j` passes the **pjass** syntax checker against both the 1.27 and the Reforged 1.32 `common.j` / `Blizzard.j`.
 - Every unit, destructable and doodad ID exists in Blizzard's game data tables (`tests/game_ids.py`).
 - Every terrain file parses back exactly. Every cliff tile uses a corner combination that has a cliff model. Every ramp follows the World Editor's corner layout, and its slope is walkable in the pathing map.
-- The trigger files are byte-identical to the World Editor's own output for the melee trigger.
-- Flood-fill checks confirm that every start location, mine, shop, waygate and creep camp can be reached on foot or through waygates, with no exceptions, and that about 99% of all walkable land can. Raised zones are entered by their ramps, and the massifs' cores are impassable.
+- The trigger files follow the World Editor's layout for a map with no triggers: the Initialization category, with nothing in it.
+- A test confirms there are no gold mines, neutral hostile units, item drops or melee calls.
+- Flood-fill checks confirm that every start location and waygate can be reached on foot or through waygates, and so can about 99% of all walkable land. Two camp names in Northrend sit just offshore; the coast next to them is reachable. Raised zones are entered by their ramps, and the massifs' cores are impassable.
 
 **It has not been loaded in the actual game client yet.** If something looks off in game, please open an issue.
 
