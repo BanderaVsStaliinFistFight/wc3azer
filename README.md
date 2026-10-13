@@ -22,8 +22,14 @@
 The terrain follows the style of the big hand-made WoW maps for Warcraft III, such as WoW Reanimated. Only the look was used as a reference; none of that map's terrain or objects were copied.
 
 - **Cliff coastlines.** Shores are cliff walls rising out of a pale shelf of shallows. Beaches stay where units need to reach the water: along the wading straits and river mouths, at every shipyard, round the small islands, and on a few stretches of open coast.
-- **Raised and sunken zones.** Highland zones stand one cliff level above their neighbours: Winterspring, Mount Hyjal, Stonetalon, Alterac, the Hinterlands, Dun Morogh, Searing Gorge, Icecrown, the Storm Peaks, Zul'Drak and Drustvar. Un'Goro Crater sinks one level below. Wherever a road crosses one of these edges it climbs a ramp, built the way the World Editor builds them.
-- **Mountain ranges.** Each range is a broad massif rising out of foothills, broken into peaks, saddles and spurs, and stepped by ragged cliff ledges, with summits up to about 1,200 units high. The high ground turns to bare rock and scree, with snow on the summits. Roads keep their passes open, settlements stand in levelled clearings away from the slopes, and nothing that matters ends up on a cut-off plateau.
+- **Raised and sunken zones.** Highland zones stand one cliff level above their neighbours: Winterspring, Mount Hyjal, Stonetalon, Alterac, the Hinterlands, Dun Morogh, Searing Gorge, Icecrown, the Storm Peaks, Zul'Drak and Drustvar. Un'Goro Crater sinks one level below. Ramps, built the way the World Editor builds them, climb these edges wherever a road crosses and every couple of dozen tiles along them.
+- **Massifs.** Sixteen great ranges tower over everything else, up to about 1,750 units high. They are stacks of up to five cliff levels topped with peaks, snow and great rock spires or glaciers, and no army can climb their cores. They are Stonetalon, the summit of Hyjal, Winterspring, Darkshore's range, the Feralas wall, the cliffs above Thousand Needles, the walls of Un'Goro, the Alterac Mountains, the Khaz Mountains, Blackrock Mountain, Redridge, the Thalassian highlands, the Blasted Lands wall, the Storm Peaks, the Icecrown glacier and the walls of Sholazar. Each is crossed only at its roads' passes: Dun Algaz through the Khaz Mountains, the Great Lift into Thousand Needles, two passes into Un'Goro, and two roads into Sholazar.
+- **Mountain ranges.** The lesser ranges are broad massifs rising out of foothills, broken into peaks, saddles and spurs, and stepped by ragged cliff ledges. The high ground turns to bare rock and scree, with snow on the summits. Roads keep their passes open, and settlements stand in levelled clearings away from the slopes.
+- **Getting about on foot.**
+  - Outside the massifs, cliff ledges and plateaus get ramps so they are part of the land, not walled-off islands of it. Any patch of ground still sealed off gets a ramp to its neighbour.
+  - Every camp and town lies on a track to the nearest road.
+  - Wading straits reach Azuremyst, Bloodmyst, Tol Barad and Alcaz Island.
+  - About 99% of the walkable land can be reached from the start locations, against 95% before; what is left is small ledges.
 - **Forests.** Woods cover a share of each zone set by its climate. They grow thicker along rivers and lakes, climb the hillsides up to a treeline, break up into clumps and clearings, and fray into scattered trees at their edges. A second species is mixed in here and there: autumn trees among summer ones, pines in the snow, canopy giants in the jungles and Ashenvale. The ground under them is dark forest floor.
 - **Ground detail.** Zone borders fray into one another instead of meeting on a line. Flowers, shrubs and mushrooms dot open ground, reeds and cattails line the water, lily pads float on the lakes, and boulders lie on steep slopes and below cliffs. Boulders on walkable ground are written into the pathing map, and none of them is allowed to cut off a path.
 - **Instances.** Each dungeon has a vestibule round its waygate, a pillared hall, a guard camp halfway, and its boss on a raised dais at the far end, reached up a ramp. Floors are themed: lava cracks in Molten Core and Onyxia's Lair, sand and brick in the desert temples, brick and poison in the crypts, ice in the Northrend raids, and moss in the caverns.
@@ -45,9 +51,9 @@ There are 93 zones in all, counting the instances. Each zone has its own ground 
 - Stormwind Harbor ↔ Boralus
 - Ratchet ↔ Kezan
 
-Goblin shipyards sit at the ports (Booty Bay, Ratchet, Theramore, Menethil, Auberdine, Valiance Keep, Vengeance Landing and others), and goblin laboratories sell zeppelins. Teldrassil connects to Darkshore through a shallow strait that ground units can wade across.
+Goblin shipyards sit at the ports (Booty Bay, Ratchet, Theramore, Menethil, Auberdine, Valiance Keep, Vengeance Landing and others), and goblin laboratories sell zeppelins. Shallow straits that ground units can wade across link Teldrassil and Azuremyst to Darkshore, Bloodmyst to Azuremyst, Tol Barad to Gilneas, and Alcaz Island, Theramore and the Echo Isles to the mainland.
 
-**Neutral content.** About 100 gold mines, roughly 290 creep camps (each camp leader drops an item), 60 shops (taverns, merchants, mercenary camps, marketplaces, dragon roosts, fountains), critters, about 28,000 trees, and some 2,200 boulders and plants. Every instance holds a guard camp and a raid boss whose retinue drops a level-7 artifact and a level-6 permanent item.
+**Neutral content.** About 100 gold mines, roughly 290 creep camps (each camp leader drops an item), 60 shops (taverns, merchants, mercenary camps, marketplaces, dragon roosts, fountains), critters, about 26,000 trees, and some 2,700 boulders, plants and rock spires. Every instance holds a guard camp and a raid boss whose retinue drops a level-7 artifact and a level-6 permanent item.
 
 ## Playing it
 
@@ -84,7 +90,7 @@ python3 -m unittest discover tests
 - Every unit, destructable and doodad ID exists in Blizzard's game data tables (`tests/game_ids.py`).
 - Every terrain file parses back exactly. Every cliff tile uses a corner combination that has a cliff model. Every ramp follows the World Editor's corner layout, and its slope is walkable in the pathing map.
 - The trigger files are byte-identical to the World Editor's own output for the melee trigger.
-- Flood-fill checks confirm that every start location, mine, shop, waygate and creep camp can be reached on foot or through waygates. The exceptions are three island expansions (Azuremyst, Bloodmyst, Tol Barad), which are reached by boat or zeppelin and have beaches to land on. Raised zones are entered by their ramps.
+- Flood-fill checks confirm that every start location, mine, shop, waygate and creep camp can be reached on foot or through waygates, with no exceptions, and that about 99% of all walkable land can. Raised zones are entered by their ramps, and the massifs' cores are impassable.
 
 **It has not been loaded in the actual game client yet.** If something looks off in game, please open an issue.
 

@@ -3,10 +3,11 @@ import numpy as np
 
 from . import geography as geo
 from .biomes import B, GROUND_TILES, TILE
-from .raster import Field, blur, dilate, distance_field, erode, shift, smoothstep, NEIGHBOURS8
+from .raster import Field, blur, dilate, distance_field, erode, label_regions, shift, smoothstep, NEIGHBOURS8
 
 MAP_W = MAP_H = 480                  # tiles; the largest map size Warcraft III supports
 RANGE_WIDTH, RANGE_HEIGHT = 1.45, 1.5  # mountain ranges relative to geography.RIDGES
+MASSIF_HEIGHT = 0.9                  # scale of geography.MASSIFS heights
 FOREST_DENSITY = 1.85                # forest cover relative to the biome densities
 MARGIN_L, MARGIN_R, MARGIN_B, MARGIN_T = 6, 6, 4, 8
 LEFT = BOTTOM = -MAP_W * 64.0        # world coordinate of the south-west tilepoint
@@ -144,6 +145,16 @@ def build(seed=1):
         ridge_h = np.maximum(ridge_h, env ** 1.2 * height * RANGE_HEIGHT * (0.45 + 0.65 * crest))
         foothills = np.maximum(foothills, smoothstep(w * 3.6, w * 1.2, d) * height * 0.22)
     z = np.maximum(z + foothills * hill_n * pass_factor, base * 0.6 + ridge_h * pass_factor)
+    # Massifs: the great ranges, broad and towering, only broken where a road finds its pass
+    massif_h = np.zeros((n, n))
+    massif_d = np.full((n, n), 1e9)            # distance from the crest in half-widths
+    for line, width, height in geo.MASSIFS:
+        d = f.segment_distance(line) + rough * 2.5
+        env = smoothstep(width * 2.3, width * 0.2, d)
+        massif_h = np.maximum(massif_h, env ** 0.85 * height * MASSIF_HEIGHT * (0.72 + 0.4 * crest))
+        massif_d = np.minimum(massif_d, d / width)
+    z = np.maximum(z, base * 0.6 + massif_h * pass_factor)
+    in_massif = massif_d < 2.6
     for cx, cy, r, depth in geo.BASINS:
         d = f.distance(cx, cy)
         z -= depth * smoothstep(r * 1.4, r * 0.5, d)
@@ -179,14 +190,14 @@ def build(seed=1):
     relief = np.maximum(z - base, 0)
     T.relief = relief
     ledge = relief * pass_factor + f.fbm(13, 3) * 90           # ragged ledges rather than contour rings
-    terrace = np.clip(np.floor((ledge - 200) / 230) + 1, 0, 3).astype(np.int32)
+    terrace = np.clip(np.floor((ledge - 200) / 230) + 1, 0, np.where(in_massif, 5, 3)).astype(np.int32)
     keep_flat = (dc <= 4) | (road_d < 6) | (distance_field(lake | river, 4) < 4) | instance_land
     for tx, ty, r in flat_spots:
         keep_flat |= f.distance(tx, ty) < r
     terrace[keep_flat] = 0
-    terrace = np.minimum(terrace, np.floor((road_d - 6) / 2.5).clip(0, 3).astype(np.int32))   # step up away from roads
+    terrace = np.minimum(terrace, np.floor((road_d - 6) / 2.5).clip(0, 5).astype(np.int32))   # step up away from roads
     tidy = np.zeros_like(terrace)
-    for k in (1, 2, 3):                                        # no one-tile slivers of ledge
+    for k in (1, 2, 3, 4, 5):                                  # no one-tile slivers of ledge
         tidy += dilate(erode(terrace >= k, 1), 1) & (tidy >= k - 1)
     terrace = tidy
     z = np.where(z > base, base + (z - base) * 0.65, z)
@@ -232,7 +243,14 @@ def build(seed=1):
         layer = m
     ramp = np.zeros((n, n), bool)
     dry = land & ~lake & ~river
+    core = land & (massif_d < 1.15) & (pass_factor > 0.7)          # the impassable heart of each massif
+    T.massif_core = core
+    no_ramp = in_massif | instance_land
+    for line, gates in getattr(geo, 'WALLS', []):
+        no_ramp |= f.segment_distance(line) < 8
     T.ramps = stamp_ramps(layer, ramp, z, dry)
+    T.ramps += edge_ramps(layer, ramp, z, dry & ~no_ramp, T.ramps, f.rng)
+    T.ramps += link_pockets(layer, ramp, z, dry, water, core, no_ramp, np.where(land, land_id, -1))
     for line, gates in getattr(geo, 'WALLS', []):     # ramparts: a raised line of corners, cliffs on both sides
         wall = (f.segment_distance(line) <= 0.8) & (land | (dw <= 4))
         for gx, gy in gates:
@@ -361,14 +379,7 @@ def build(seed=1):
 
 
 def stamp_ramps(layer, ramp, z, dry):
-    """Cut a ramp wherever a road climbs or drops one cliff level.
-
-    Ramps follow the World Editor's layout: along a straight stretch of cliff
-    edge, each column of the ramp flags its last upper corner and the two lower
-    corners after it. The edge is straightened over a small window around the
-    crossing and the ground there is levelled. Returns the ramp centres.
-    """
-    n = layer.shape[0]
+    """Cut a ramp wherever a road climbs or drops one cliff level. Returns the ramp centres."""
     crossings = []
     for line in geo.ROADS:
         pts = []
@@ -389,48 +400,148 @@ def stamp_ramps(layer, ramp, z, dry):
     for cx, cy, dx, dy in crossings:
         if any(np.hypot(cx - px, cy - py) < 6 for px, py in done):
             continue
-        horizontal = abs(dx) >= abs(dy)            # the road runs along x: the ramp climbs along x
-        s, t = (cx, cy) if horizontal else (cy, cx)
-
-        def at(si, ti):                              # (row, column) of along/across indices
-            return (ti, si) if horizontal else (si, ti)
-
-        t0 = int(round(t))
-        samples = [layer[at(int(round(s + o)), t0)] for o in (-3, 3)]
-        if abs(samples[0] - samples[1]) != 1:
-            continue
-        upper = max(samples)
-        sgn = -1 if samples[0] > samples[1] else 1     # -1: the upper side is at smaller s
-        across = range(t0 - 4, t0 + 5)
-        for shift_by in (0, -1, 1, -2, 2, -3, 3):      # slide along the road to a clean stretch of edge
-            j0 = (int(np.floor(s)) if sgn < 0 else int(np.ceil(s))) + shift_by
-            along = range(j0 - 2, j0 + 4) if sgn < 0 else range(j0 - 3, j0 + 3)
-            cells = [(si, ti) for si in along for ti in across]
-            if any(not (0 < si < n - 1 and 0 < ti < n - 1) for si, ti in cells):
-                continue
-            if any(not dry[at(si, ti)] or layer[at(si, ti)] not in (upper - 1, upper) for si, ti in cells):
-                continue
-            if any(ramp[at(si + a, ti + b)] for si, ti in cells for a in (-1, 0, 1) for b in (-1, 0, 1)
-                   if 0 <= si + a < n and 0 <= ti + b < n):
-                continue
-            break
-        else:
-            continue
-        for si, ti in cells:
-            is_upper = si <= j0 if sgn < 0 else si >= j0
-            layer[at(si, ti)] = upper if is_upper else upper - 1
-        for k in range(3):                             # the upper corner and the two lower ones below it
-            for ti in range(t0 - 2, t0 + 3):
-                ramp[at(j0 - sgn * k, ti)] = True
-        rows = [at(si, ti) for si, ti in cells]
-        level_z = float(np.mean([z[r] for r in rows]))
-        for si in range(min(along) - 2, max(along) + 3):
-            for ti in range(t0 - 6, t0 + 7):
-                if 0 <= si < n and 0 <= ti < n:
-                    inside = (si in along) and (ti in across)
-                    z[at(si, ti)] = level_z if inside else (z[at(si, ti)] + level_z) / 2
-        done.append((cx, cy))
+        if stamp_ramp(layer, ramp, z, dry, cx, cy, abs(dx) >= abs(dy)):
+            done.append((cx, cy))
     return done
+
+
+def edge_ramps(layer, ramp, z, dry, done, rng, spacing=24):
+    """Ramps along the cliff edges between zones and up onto ledges, about every `spacing` tiles."""
+    cands = [(i + 0.5, j, True) for j, i in np.argwhere((np.abs(layer[:, 1:] - layer[:, :-1]) == 1) & dry[:, 1:] & dry[:, :-1])]
+    cands += [(i, j + 0.5, False) for j, i in np.argwhere((np.abs(layer[1:, :] - layer[:-1, :]) == 1) & dry[1:, :] & dry[:-1, :])]
+    taken = np.zeros((MAP_H // 8 + 2, MAP_W // 8 + 2), bool)    # coarse grid of ramps already cut
+
+    def near_taken(x, y):
+        gx, gy = int(x // 8), int(y // 8)
+        r = spacing // 8 + 1
+        for px, py in [(px, py) for px, py in done if abs(px - x) < spacing and abs(py - y) < spacing]:
+            if np.hypot(px - x, py - y) < spacing:
+                return True
+        return False
+
+    new = []
+    for k in rng.permutation(len(cands)):
+        cx, cy, horizontal = cands[k]
+        if near_taken(cx, cy):
+            continue
+        if stamp_ramp(layer, ramp, z, dry, cx, cy, horizontal):
+            done = done + [(cx, cy)]
+            new.append((cx, cy))
+    return new
+
+
+def walkable_tiles(layer, ramp, z, dry, water, core):
+    """Rough walkability of each tile while the terrain is still being shaped (no pathing map yet)."""
+    corners = lambda a: [a[:-1, :-1], a[:-1, 1:], a[1:, :-1], a[1:, 1:]]
+    h = np.where(water, z, z + 128 * (layer - 2))
+    foot = dry | (water & (z > -DEEP_WATER))
+    rl, hr = corners(layer), corners(h)
+    flat = np.maximum.reduce(rl) == np.minimum.reduce(rl)
+    entrance = np.logical_and.reduce(corners(ramp)) & ~flat
+    gentle = np.maximum.reduce(hr) - np.minimum.reduce(hr) <= 95
+    walk = np.logical_and.reduce(corners(foot)) & ((flat & gentle) | entrance) & ~core[:-1, :-1]
+    out = np.zeros(layer.shape, bool)
+    out[:-1, :-1] = walk
+    return out
+
+
+def link_pockets(layer, ramp, z, dry, water, core, no_ramp, owner, rounds=6):
+    """Give every sealed-off patch of walkable ground a ramp down (or up) to its neighbour."""
+    new = []
+    for _ in range(rounds):
+        label, sizes = label_regions(walkable_tiles(layer, ramp, z, dry, water, core))
+        sel = (owner >= 0) & (label >= 0)
+        keys, counts = np.unique(owner[sel] * (len(sizes) + 1) + label[sel], return_counts=True)
+        best = {}
+        for key, count in zip(keys, counts):
+            land, lab = divmod(int(key), len(sizes) + 1)
+            if count > best.get(land, (0, -1))[0]:
+                best[land] = (count, lab)
+        main = np.zeros(len(sizes), bool)
+        main[[lab for _, lab in best.values()]] = True
+        pocket = (label >= 0) & ~main[label] & (sizes[label] >= 25)
+        ok = dry & ~no_ramp
+        tried = set()
+        made = 0
+        for horizontal in (True, False):
+            if horizontal:      # edge between points (j, i) and (j, i + 1): tiles (j, i - 1) and (j, i + 1) either side
+                a, b = layer[:, 1:-1], layer[:, 2:]
+                la, lb = label[:, :-2], label[:, 2:]
+                edge = (np.abs(a - b) == 1) & ok[:, 1:-1] & ok[:, 2:]
+                coords = [(i + 1.5, j) for j, i in np.argwhere(edge & (la != lb) & (la >= 0) & (lb >= 0)
+                                                                & (pocket[:, :-2] | pocket[:, 2:]))]
+                owners = [(label[j, int(x) - 1], label[j, int(x) + 1]) for x, j in coords]
+            else:
+                a, b = layer[1:-1, :], layer[2:, :]
+                la, lb = label[:-2, :], label[2:, :]
+                edge = (np.abs(a - b) == 1) & ok[1:-1, :] & ok[2:, :]
+                coords = [(i, j + 1.5) for j, i in np.argwhere(edge & (la != lb) & (la >= 0) & (lb >= 0)
+                                                                & (pocket[:-2, :] | pocket[2:, :]))]
+                owners = [(label[int(y) - 1, i], label[int(y) + 1, i]) for i, y in coords]
+            for (cx, cy), pair in zip(coords, owners):
+                key = tuple(sorted(int(v) for v in pair))
+                if key in tried:
+                    continue
+                if stamp_ramp(layer, ramp, z, dry, cx, cy, horizontal):
+                    tried.add(key)
+                    new.append((cx, cy))
+                    made += 1
+        if not made:
+            break
+    return new
+
+
+def stamp_ramp(layer, ramp, z, dry, cx, cy, horizontal):
+    """Cut one ramp across the cliff edge at (cx, cy), climbing along x if `horizontal`, else along y.
+
+    Ramps follow the World Editor's layout: along a straight stretch of cliff
+    edge, each column of the ramp flags its last upper corner and the two lower
+    corners after it. The edge is straightened over a small window around the
+    crossing and the ground there is levelled. Returns whether it was cut.
+    """
+    n = layer.shape[0]
+    s, t = (cx, cy) if horizontal else (cy, cx)
+
+    def at(si, ti):                              # (row, column) of along/across indices
+        return (ti, si) if horizontal else (si, ti)
+
+    t0 = int(round(t))
+    if not (6 < t0 < n - 7 and 6 < s < n - 7):
+        return False
+    samples = [layer[at(int(round(s + o)), t0)] for o in (-3, 3)]
+    if abs(samples[0] - samples[1]) != 1:
+        return False
+    upper = max(samples)
+    sgn = -1 if samples[0] > samples[1] else 1     # -1: the upper side is at smaller s
+    across = range(t0 - 4, t0 + 5)
+    for shift_by in (0, -1, 1, -2, 2, -3, 3):      # slide along the crossing to a clean stretch of edge
+        j0 = (int(np.floor(s)) if sgn < 0 else int(np.ceil(s))) + shift_by
+        along = range(j0 - 2, j0 + 4) if sgn < 0 else range(j0 - 3, j0 + 3)
+        cells = [(si, ti) for si in along for ti in across]
+        if any(not (0 < si < n - 1 and 0 < ti < n - 1) for si, ti in cells):
+            continue
+        if any(not dry[at(si, ti)] or layer[at(si, ti)] not in (upper - 1, upper) for si, ti in cells):
+            continue
+        if any(ramp[at(si + a, ti + b)] for si, ti in cells for a in (-1, 0, 1) for b in (-1, 0, 1)
+               if 0 <= si + a < n and 0 <= ti + b < n):
+            continue
+        break
+    else:
+        return False
+    for si, ti in cells:
+        is_upper = si <= j0 if sgn < 0 else si >= j0
+        layer[at(si, ti)] = upper if is_upper else upper - 1
+    for k in range(3):                             # the upper corner and the two lower ones below it
+        for ti in range(t0 - 2, t0 + 3):
+            ramp[at(j0 - sgn * k, ti)] = True
+    rows = [at(si, ti) for si, ti in cells]
+    level_z = float(np.mean([z[r] for r in rows]))
+    for si in range(min(along) - 2, max(along) + 3):
+        for ti in range(t0 - 6, t0 + 7):
+            if 0 <= si < n and 0 <= ti < n:
+                inside = (si in along) and (ti in across)
+                z[at(si, ti)] = level_z if inside else (z[at(si, ti)] + level_z) / 2
+    return True
 
 
 def check_cliffs(layer):
@@ -456,7 +567,7 @@ def compute_pathing(T):
     shallow = water_here & ~deep
     cells = np.where(shallow, 0x08, cells)
     cells = np.where(deep, 0x0A, cells)
-    blocked = T.cliff_tile[by, bx] | T.steep_tile[by, bx]
+    blocked = T.cliff_tile[by, bx] | T.steep_tile[by, bx] | T.massif_core[by, bx]
     cells = np.where(T.ramp_tile[by, bx] & ~water_here, 0x48, cells)
     cells = np.where(blocked & ~water_here, 0xCA, cells)
     cells = np.where(blocked & water_here, cells | 0x0A, cells)

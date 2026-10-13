@@ -143,35 +143,44 @@ RIDGES = [
     # Kalimdor
     ([(60, 360), (66, 380), (78, 392), (100, 394), (106, 380)], 4, 420),          # Moonglade ring (north)
     ([(108, 372), (112, 360), (116, 340), (112, 320)], 4, 380),                    # Felwood / Hyjal wall
-    ([(122, 344), (134, 348), (146, 342)], 6, 520),                                # Hyjal summit
-    ([(118, 368), (130, 392), (150, 396), (164, 384)], 5, 460),                    # Winterspring peaks
-    ([(30, 258), (40, 250), (50, 236), (56, 222), (64, 210)], 6, 560),             # Stonetalon peaks
     ([(66, 210), (74, 200), (70, 186), (64, 170), (72, 162), (88, 160), (98, 168), (100, 182)], 3, 320),  # Mulgore rim
     ([(98, 196), (96, 206), (84, 208)], 3, 300),
     ([(152, 252), (158, 262), (170, 268)], 3, 260),                                # Orgrimmar ridge
     ([(30, 150), (50, 148), (70, 144)], 4, 300),                                   # Feralas / Desolace hills
-    ([(70, 104), (84, 104), (98, 98), (100, 84), (96, 68), (82, 64), (68, 70), (64, 86), (70, 104)], 4, 380),  # Un'Goro rim
     ([(138, 112), (150, 104), (160, 112)], 4, 300),                                # Onyxia's lair hills
     ([(26, 96), (40, 92), (60, 96)], 3, 220),                                      # Silithus / Feralas border
-    ([(64, 318), (66, 336), (64, 356), (66, 372)], 3, 380),                        # Darkshore's eastern range
     ([(186, 304), (192, 320), (194, 334)], 3, 340),                                # the mountains of Azshara
-    ([(66, 134), (70, 118), (68, 104)], 3, 360),                                   # Feralas / Thousand Needles wall
     # Eastern Kingdoms
-    ([(376, 336), (384, 346), (394, 352), (404, 346)], 5, 560),                    # Alterac Mountains
     ([(408, 318), (420, 322), (432, 318)], 4, 300),                                # Hinterland hills
-    ([(352, 250), (360, 244), (370, 248), (380, 246), (388, 236)], 5, 520),        # Khaz Mountains (Ironforge)
-    ([(388, 258), (396, 250), (404, 248)], 4, 360),                                # Dun Algaz
     ([(380, 220), (394, 222), (408, 220)], 4, 420),                                # Searing Gorge rim
-    ([(388, 202), (396, 200)], 6, 520),                                            # Blackrock Mountain
     ([(372, 182), (390, 182), (414, 183), (428, 182)], 3, 360),                    # Redridge / Burning Steppes wall
     ([(446, 180), (452, 168), (446, 160)], 3, 300),                                # Redridge east
     ([(408, 150), (416, 140), (424, 132)], 4, 420),                                # Deadwind peaks
-    ([(426, 122), (430, 110), (432, 96), (428, 84)], 4, 400),                      # Blasted Lands wall
     ([(382, 120), (396, 116), (410, 120)], 3, 260),                                # Duskwood / STV ridge
     ([(368, 70), (376, 80), (388, 84)], 3, 220),                                   # STV hills
     ([(430, 256), (440, 248), (448, 236)], 3, 280),                                # Grim Batol hills
     ([(440, 222), (452, 214), (458, 202)], 4, 360),                                # Badlands peaks
-    ([(414, 160), (426, 156), (440, 160)], 3, 360),                                # Redridge peaks
+]
+
+# Massifs: the great ranges, huge stacks of cliffs and peaks (polyline, half-width, height)
+# that no army can climb. Roads still find their passes through them.
+MASSIFS = [
+    # Kalimdor
+    ([(22, 266), (28, 252), (34, 238), (38, 224)], 6, 1350),                       # Stonetalon Peak
+    ([(124, 350), (136, 356), (150, 352)], 5, 1250),                               # the summit of Hyjal
+    ([(116, 366), (128, 390), (148, 398), (166, 388)], 6, 1300),                   # Winterspring's Frostsaber peaks
+    ([(64, 320), (66, 336), (64, 356), (66, 372)], 6, 950),                        # Darkshore's eastern range
+    ([(66, 136), (70, 118), (68, 102)], 5, 1100),                                  # the wall between Feralas and Thousand Needles
+    ([(80, 150), (96, 147), (118, 146), (134, 150)], 4, 1000),                     # the cliffs above Thousand Needles
+    ([(70, 104), (84, 104), (98, 98), (100, 84), (96, 68), (82, 64), (68, 70), (64, 86), (70, 104)], 4, 1050),  # the walls of Un'Goro Crater
+    # Eastern Kingdoms
+    ([(384, 336), (392, 348), (402, 354), (412, 348)], 6, 1350),                   # the Alterac Mountains
+    ([(348, 252), (358, 258), (372, 258), (386, 254), (394, 250)], 5, 1300),       # the Khaz Mountains, split by Dun Algaz
+    ([(378, 203), (388, 204)], 7, 1450),                                           # Blackrock Mountain
+    ([(410, 158), (424, 154), (442, 158)], 5, 1150),                               # the Redridge Mountains
+    ([(406, 396), (418, 391), (432, 389)], 5, 1150),                               # the Thalassian highlands, west of the pass
+    ([(452, 392), (464, 400)], 4, 1000),                                           # ... and east of it
+    ([(426, 124), (430, 110), (432, 96), (428, 82)], 5, 1250),                     # the Blasted Lands wall
 ]
 
 # Lakes: (cx, cy, rx, ry) or polygon.
@@ -347,7 +356,7 @@ LANDMARKS = [
 # Destructable landmarks (volcanoes etc.): (id, x, y, scale)
 DESTRUCTABLE_LANDMARKS = [
     ('Volc', 82, 82, 1.0),      # Fire Plume Ridge
-    ('Volc', 392, 202, 1.1),    # Blackrock Mountain
+    ('Volc', 383, 203.5, 1.6),  # Blackrock Mountain
 ]
 
 
@@ -391,13 +400,14 @@ def _squash_points(points):
 
 
 def _squash_everything():
-    global RIDGES, LAKES, RIVERS, SHALLOWS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, PORTALS, ROADS
+    global RIDGES, MASSIFS, LAKES, RIVERS, SHALLOWS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, PORTALS, ROADS
     global LANDMARKS, DESTRUCTABLE_LANDMARKS, WALLS
     near = _near_squashed
     for z in ZONES:
         if z['land'] in _SQUASHED_LANDS:
             z['cy'], z['ry'] = _sy(z['cy']), z['ry'] * SQUASH
     RIDGES = [(_squash_points(l), w, h) if near(*l[0]) else (l, w, h) for l, w, h in RIDGES]
+    MASSIFS = [(_squash_points(l), w, h) if near(*l[0]) else (l, w, h) for l, w, h in MASSIFS]
     LAKES = [(x, _sy(y), rx, ry * SQUASH) if near(x, y) else (x, y, rx, ry) for x, y, rx, ry in LAKES]
     RIVERS = [_squash_points(l) if near(*l[0]) else l for l in RIVERS]
     SHALLOWS = [_squash_points(l) if near(*l[0]) else l for l in SHALLOWS]
@@ -489,10 +499,12 @@ _nr_zone("Zul'Drak", 0.73, 0.53, 0.14, 0.10, 'tundra', base=50, hills=90, densit
 _nr_zone('Grizzly Hills', 0.70, 0.30, 0.10, 0.11, 'grizzly', base=70)
 _nr_zone('Howling Fjord', 0.87, 0.17, 0.12, 0.15, 'fjord', base=80)
 
+MASSIFS += [
+    ([nr(0.55, 0.70), nr(0.65, 0.82), nr(0.78, 0.86), nr(0.90, 0.78)], 8, 1450),      # the Storm Peaks
+    ([nr(0.28, 0.88), nr(0.38, 0.90), nr(0.48, 0.86)], 6, 1400),                      # the Icecrown glacier
+    ([nr(0.05, 0.50), nr(0.12, 0.47), nr(0.21, 0.50), nr(0.25, 0.60), nr(0.22, 0.74)], 4, 1100),  # the walls of Sholazar
+]
 RIDGES += [
-    ([nr(0.55, 0.70), nr(0.65, 0.82), nr(0.78, 0.86), nr(0.90, 0.78)], 6, 640),       # the Storm Peaks
-    ([nr(0.28, 0.88), nr(0.38, 0.90), nr(0.48, 0.86)], 5, 520),                       # Icecrown glacier
-    ([nr(0.05, 0.50), nr(0.12, 0.47), nr(0.21, 0.50), nr(0.25, 0.60), nr(0.22, 0.74)], 3, 360),  # Sholazar rim
     ([nr(0.60, 0.42), nr(0.70, 0.40), nr(0.82, 0.42)], 3, 280),                       # Zul'Drak escarpment
     ([nr(0.72, 0.22), nr(0.80, 0.26), nr(0.90, 0.28)], 3, 260),                       # Howling Fjord highlands
     ([nr(0.25, 0.40), nr(0.30, 0.36), nr(0.38, 0.38)], 3, 240),                       # Wintergrasp foothills
@@ -543,6 +555,8 @@ ROADS += [[nr(u, v) for u, v in line] for line in [
     [(0.52, 0.30), (0.62, 0.30), (0.70, 0.30), (0.76, 0.22), (0.80, 0.10)],
     [(0.50, 0.52), (0.60, 0.54), (0.72, 0.52), (0.86, 0.48)],
     [(0.50, 0.52), (0.58, 0.62), (0.66, 0.66), (0.70, 0.80)],
+    [(0.18, 0.38), (0.15, 0.48), (0.13, 0.60)],             # Fizzcrank up into Sholazar
+    [(0.32, 0.50), (0.25, 0.55), (0.18, 0.58)],             # Wintergrasp over the eastern wall of Sholazar
     [(0.80, 0.10), (0.88, 0.18), (0.96, 0.26)],
 ]]
 
@@ -744,6 +758,7 @@ def _find_site(ref):
     raise KeyError(ref)
 
 
+_WORLD_ROADS = list(ROADS)          # the roads of the world, before the instance corridors join them
 for _name, _box, _biome, _ref, _side in INSTANCES:
     _x0, _y0, _x1, _y1 = _box
     _outline, _gate, _mid, _boss, _blocks, _corridor = _instance_layout(_name, _box, _side)
@@ -755,3 +770,52 @@ for _name, _box, _biome, _ref, _side in INSTANCES:
     ROADS.append(_corridor)
     PORTALS.append(((_name + ' Entrance',) + _find_site(_ref), (_name + ' Portal',) + _gate))
     DUNGEON_CAMPS += [(_name + ' Guards', _mid[0], _mid[1], 2), (_name, _boss[0], _boss[1], 3)]
+
+
+# ---------------------------------------------------------------------------
+# Getting about on foot: wading straits out to the small islands, and a track
+# from every camp and town to the nearest road (never over a massif).
+# ---------------------------------------------------------------------------
+SHALLOWS += [
+    [(29, 297), (36, 296.5), (43, 295.5)],          # Azuremyst Isle to Darkshore
+    [(17, 306), (20, 302)],                         # Bloodmyst Isle to Azuremyst
+    [(342, 243), (346, 240.5), (349.5, 238)],       # Tol Barad to Gilneas
+    [(165, 116), (171, 118.5), (177, 121.5), (181, 124)],   # Alcaz Island to Dustwallow
+]
+
+
+def _segment_point(p, a, b):
+    (px, py), (ax, ay), (bx, by) = p, a, b
+    dx, dy = bx - ax, by - ay
+    t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / float(dx * dx + dy * dy)))
+    return ax + t * dx, ay + t * dy
+
+
+def _near_massif(a, b, steps=12):
+    for k in range(steps + 1):
+        p = (a[0] + (b[0] - a[0]) * k / steps, a[1] + (b[1] - a[1]) * k / steps)
+        for line, width, height in MASSIFS:
+            for c, d in zip(line, line[1:]):
+                q = _segment_point(p, c, d)
+                if math.hypot(p[0] - q[0], p[1] - q[1]) < width * 2.2:
+                    return True
+    return False
+
+
+def _spur_roads():
+    roads = list(_WORLD_ROADS)
+    spurs = []
+    for name, x, y, _ in CAMPS + TOWNS:
+        best = None
+        for road in roads:
+            for a, b in zip(road, road[1:]):
+                q = _segment_point((x, y), a, b)
+                d = math.hypot(x - q[0], y - q[1])
+                if best is None or d < best[0]:
+                    best = (d, q)
+        if best and 4 < best[0] <= 30 and not _near_massif((x, y), best[1]):
+            spurs.append([(x, y), (round(best[1][0], 1), round(best[1][1], 1))])
+    return spurs
+
+
+ROADS += _spur_roads()

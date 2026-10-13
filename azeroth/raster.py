@@ -148,3 +148,24 @@ def erode(mask, steps=1):
 def smoothstep(e0, e1, x):
     t = np.clip((x - e0) / (e1 - e0), 0, 1)
     return t * t * (3 - 2 * t)
+
+
+def label_regions(mask):
+    """Label 4-connected areas of a boolean grid; returns (labels with -1 off the mask, sizes)."""
+    h, w = mask.shape
+    label = -np.ones((h, w), np.int64)
+    sizes = []
+    for sy, sx in np.argwhere(mask):
+        if label[sy, sx] >= 0:
+            continue
+        cid, stack, count = len(sizes), [(sy, sx)], 0
+        label[sy, sx] = cid
+        while stack:
+            y, x = stack.pop()
+            count += 1
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < h and 0 <= xx < w and mask[yy, xx] and label[yy, xx] < 0:
+                    label[yy, xx] = cid
+                    stack.append((yy, xx))
+        sizes.append(count)
+    return label, np.array(sizes + [0])

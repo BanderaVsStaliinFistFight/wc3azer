@@ -5,7 +5,7 @@ import numpy as np
 
 from . import geography as geo
 from .biomes import B
-from .raster import dilate, smoothstep
+from .raster import dilate, label_regions
 from .terrain import MAP_W, MAP_H, ground_z_at, world_xy
 
 NEUTRAL_HOSTILE, NEUTRAL_PASSIVE = 12, 15     # classic (12 player) numbering used by war3mapUnits.doo
@@ -13,13 +13,16 @@ ITEM_CLASS = {'permanent': 'i', 'charged': 'j', 'powerup': 'k', 'artifact': 'l'}
 TREE_VARIATIONS = {'LTlt': 10, 'FTtw': 10, 'ATtr': 5, 'CTtr': 5, 'BTtw': 10, 'ZTtw': 10, 'WTst': 10, 'NTtw': 10, 'ITtw': 10,
                    'ATtc': 3, 'ZTtc': 3, 'CTtc': 3}
 DETAIL_VARIATIONS = {'LRrk': 10, 'ARrk': 10, 'CRrk': 10, 'BRrk': 10, 'BRsp': 8, 'ZRrk': 10, 'ZRsp': 8, 'NRrk': 10, 'IRrs': 10,
-                     'ORrk': 10, 'DRrk': 10, 'ZPfw': 5, 'ZPsh': 3, 'APms': 4, 'CPms': 4, 'APct': 1, 'LPrs': 4, 'LPfp': 3}
+                     'ORrk': 10, 'DRrk': 10, 'BRrs': 8, 'CRrs': 8, 'ORrs': 10, 'ZRrs': 8, 'IRgc': 10, 'ZPfw': 5, 'ZPsh': 3, 'APms': 4, 'CPms': 4, 'APct': 1, 'LPrs': 4, 'LPfp': 3}
 # per biome: (rock, rock spire or None) scattered over steep slopes
 ROCKS = {'nightelf': ('ARrk', None), 'worldtree': ('ARrk', None), 'crystal': ('ARrk', None), 'fel': ('CRrk', None),
          'savanna': ('BRrk', None), 'reddesert': ('BRrk', 'BRsp'), 'needles': ('BRrk', 'BRsp'), 'barren': ('BRrk', None),
          'desert': ('BRrk', 'BRsp'), 'amber': ('BRrk', 'BRsp'), 'jungle': ('ZRrk', 'ZRsp'), 'swamp': ('ZRrk', None),
          'snow': ('NRrk', None), 'tundra': ('NRrk', None), 'icecrown': ('IRrs', None), 'frozen': ('IRrs', None),
          'volcanic': ('ORrk', None), 'lava': ('ORrk', None), 'halls': ('DRrk', None), 'crypt': ('DRrk', None)}
+# per biome: the great spire raised on the heights of a massif
+SPIRES = {'snow': 'IRgc', 'tundra': 'IRgc', 'icecrown': 'IRgc', 'crystal': 'IRgc', 'savanna': 'BRrs', 'reddesert': 'BRrs',
+          'needles': 'BRrs', 'barren': 'BRrs', 'desert': 'BRrs', 'amber': 'BRrs', 'volcanic': 'ORrs', 'fel': 'CRrs'}
 # per biome: small plants without pathing, dotted over open ground
 PLANTS = {'temperate': ['ZPfw', 'ZPsh'], 'farmland': ['ZPfw', 'ZPsh'], 'plains': ['ZPfw', 'ZPsh'], 'autumn': ['ZPsh', 'ZPfw'],
           'highland': ['ZPsh', 'ZPfw'], 'darkforest': ['ZPsh', 'APms'], 'nightelf': ['APms', 'ZPfw', 'ZPsh'],
@@ -353,6 +356,12 @@ def place(T, seed=7):
             T.pathing[ty * 4:ty * 4 + 4, tx * 4:tx * 4 + 4] = 0xCA
             occupied[ty, tx] = True
     unblock_rubble(T, label, sizes, rubble, detail)
+    # great rock spires and glaciers crown the massifs
+    crown = np.zeros((n, n), bool)
+    crown[:-1, :-1] = T.massif_core[:-1, :-1]
+    for ty, tx in np.argwhere(crown & ground & (rng.random((n, n)) < 0.05)):
+        spire = SPIRES.get(str(biome_of[ty, tx]), 'ZRrs')
+        add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.8, 1.2), fixed=4.712389 if spire in ('ORrs', 'IRgc') else None)
     lush = dilate(occupied, 1) | (T.road_d < 1.6)
     open_ground = tile_ok & ~is_tree & ~lush & ~steep
     roll = rng.random((n, n))
@@ -380,23 +389,9 @@ def place(T, seed=7):
 def walkable_regions(T):
     """Label the walkable areas (tile resolution); returns (label map, area sizes), label -1 = unwalkable."""
     cells = T.pathing.reshape(MAP_H, 4, MAP_W, 4)
-    walk = ((cells & 0x02) == 0).mean(axis=(1, 3)) >= 0.5
-    label = -np.ones((MAP_H + 1, MAP_W + 1), np.int64)
-    sizes = []
-    for sy, sx in np.argwhere(walk):
-        if label[sy, sx] >= 0:
-            continue
-        cid, stack, count = len(sizes), [(sy, sx)], 0
-        label[sy, sx] = cid
-        while stack:
-            y, x = stack.pop()
-            count += 1
-            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-                if 0 <= yy < MAP_H and 0 <= xx < MAP_W and walk[yy, xx] and label[yy, xx] < 0:
-                    label[yy, xx] = cid
-                    stack.append((yy, xx))
-        sizes.append(count)
-    return label, np.array(sizes + [0])
+    walk = np.zeros((MAP_H + 1, MAP_W + 1), bool)
+    walk[:-1, :-1] = ((cells & 0x02) == 0).mean(axis=(1, 3)) >= 0.5
+    return label_regions(walk)
 
 
 def main_regions(T, label, sizes):
