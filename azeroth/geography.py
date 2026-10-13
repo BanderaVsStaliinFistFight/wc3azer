@@ -8,6 +8,8 @@ the map for Northrend, which follows the Wrath of the Lich King continent map
 inside NORTHREND_BOX. The Maelstrom sits in the middle of the Great Sea with the
 goblin isle of Kezan below it and Kul Tiras to the east.
 """
+import math
+
 
 # ---------------------------------------------------------------------------
 # Landmasses: polygons (clockwise or not, doesn't matter) or ellipses.
@@ -33,15 +35,14 @@ EASTERN_KINGDOMS = [
     (366, 15), (354, 18), (346, 26), (342, 40), (338, 56), (336, 72), (334, 88), (332, 104), (330, 118),
     (326, 130), (324, 144), (326, 158), (330, 170), (338, 176), (342, 186), (344, 200), (346, 214), (344, 228),
     (346, 242), (350, 254), (360, 262), (368, 268), (372, 276), (366, 284), (378, 288), (390, 291), (382, 296),
-    (372, 302), (362, 306), (354, 312), (348, 318), (343, 317), (339, 311), (335, 306), (329, 302), (320, 303),
-    (310, 304), (302, 307), (297, 312), (295, 320), (299, 328), (306, 333), (312, 330), (317, 335), (324, 338),
-    (331, 341), (334, 350), (338, 364), (336, 376), (340, 388), (348, 396), (358, 400),
+    (372, 302), (362, 306), (354, 312), (348, 318), (343, 322), (338, 329), (330, 331.5), (320, 331.5),
+    (312, 333), (310, 338), (314, 345), (322, 348.5), (334, 350), (338, 364), (336, 376), (340, 388), (348, 396), (358, 400),
     (370, 398), (382, 396), (394, 400), (404, 406), (410, 420), (414, 432),
 ]
 
 KUL_TIRAS = [
-    (276, 200), (278, 214), (286, 224), (298, 228), (310, 226), (318, 216), (318, 202), (312, 192), (304, 186),
-    (300, 192), (294, 183), (284, 184), (278, 190),
+    (276, 180), (278, 194), (286, 204), (298, 208), (310, 206), (318, 196), (318, 182), (312, 172), (304, 166),
+    (300, 172), (294, 163), (284, 164), (278, 170),
 ]
 
 # name: shape. Polygons are lists of points; ellipses are ('ellipse', cx, cy, rx, ry).
@@ -56,14 +57,14 @@ LANDMASSES = {
     'Echo Isles': ('ellipse', 176, 206, 4, 3),
     'Theramore Isle': ('ellipse', 179, 133, 3, 3),
     'Alcaz Island': ('ellipse', 182, 152, 4, 3),
-    'Tol Barad': ('ellipse', 350, 294, 6, 4),
+    'Tol Barad': ('ellipse', 352, 291.5, 5, 3.75),
     'Kezan': ('ellipse', 250, 202, 9, 6),
 }
 
 # The Maelstrom: a ring of jagged rocks around a bottomless whirlpool.
-MAELSTROM = (252, 246)
-MAELSTROM_ROCKS = [(252, 268, 3), (268, 262, 3), (275, 247, 3), (268, 231, 3), (252, 224, 3),
-                   (236, 230, 3), (229, 246, 3), (236, 262, 3), (260, 256, 2), (244, 238, 2)]
+MAELSTROM = (247, 246)
+MAELSTROM_ROCKS = [(247, 268, 3), (263, 262, 3), (270, 247, 3), (263, 231, 3), (247, 224, 3),
+                   (231, 230, 3), (224, 246, 3), (231, 262, 3), (255, 256, 2), (239, 238, 2)]
 for i, (x, y, r) in enumerate(MAELSTROM_ROCKS):
     LANDMASSES['Maelstrom Rock %d' % i] = ('ellipse', x, y, r, r)
 
@@ -113,7 +114,6 @@ zone('Tirisfal Glades', 'Eastern Kingdoms', 362, 382, 22, 14, 'autumn', density=
 zone('Western Plaguelands', 'Eastern Kingdoms', 398, 372, 15, 17, 'plague')
 zone('Eastern Plaguelands', 'Eastern Kingdoms', 442, 368, 26, 17, 'plague')
 zone('Silverpine Forest', 'Eastern Kingdoms', 346, 346, 9, 20, 'darkforest')
-zone('Gilneas', 'Eastern Kingdoms', 316, 320, 18, 14, 'darkforest', base=70)
 zone('Hillsbrad Foothills', 'Eastern Kingdoms', 368, 322, 15, 11, 'temperate')
 zone('Alterac Mountains', 'Eastern Kingdoms', 390, 343, 12, 10, 'snow', base=140)
 zone('The Hinterlands', 'Eastern Kingdoms', 434, 330, 28, 13, 'highland')
@@ -134,16 +134,16 @@ zone('Swamp of Sorrows', 'Eastern Kingdoms', 448, 150, 15, 12, 'swamp')
 zone('Blasted Lands', 'Eastern Kingdoms', 446, 104, 18, 22, 'volcanic', base=40)
 zone('Northern Stranglethorn', 'Eastern Kingdoms', 366, 98, 26, 20, 'jungle')
 zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
-zone('Tol Barad', 'Tol Barad', 350, 294, 6, 4, 'barren')
+zone('Tol Barad', 'Tol Barad', 352, 291.5, 5, 3.75, 'barren')
 # Northrend
 # Kul Tiras, Kezan, the Maelstrom
-zone('Drustvar', 'Kul Tiras', 284, 207, 10, 11, 'autumn', base=110, hills=110)
-zone('Stormsong Valley', 'Kul Tiras', 306, 219, 11, 9, 'farmland', base=50)
-zone('Tiragarde Sound', 'Kul Tiras', 302, 195, 10, 9, 'temperate')
+zone('Drustvar', 'Kul Tiras', 284, 187, 10, 11, 'autumn', base=110, hills=110)
+zone('Stormsong Valley', 'Kul Tiras', 306, 199, 11, 9, 'farmland', base=50)
+zone('Tiragarde Sound', 'Kul Tiras', 302, 175, 10, 9, 'temperate')
 zone('Kezan', 'Kezan', 250, 202, 9, 6, 'jungle')
-zone('The Maelstrom', 'Maelstrom Rock 0', 252, 246, 30, 30, 'rocky')
+zone('The Maelstrom', 'Maelstrom Rock 0', 247, 246, 30, 30, 'rocky')
 for i in range(1, len(MAELSTROM_ROCKS)):
-    zone('The Maelstrom', 'Maelstrom Rock %d' % i, 252, 246, 30, 30, 'rocky')
+    zone('The Maelstrom', 'Maelstrom Rock %d' % i, 247, 246, 30, 30, 'rocky')
 ZONES = Z
 
 # ---------------------------------------------------------------------------
@@ -178,9 +178,8 @@ RIDGES = [
     ([(382, 120), (396, 116), (410, 120)], 3, 260),                                # Duskwood / STV ridge
     ([(368, 70), (376, 80), (388, 84)], 3, 220),                                   # STV hills
     ([(430, 256), (440, 248), (448, 236)], 3, 280),                                # Grim Batol hills
-    ([(299, 310), (300, 320), (305, 328)], 3, 220),                                # Gilneas headlands
     # Kul Tiras
-    ([(280, 212), (286, 202), (284, 192)], 3, 300),                                # Drustvar
+    ([(280, 192), (286, 182), (284, 172)], 3, 300),                                # Drustvar
 ]
 
 # Lakes: (cx, cy, rx, ry) or polygon.
@@ -234,9 +233,7 @@ MESAS = [
 ]
 
 # Walls: (polyline, gate gaps) built as a one-tile raised cliff rampart, also out into shallow water.
-WALLS = [
-    ([(325, 345), (352, 310)], [(338, 327)]),     # the Greymane Wall and its gate; it runs a few tiles out to sea
-]
+WALLS = []
 
 # Basins (bowls): (cx, cy, radius, depth)
 BASINS = [
@@ -256,7 +253,7 @@ CAPITALS = [
     (4, 'Ironforge', 372, 236, 'human'),
     (5, 'Thunder Bluff', 86, 196, 'orc'),
     (7, 'Silvermoon City', 438, 428, 'human'),
-    (10, 'Boralus', 300, 196, 'human'),
+    (10, 'Boralus', 300, 176, 'human'),
 ]
 
 TOWNS = [
@@ -271,13 +268,12 @@ TOWNS = [
     ('Gadgetzan Market', 130, 72, 'ngme'), ('Cenarion Hold', 44, 72, 'nmoo'), ("Marshal's Refuge", 86, 92, 'nfoh'),
     ('Freewind Post', 100, 128, 'nmr4'), ('Camp Mojache', 58, 126, 'ntav'), ("Nijel's Point", 40, 198, 'ngme'),
     ('Sun Rock Retreat', 52, 230, 'nmer'), ('Camp Taurajo', 114, 182, 'nmr4'), ('Ramkahen', 78, 40, 'nmrk'),
-    ('Stormwind Harbor', 344, 186, 'nshp'), ('Brennadam', 306, 220, 'ntav'), ('Arathor', 404, 300, 'nmrk'),
+    ('Stormwind Harbor', 344, 186, 'nshp'), ('Brennadam', 306, 200, 'ntav'), ('Arathor', 404, 300, 'nmrk'),
     ('Aerie Peak', 422, 334, 'nmer'), ('Hammerfall', 428, 300, 'ntav'), ("Thorium Point", 390, 214, 'ngme'),
     ('Morgan\'s Vigil', 418, 190, 'ndrk'), ('Sentinel Hill', 342, 146, 'ntav'), ('Sepulcher', 346, 352, 'nmr2'),
     ('Brill', 370, 384, 'ngme'), ('Chillwind Camp', 404, 360, 'nfoh'), ('Tanaris Caverns of Time', 150, 70, 'ndrz'),
     ('Onyxia\'s Lair', 150, 106, 'ndrk'), ('Feathermoon', 26, 118, 'nshp'), ('Rut\'theran', 44, 404, 'nshp'),
     ('Splintertree Post', 140, 282, 'nmr5'), ('Razor Hill', 166, 232, 'ngme'), ('Kezan Trade', 250, 202, 'ngad'),
-    ('Duskhaven', 301, 313, 'ntav'), ('Keel Harbor', 310, 329, 'nshp'),
 ]
 
 CAMPS = [
@@ -288,7 +284,7 @@ CAMPS = [
     ('Stonewatch', 440, 176, 0), ('Blackrock Spire', 396, 196, 2), ('Uldaman', 426, 224, 1), ('Dun Algaz', 396, 246, 0),
     ('Kharanos', 380, 232, 0), ('Gnomeregan', 356, 246, 1), ('Grim Batol', 444, 248, 2), ('Dragonmaw Gates', 458, 262, 1),
     ('Thandol Span', 386, 290, 0), ('Stromgarde', 396, 310, 1), ('Dalaran Crater', 378, 344, 2), ('Durnholde Keep', 382, 316, 1),
-    ('Shadowfang Keep', 340, 340, 1), ('Gilneas City', 330, 318, 1), ('The Blackwald', 312, 314, 2), ('Stormglen Village', 322, 307, 0), ('Andorhal', 404, 368, 1), ('Stratholme', 448, 382, 2),
+    ('Shadowfang Keep', 340, 340, 1), ('Andorhal', 404, 368, 1), ('Stratholme', 448, 382, 2),
     ('Zul\'Aman', 456, 408, 2), ('Sunwell Plateau', 442, 456, 2), ('Jintha\'Alor', 446, 326, 2), ('Scarlet Monastery', 378, 390, 1),
     ('Naxxramas Shadow', 432, 362, 2), ('Highbank', 462, 290, 1), ('Ruins of Lordaeron', 364, 366, 0),
     ('Shadowglen', 38, 420, 0), ('Ruins of Mathystra', 58, 384, 1), ('Bashal\'Aran', 50, 330, 0), ('Felwood Jaedenar', 76, 322, 1),
@@ -300,8 +296,8 @@ CAMPS = [
     ('Shimmering Flats', 116, 116, 1), ('Brackenwall Village', 140, 150, 1), ('Fire Plume Ridge', 82, 82, 2), ('Ahn\'Qiraj', 30, 56, 2),
     ('Zul\'Farrak', 120, 92, 2), ('Lost City of the Tol\'vir', 96, 32, 2), ('Steamwheedle Port', 160, 90, 0), ('Ruins of Ahn\'Qiraj', 46, 52, 1),
     ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 16, 386, 0),
-    ('Waycrest Manor', 284, 210, 1), ('Shrine of the Storm', 312, 220, 1), ('Freehold', 290, 188, 1),
-    ('Maelstrom Rock', 252, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 350, 294, 1),
+    ('Waycrest Manor', 284, 190, 1), ('Shrine of the Storm', 312, 200, 1), ('Freehold', 290, 168, 1),
+    ('Maelstrom Rock', 247, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 352, 291.5, 1),
 ]
 
 # Waygates (mage portals): pairs of (name, x, y) linking far-apart lands.
@@ -309,7 +305,7 @@ PORTALS = [
     (('Stormwind Portal', 362, 180), ('Darnassus Portal', 38, 412)),
     (('Orgrimmar Portal', 152, 262), ('Undercity Portal', 356, 382)),
     (('Thunder Bluff Portal', 78, 202), ('Silvermoon Portal', 432, 420)),
-    (('Stormwind Harbor Portal', 350, 190), ('Boralus Portal', 306, 202)),
+    (('Stormwind Harbor Portal', 350, 190), ('Boralus Portal', 306, 182)),
     (('Ratchet Portal', 152, 206), ('Kezan Portal', 250, 202)),
 ]
 
@@ -339,7 +335,7 @@ ROADS = [
     [(140, 150), (150, 140), (166, 134), (176, 133)],
     [(118, 206), (130, 196), (140, 170), (140, 150)],
     # Kul Tiras
-    [(300, 196), (290, 206), (306, 220)],
+    [(300, 176), (290, 186), (306, 200)],
 ]
 
 # Landmark doodads: (doodad id, x, y, scale, angle radians)
@@ -355,7 +351,6 @@ LANDMARKS = [
     ('BOth', 156, 258, 0.95, 4.71),      # Hellscream's throne
     ('YOst', 360, 180, 0.95, 4.71),      # Stormwind statue
     ('AOgs', 40, 406, 1.0, 4.71),        # Sentinel statue
-    ('YOst', 324, 320, 0.95, 4.71),      # Greymane's statue, Gilneas City
 ]
 # Destructable landmarks (volcanoes etc.): (id, x, y, scale)
 DESTRUCTABLE_LANDMARKS = [
@@ -560,3 +555,66 @@ ROADS += [[nr(u, v) for u, v in line] for line in [
 ]]
 
 LANDMARKS += [('IZft',) + nr(0.28, 0.82) + (1.0, 4.71)]   # The Frozen Throne
+
+
+# ---------------------------------------------------------------------------
+# Gilneas, traced from the in-game zone map. Authored in that map's pixel
+# coordinates (x right, y down) and fitted into GILNEAS_BOX, after the squash.
+# ---------------------------------------------------------------------------
+GILNEAS_BOX = (289, 222, 343, 263)        # x0, y0, x1, y1 in tiles
+_GILNEAS_PX = (100, 30, 640, 440)         # the zone map's frame: left, top, right, bottom
+
+
+def gl(px, py):
+    x0, y0, x1, y1 = GILNEAS_BOX
+    l, t, r, b = _GILNEAS_PX
+    return round(x0 + (px - l) / (r - l) * (x1 - x0), 1), round(y0 + (b - py) / (b - t) * (y1 - y0), 1)
+
+
+LANDMASSES['Gilneas'] = [gl(px, py) for px, py in [
+    (290, -10), (478, -10), (478, 60), (470, 100), (500, 105), (540, 110), (560, 120), (548, 165), (550, 220),
+    (538, 275), (552, 325), (532, 365), (548, 405), (500, 425), (445, 415), (395, 428), (335, 432), (282, 420),
+    (268, 370), (276, 312), (240, 302), (195, 306), (150, 300), (118, 290), (108, 250), (118, 205), (132, 165),
+    (150, 120), (172, 88), (210, 70),
+]]
+zone('Gilneas', 'Gilneas', *gl(330, 230), 30, 24, 'darkforest', base=70)
+zone('Silverpine Forest', 'Eastern Kingdoms', 322, 274, 12, 7, 'darkforest')       # the land just north of the wall
+
+SEA_INLETS += [([gl(px, py) for px, py in line], w) for line, w in [
+    ([(195, 30), (235, 70), (270, 115), (300, 160), (330, 205), (352, 238)], 1.0),   # the estuary into Gilneas City
+    ([(530, 85), (490, 95), (468, 125), (458, 160), (450, 190)], 0.9),                # the north-east channel
+    ([(600, 70), (540, 80)], 1.6),                                                     # its mouth on Baradin Bay
+]]
+RIDGES += [([gl(px, py) for px, py in line], w, h) for line, w, h in [
+    ([(130, 225), (190, 222), (250, 235), (300, 245), (335, 258)], 2.2, 440),         # western mountains
+    ([(285, 320), (296, 360), (305, 405)], 2.0, 400),                                  # southern mountains
+    ([(345, 318), (358, 330)], 1.4, 200),                                              # the hill south of the city
+    ([(505, 115), (528, 140)], 1.2, 180),                                              # north-eastern hills
+]]
+
+# Rugged highlands drawn as cliff plateaus, like the hatched mountains on the zone map
+MESAS += [gl(px, py) + (r, 1) for px, py, r in [
+    (175, 215, 2.0), (240, 222, 2.2), (300, 232, 1.8),          # western mountains
+    (290, 345, 2.0), (300, 395, 1.8),                           # southern mountains
+]]
+
+# Gilneas City: a ring road with four spokes around Greymane's statue
+_CITY, _CITY_R = gl(410, 245), 4.5
+_ring = [(round(_CITY[0] + _CITY_R * math.cos(a), 1), round(_CITY[1] + _CITY_R * math.sin(a), 1))
+         for a in [2 * math.pi * k / 16 for k in range(17)]]
+ROADS += [
+    _ring,
+    [(_CITY[0] - _CITY_R, _CITY[1]), (_CITY[0] + _CITY_R, _CITY[1])],
+    [(_CITY[0], _CITY[1] - _CITY_R), (_CITY[0], _CITY[1] + _CITY_R)],
+    [(_CITY[0], _CITY[1] + _CITY_R), gl(400, 20), (330, 272), (346, 282.8)],          # north gate to the Greymane Gate and Silverpine
+    [(_CITY[0] - _CITY_R, _CITY[1]), gl(290, 285), gl(250, 300)],                      # west gate to Duskhaven
+    [(_CITY[0], _CITY[1] - _CITY_R), gl(420, 395)],                                    # south gate to Stormglen
+]
+LANDMARKS += [('YOst',) + _CITY + (0.95, 4.71)]                                         # Greymane's statue
+
+# The Greymane Wall: a cliff rampart across the neck to Silverpine; its gate is the only way in on foot.
+WALLS += [([(305, 264), (331, 264)], [gl(400, 20)])]
+
+TOWNS += [('Duskhaven',) + gl(250, 300) + ('ntav',), ('Keel Harbor',) + gl(265, 60) + ('nshp',)]
+CAMPS += [('Gilneas City',) + gl(470, 300) + (1,), ('The Blackwald',) + gl(330, 360) + (2,),
+          ('Emberstone Mine',) + gl(200, 150) + (0,)]

@@ -53,8 +53,9 @@ def build(seed=1):
     # tidy single-tile specks
     land = dilate(erode(land, 1), 1) | (land & (land_sd > 2))
     land &= playable
+    inlet_noise = f.fbm(5, 2) * 0.4
     for line, width in getattr(geo, 'SEA_INLETS', []):
-        land &= ~(f.segment_distance(line) < width + f.fbm(5, 2) * 0.4)
+        land &= ~(f.segment_distance(line) < width + inlet_noise)
     land &= dilate(erode(land, 1), 1)          # drop one-tile slivers the inlets leave behind
     T.land_names = names
 

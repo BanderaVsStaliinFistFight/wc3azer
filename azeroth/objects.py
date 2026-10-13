@@ -86,7 +86,7 @@ def place(T, seed=7):
     # ---- player start locations, each with a main gold mine ---------------------
     mines = []
     def mine_spot_for(sx, sy):
-        for dist in (7.5, 8.5, 9.5, 10.5):
+        for dist in (7.5, 8.5, 9.5, 10.5, 11.5, 12.5):
             for ang in np.linspace(0, 2 * math.pi, 24, endpoint=False):
                 mx, my = sx + dist * math.cos(ang), sy + dist * math.sin(ang)
                 mx, my = round(mx * 2) / 2, round(my * 2) / 2
@@ -96,14 +96,17 @@ def place(T, seed=7):
 
     for idx, name, cx, cy, race in geo.CAPITALS:
         placed = None
-        for rad in np.arange(0, 24, 0.5):
-            for k in range(max(1, int(rad * 6))):
-                a = 2 * math.pi * k / max(1, int(rad * 6))
-                sx, sy = round((cx + rad * math.cos(a)) * 2) / 2, round((cy + rad * math.sin(a)) * 2) / 2
-                if area_ok(sx, sy, 5):
-                    placed = mine_spot_for(sx, sy)
-                    if placed:
-                        break
+        for base_r in (5, 4.5, 4):                     # prefer a roomy base, settle for a tighter one
+            for rad in np.arange(0, 24, 0.5):
+                for k in range(max(1, int(rad * 6))):
+                    a = 2 * math.pi * k / max(1, int(rad * 6))
+                    sx, sy = round((cx + rad * math.cos(a)) * 2) / 2, round((cy + rad * math.sin(a)) * 2) / 2
+                    if area_ok(sx, sy, base_r):
+                        placed = mine_spot_for(sx, sy)
+                        if placed:
+                            break
+                if placed:
+                    break
             if placed:
                 break
         assert placed, 'no room for start location %s' % name
