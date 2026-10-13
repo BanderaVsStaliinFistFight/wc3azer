@@ -9,6 +9,8 @@ from .raster import (Field, blur, dilate, distance_field, erode, flow_accumulati
 MAP_W = MAP_H = 480                  # tiles; the largest map size Warcraft III supports
 RANGE_WIDTH, RANGE_HEIGHT = 1.45, 1.5  # mountain ranges relative to geography.RIDGES
 MASSIF_HEIGHT = 0.9                  # scale of geography.MASSIFS heights
+HILL_SCALE = 2.5                     # rolling hills relative to the biome `hills` amplitudes
+INLAND_RISE = 90                     # how much higher the heart of a landmass stands than its shores
 FOREST_DENSITY = 2.0                 # forest cover relative to the biome densities
 MARGIN_L, MARGIN_R, MARGIN_B, MARGIN_T = 6, 6, 4, 8
 LEFT = BOTTOM = -MAP_W * 64.0        # world coordinate of the south-west tilepoint
@@ -147,9 +149,13 @@ def build(seed=1):
     dc = distance_field(water, 40)                 # inland distance from any water
     dw = distance_field(land, 40)                  # distance from land, out at sea
     hill_n = f.fbm(18, 5) * 0.5 + 0.5
+    knolls = f.fbm(7, 3) * 0.5 + 0.5                                # smaller hills riding on the big ones
+    instance_zone_pt = np.array([bool(zd.get('instance')) for zd in geo.ZONES])[zone_of]
+    hills = hills * np.where(instance_zone_pt, 1.0, HILL_SCALE)
     ridge_n = f.ridged(34, 5)
     detail = f.fbm(5, 2)
-    z = base + hills * hill_n * (0.4 + 0.6 * pass_factor) + mountains * ridge_n ** 2 * pass_factor + detail * 8
+    z = (base + hills * (hill_n + 0.6 * knolls) * (0.4 + 0.6 * pass_factor) + mountains * ridge_n ** 2 * pass_factor
+         + detail * 8 + INLAND_RISE * smoothstep(3, 40, dc) * ~instance_zone_pt)
     # Mountain ranges: a broad massif along each ridge line, broken into peaks,
     # saddles and spurs by ridged noise, rising out of a skirt of foothills.
     ridge_h = np.zeros((n, n))
@@ -177,7 +183,7 @@ def build(seed=1):
     for cx, cy, r, depth in geo.BASINS:
         d = f.distance(cx, cy)
         z -= depth * smoothstep(r * 1.4, r * 0.5, d)
-    z = z + f.fbm(45, 3) * 22                                       # broad swells, so the plains are never flat
+    z = z + f.fbm(45, 3) * 35                                       # broad swells, so the plains are never flat
     z = np.maximum(z, 12)
 
     # Erosion: water running off the land gathers into streams that cut a branching
@@ -205,7 +211,7 @@ def build(seed=1):
         beach_src |= (land_id == land_index[name]) & (land_sd > -6)
     coast_pts = land & (dc <= 1)
     beach_noise = f.fbm(22, 3)
-    beach_src |= coast_pts & (upland < 62 + beach_noise * 40)
+    beach_src |= coast_pts & (upland < 90 + beach_noise * 45)
     beach_src &= ~dilate(instance_land, 8)
     for line, gates in getattr(geo, 'WALLS', []):      # no wading round the end of a wall
         beach_src &= f.segment_distance(line) > 10
@@ -230,7 +236,7 @@ def build(seed=1):
     for k in (1, 2, 3, 4, 5):                                  # no one-tile slivers of ledge
         tidy += dilate(erode(terrace >= k, 1), 1) & (tidy >= k - 1)
     terrace = tidy
-    z = np.where(z > base, base + (z - base) * 0.65, z)
+    z = np.where(z > base + 180, base + 180 + (z - base - 180) * 0.65, z)     # only mountains are compressed
     z = z + (blur(z, 3) - z) * clearing * 0.85
 
     sea = water & ~lake & ~river
@@ -280,7 +286,10 @@ def build(seed=1):
         no_ramp |= f.segment_distance(line) < 8
     T.ramps = stamp_ramps(layer, ramp, z, dry, T.road_lines)
     T.ramps += edge_ramps(layer, ramp, z, dry & ~no_ramp, T.ramps, f.rng)
-    T.ramps += link_pockets(layer, ramp, z, dry, water, core, no_ramp, np.where(land, land_id, -1))
+    near_core = (massif_d < 1.4) | instance_land                    # pockets may link up anywhere but a massif's heart
+    for line, gates in getattr(geo, 'WALLS', []):
+        near_core |= f.segment_distance(line) < 8
+    T.ramps += link_pockets(layer, ramp, z, dry, water, core, near_core, np.where(land, land_id, -1))
     for line, gates in getattr(geo, 'WALLS', []):     # ramparts: a raised line of corners, cliffs on both sides
         wall = (f.segment_distance(line) <= 0.8) & (land | (dw <= 4))
         for gx, gy in gates:
@@ -330,7 +339,7 @@ def build(seed=1):
     zcold = np.array([B[zd['biome']]['cold'] for zd in geo.ZONES])[zone_of]
     density = np.array([zd.get('density', B[zd['biome']]['density']) for zd in geo.ZONES])[zone_of] * FOREST_DENSITY
     density = density * (1 + 0.35 * smoothstep(10, 2, distance_field(lake | river, 10)))
-    treeline = np.where(zcold, 300, 560)
+    treeline = np.where(zcold, 420, 700)
     density = np.clip(density * smoothstep(treeline + 60, treeline - 120, T.h_rel), 0, 0.88)
     fn = (f.fbm(16, 4) + f.fbm(6, 3) * 0.6 + f.fbm(40, 2) * 0.5) / 2.1
     land_noise = np.sort(fn[land])
@@ -374,7 +383,7 @@ def build(seed=1):
     tex = np.where(alpine & (noises[1] > -0.15), rock, np.where(alpine & (noises[2] > 0.2), TILE['Ldrt'], tex))
     tex = np.where(steep & land & ~instance_zone, rock, tex)
     height = T.h_rel
-    snowcap = land & (height > np.where(cold, 300, 600) + noises[0] * 60) & (noises[1] > -0.4) & ~instance_zone
+    snowcap = land & (height > np.where(cold, 420, 700) + noises[0] * 60) & (noises[1] > -0.4) & ~instance_zone
     tex = np.where(snowcap, TILE['Nsnw'], tex)
     beach_tile = per_zone('beach')
     beach = land & T.beach & (dc < 1.6 + noises[2]) & (height < 45) & ~lake_adjacent(lake | river)
