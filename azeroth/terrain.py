@@ -3,12 +3,13 @@ import numpy as np
 
 from . import geography as geo
 from .biomes import B, GROUND_TILES, TILE
-from .raster import Field, blur, dilate, distance_field, erode, label_regions, shift, smoothstep, NEIGHBOURS8
+from .raster import (Field, blur, dilate, distance_field, erode, flow_accumulation, label_regions, meander, shift,
+                     smoothstep, NEIGHBOURS8)
 
 MAP_W = MAP_H = 480                  # tiles; the largest map size Warcraft III supports
 RANGE_WIDTH, RANGE_HEIGHT = 1.45, 1.5  # mountain ranges relative to geography.RIDGES
 MASSIF_HEIGHT = 0.9                  # scale of geography.MASSIFS heights
-FOREST_DENSITY = 1.85                # forest cover relative to the biome densities
+FOREST_DENSITY = 2.0                 # forest cover relative to the biome densities
 MARGIN_L, MARGIN_R, MARGIN_B, MARGIN_T = 6, 6, 4, 8
 LEFT = BOTTOM = -MAP_W * 64.0        # world coordinate of the south-west tilepoint
 WATER_RAW = 0x2000                   # default water level; surface sits at z = -89.6
@@ -64,14 +65,23 @@ def build(seed=1):
     T.land_id = land_id
 
     # ---- 2. inland water ---------------------------------------------------
+    # Rivers wind from side to side, widen towards the mouth and rise from a pond where no lake feeds them.
+    bends = np.random.default_rng(seed * 7 + 3)
+    T.river_lines = [meander(line, 2.2, 13, bends) for line in geo.RIVERS]
+    ponds = [(line[0][0], line[0][1], 2.2, 1.8) for line in geo.RIVERS
+             if all(np.hypot(line[0][0] - cx, line[0][1] - cy) > max(rx, ry) + 3 for cx, cy, rx, ry in geo.LAKES)]
     lake_sd = np.full((n, n), -1e9)
-    for cx, cy, rx, ry in geo.LAKES:
+    for cx, cy, rx, ry in list(geo.LAKES) + ponds:
         lake_sd = np.maximum(lake_sd, f.ellipse_sdf(cx, cy, rx, ry))
     lake = (lake_sd + f.fbm(5, 3) * 1.2 > 0) & land
     river_d = np.full((n, n), 1e9)
-    for line in geo.RIVERS:
-        river_d = np.minimum(river_d, f.segment_distance(line))
-    river = (river_d < 1.3 + f.fbm(6, 2) * 0.5) & land
+    river_w = np.zeros((n, n))
+    for line in T.river_lines:
+        d, along = f.polyline_along(line)
+        closer = d < river_d
+        river_d = np.where(closer, d, river_d)
+        river_w = np.where(closer, 0.75 + 1.4 * along, river_w)
+    river = (river_d < river_w + f.fbm(6, 2) * 0.4) & land
     shallow_d = np.full((n, n), 1e9)
     for line in geo.SHALLOWS:
         shallow_d = np.minimum(shallow_d, f.segment_distance(line))
@@ -111,9 +121,17 @@ def build(seed=1):
     hills = blur(zone_prop('hills'), 3)
     mountains = blur(zone_prop('mountains'), 3)
 
+    # Roads wander a little, except closed rings and the corridors inside instances.
+    wander = np.random.default_rng(seed * 11 + 5)
+
+    def in_instance(p):
+        return any(x0 <= p[0] <= x1 and y0 <= p[1] <= y1 for _, (x0, y0, x1, y1), _, _, _ in geo.INSTANCES)
+
+    T.road_lines = [line if line[0] == line[-1] or in_instance(line[0]) else meander(line, 1.1, 17, wander)
+                    for line in geo.ROADS]
     road_d = np.full((n, n), 1e9)
-    for line in geo.ROADS:
-        road_d = np.minimum(road_d, f.segment_distance(line))
+    for line in T.road_lines:
+        road_d = np.minimum(road_d, f.segment_distance(line, reach=30))
     T.road_d = road_d
     pass_factor = smoothstep(2.5, 6.0, road_d)       # roads cut passes through ridges
     # settlements, camps and portals keep the mountains at arm's length and stand in a levelled clearing
@@ -138,9 +156,10 @@ def build(seed=1):
     foothills = np.zeros((n, n))
     rough = f.fbm(9, 3)
     crest = f.ridged(11, 4)
+    folds = np.random.default_rng(seed * 13 + 7)                  # no mountain range runs ruler-straight
     for line, width, height in geo.RIDGES:
         w = width * RANGE_WIDTH
-        d = f.segment_distance(line) + rough * 2.2
+        d = f.segment_distance(meander(line, 2.0, 18, folds, step=2.0), reach=w * 4 + 4) + rough * 2.2
         env = smoothstep(w * 2.0, 0, d)
         ridge_h = np.maximum(ridge_h, env ** 1.2 * height * RANGE_HEIGHT * (0.45 + 0.65 * crest))
         foothills = np.maximum(foothills, smoothstep(w * 3.6, w * 1.2, d) * height * 0.22)
@@ -149,7 +168,7 @@ def build(seed=1):
     massif_h = np.zeros((n, n))
     massif_d = np.full((n, n), 1e9)            # distance from the crest in half-widths
     for line, width, height in geo.MASSIFS:
-        d = f.segment_distance(line) + rough * 2.5
+        d = f.segment_distance(meander(line, 2.5, 20, folds, step=2.0), reach=width * 3 + 4) + rough * 2.5
         env = smoothstep(width * 2.3, width * 0.2, d)
         massif_h = np.maximum(massif_h, env ** 0.85 * height * MASSIF_HEIGHT * (0.72 + 0.4 * crest))
         massif_d = np.minimum(massif_d, d / width)
@@ -158,9 +177,20 @@ def build(seed=1):
     for cx, cy, r, depth in geo.BASINS:
         d = f.distance(cx, cy)
         z -= depth * smoothstep(r * 1.4, r * 0.5, d)
+    z = z + f.fbm(45, 3) * 22                                       # broad swells, so the plains are never flat
     z = np.maximum(z, 12)
 
-    # Coasts are cliffs except where beaches are needed (see geography.BEACHES).
+    # Erosion: water running off the land gathers into streams that cut a branching
+    # network of valleys, shallow in the lowlands and deep gullies in the mountains.
+    route = blur(z, 2) + dc * 3.0 + f.fbm(25, 4) * 25
+    flow = flow_accumulation(route, land)
+    T.flow = flow
+    carve = np.clip(6.0 * flow ** 0.45, 0, 140) * (0.55 + 0.45 * smoothstep(10, 260, z - base))
+    z = np.maximum(z - blur(carve, 1), 12)
+    upland = blur(z, 4)                                              # how high the land behind each shore stands
+
+    # Coasts: beaches where low land meets the sea, cliffs where it is high, and beaches
+    # wherever units must reach the water (see geography.BEACHES).
     instance_land = np.isin(land_id, [land_index[nm] for nm in geo.INSTANCE_NAMES]) & land
     beach_src = np.zeros((n, n), bool)
     for line in geo.SHALLOWS:
@@ -175,7 +205,7 @@ def build(seed=1):
         beach_src |= (land_id == land_index[name]) & (land_sd > -6)
     coast_pts = land & (dc <= 1)
     beach_noise = f.fbm(22, 3)
-    beach_src |= coast_pts & (beach_noise > np.quantile(beach_noise[coast_pts], 0.86))
+    beach_src |= coast_pts & (upland < 62 + beach_noise * 40)
     beach_src &= ~dilate(instance_land, 8)
     for line, gates in getattr(geo, 'WALLS', []):      # no wading round the end of a wall
         beach_src &= f.segment_distance(line) > 10
@@ -248,7 +278,7 @@ def build(seed=1):
     no_ramp = in_massif | instance_land
     for line, gates in getattr(geo, 'WALLS', []):
         no_ramp |= f.segment_distance(line) < 8
-    T.ramps = stamp_ramps(layer, ramp, z, dry)
+    T.ramps = stamp_ramps(layer, ramp, z, dry, T.road_lines)
     T.ramps += edge_ramps(layer, ramp, z, dry & ~no_ramp, T.ramps, f.rng)
     T.ramps += link_pockets(layer, ramp, z, dry, water, core, no_ramp, np.where(land, land_id, -1))
     for line, gates in getattr(geo, 'WALLS', []):     # ramparts: a raised line of corners, cliffs on both sides
@@ -301,7 +331,7 @@ def build(seed=1):
     density = np.array([zd.get('density', B[zd['biome']]['density']) for zd in geo.ZONES])[zone_of] * FOREST_DENSITY
     density = density * (1 + 0.35 * smoothstep(10, 2, distance_field(lake | river, 10)))
     treeline = np.where(zcold, 300, 560)
-    density = np.clip(density * smoothstep(treeline + 60, treeline - 120, T.h_rel), 0, 0.85)
+    density = np.clip(density * smoothstep(treeline + 60, treeline - 120, T.h_rel), 0, 0.88)
     fn = (f.fbm(16, 4) + f.fbm(6, 3) * 0.6 + f.fbm(40, 2) * 0.5) / 2.1
     land_noise = np.sort(fn[land])
     thresh = land_noise[np.minimum(((1 - density) * (len(land_noise) - 1)).astype(int), len(land_noise) - 1)]
@@ -316,13 +346,18 @@ def build(seed=1):
     jx = np.clip(np.round(xs + f.fbm(3, 2) * 4), 0, n - 1).astype(int)
     jy = np.clip(np.round(ys + f.fbm(3, 2) * 4), 0, n - 1).astype(int)
     zone_tex = np.where(land & land[jy, jx] & (land_id[jy, jx] == land_id), zone_of[jy, jx], zone_of)
+    # Each zone's tiles follow the land: its second tile (lusher or variant ground) gathers on
+    # wet valley floors and by the water, its third (dirt or rock) on slopes and high, dry ground.
+    wet = np.clip(smoothstep(10, 1, distance_field(lake | river, 10)) + np.clip(np.log1p(T.flow) / 7.0 - 0.35, 0, 1), 0, 1)
+    rugged = np.clip(slope_pt / 80.0, 0, 1) * 0.55 + np.clip(T.relief / 350.0, 0, 1) * 0.3
+    bias = [0.0, wet * 0.8 - 0.22, rugged * 1.2 - wet * 0.5 - 0.12]
     for zi, zdef in enumerate(geo.ZONES):
         sel = zone_tex == zi
         if not sel.any():
             continue
         recipe = B[zdef['biome']]['tiles']
         for k, (tile, thr) in enumerate(recipe):
-            tex[sel & (noises[k % 3] > thr)] = TILE[tile]
+            tex[sel & (noises[k % 3] + bias[min(k, 2)] > thr)] = TILE[tile]
     biome_arr = np.array(biome_names)[zone_of]
     T.biome = biome_arr
 
@@ -378,10 +413,10 @@ def build(seed=1):
     return T
 
 
-def stamp_ramps(layer, ramp, z, dry):
+def stamp_ramps(layer, ramp, z, dry, roads):
     """Cut a ramp wherever a road climbs or drops one cliff level. Returns the ramp centres."""
     crossings = []
-    for line in geo.ROADS:
+    for line in roads:
         pts = []
         for (ax, ay), (bx, by) in zip(line, line[1:]):
             steps = max(1, int(np.hypot(bx - ax, by - ay) / 0.25))

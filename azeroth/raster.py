@@ -55,17 +55,45 @@ class Field:
             m = m.reshape(self.h, supersample, self.w, supersample).mean(axis=(1, 3)) > 0.5
         return m
 
-    def segment_distance(self, points, closed=False):
-        """Distance (tiles) from every tilepoint to a polyline."""
+    def segment_distance(self, points, closed=False, reach=None):
+        """Distance (tiles) from every tilepoint to a polyline; with `reach`, only measured that far out (inf beyond)."""
         pts = list(points) + ([points[0]] if closed else [])
         best = np.full((self.h, self.w), np.inf)
         for (ax, ay), (bx, by) in zip(pts[:-1], pts[1:]):
+            if reach is None:
+                y0, y1, x0, x1 = 0, self.h, 0, self.w
+            else:
+                x0, x1 = int(max(min(ax, bx) - reach, 0)), int(min(max(ax, bx) + reach + 1, self.w))
+                y0, y1 = int(max(min(ay, by) - reach, 0)), int(min(max(ay, by) + reach + 1, self.h))
+                if x0 >= x1 or y0 >= y1:
+                    continue
+            xs, ys = self.xs[y0:y1, x0:x1], self.ys[y0:y1, x0:x1]
             dx, dy = bx - ax, by - ay
             l2 = dx * dx + dy * dy or 1e-9
-            t = np.clip(((self.xs - ax) * dx + (self.ys - ay) * dy) / l2, 0, 1)
-            d = np.hypot(self.xs - (ax + t * dx), self.ys - (ay + t * dy))
-            np.minimum(best, d, out=best)
+            t = np.clip(((xs - ax) * dx + (ys - ay) * dy) / l2, 0, 1)
+            d = np.hypot(xs - (ax + t * dx), ys - (ay + t * dy))
+            np.minimum(best[y0:y1, x0:x1], d, out=best[y0:y1, x0:x1])
         return best
+
+    def polyline_along(self, points):
+        """Distance (tiles) to a polyline, and how far along it (0 at its first point, 1 at its last) the nearest point lies."""
+        best = np.full((self.h, self.w), np.inf)
+        along = np.zeros((self.h, self.w))
+        lengths = [float(np.hypot(bx - ax, by - ay)) for (ax, ay), (bx, by) in zip(points[:-1], points[1:])]
+        total = sum(lengths) or 1e-9
+        start = 0.0
+        for ((ax, ay), (bx, by)), seg in zip(zip(points[:-1], points[1:]), lengths):
+            x0, x1 = int(max(min(ax, bx) - 12, 0)), int(min(max(ax, bx) + 13, self.w))
+            y0, y1 = int(max(min(ay, by) - 12, 0)), int(min(max(ay, by) + 13, self.h))
+            xs, ys = self.xs[y0:y1, x0:x1], self.ys[y0:y1, x0:x1]
+            dx, dy = bx - ax, by - ay
+            t = np.clip(((xs - ax) * dx + (ys - ay) * dy) / (seg * seg or 1e-9), 0, 1)
+            d = np.hypot(xs - (ax + t * dx), ys - (ay + t * dy))
+            closer = d < best[y0:y1, x0:x1]
+            best[y0:y1, x0:x1] = np.where(closer, d, best[y0:y1, x0:x1])
+            along[y0:y1, x0:x1] = np.where(closer, (start + t * seg) / total, along[y0:y1, x0:x1])
+            start += seg
+        return best, along
 
     def polygon_sdf(self, points):
         """Signed distance to a polygon outline: positive inside."""
@@ -169,3 +197,50 @@ def label_regions(mask):
                     stack.append((yy, xx))
         sizes.append(count)
     return label, np.array(sizes + [0])
+
+
+def meander(points, amplitude, wavelength, rng, step=1.0):
+    """Densify a polyline and let it wander from side to side, keeping its two ends in place."""
+    dense = []
+    for (ax, ay), (bx, by) in zip(points[:-1], points[1:]):
+        k = max(1, int(np.hypot(bx - ax, by - ay) / step))
+        dense += [(ax + (bx - ax) * i / k, ay + (by - ay) * i / k) for i in range(k)]
+    dense.append(tuple(points[-1]))
+    if len(dense) < 3:
+        return dense
+    pts = np.array(dense, dtype=np.float64)
+    seg = np.hypot(*np.diff(pts, axis=0).T)
+    s = np.concatenate([[0.0], np.cumsum(seg)])
+    total = s[-1] or 1e-9
+    phases = rng.uniform(0, 2 * np.pi, 3)
+    wave = (np.sin(2 * np.pi * s / wavelength + phases[0]) + 0.5 * np.sin(2 * np.pi * s / (wavelength * 0.43) + phases[1])
+            + 0.3 * np.sin(2 * np.pi * s / (wavelength * 2.3) + phases[2])) / 1.8
+    taper = np.clip(np.minimum(s, total - s) / 4.0, 0, 1)
+    tangent = np.gradient(pts, axis=0)
+    tangent /= np.maximum(np.hypot(*tangent.T), 1e-9)[:, None]
+    normal = np.stack([-tangent[:, 1], tangent[:, 0]], axis=1)
+    out = pts + normal * (wave * amplitude * taper)[:, None]
+    return [tuple(p) for p in out]
+
+
+def flow_accumulation(height, mask):
+    """Upstream area (in points) draining through each point of `mask`, water running to the lowest of its 8 neighbours."""
+    h, w = height.shape
+    big = np.where(mask, height, -1e9)
+    best = big.copy()
+    receiver = -np.ones((h, w), np.int64)
+    idx = np.arange(h * w).reshape(h, w)
+    for dx, dy in NEIGHBOURS8:
+        nb = shift(big, dx, dy, 1e9)
+        nb_idx = shift(idx, dx, dy, -1)
+        lower = (nb < best) & mask & (nb_idx >= 0)
+        best = np.where(lower, nb, best)
+        receiver = np.where(lower, nb_idx, receiver)
+    order = np.argsort(-big, axis=None)
+    acc = np.where(mask, 1.0, 0.0).ravel().tolist()
+    rec = receiver.ravel().tolist()
+    for i in order[:int(mask.sum())].tolist():
+        r = rec[i]
+        if r >= 0:
+            acc[r] += acc[i]
+    return np.array(acc).reshape(h, w)
