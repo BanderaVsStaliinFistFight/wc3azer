@@ -258,8 +258,8 @@ def place(T, seed=7):
 
     roll = rng.random((n, n))
     # rocks on steep slopes, and rubble at the foot and brow of mountain cliffs
-    rubble = by_cliff & tile_ok & (T.relief > 120) & (T.road_d > 5) & ~T.ramp_near & ~is_tree & ~clear & (roll < 0.10)
-    for ty, tx in np.argwhere((steep & ground & ~clear & (roll < 0.2)) | rubble):
+    rubble = by_cliff & tile_ok & (T.relief > 120) & (T.road_d > 5) & ~T.ramp_near & ~is_tree & ~clear & (roll < 0.05)
+    for ty, tx in np.argwhere((steep & ground & ~clear & (roll < 0.09)) | rubble):
         rock, spire = ROCKS.get(str(biome_of[ty, tx]), ('LRrk', None))
         if spire and rng.random() < 0.25:
             d = add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.28, 0.42))
@@ -270,7 +270,7 @@ def place(T, seed=7):
     # great rock spires and glaciers crown the massifs
     crown = np.zeros((n, n), bool)
     crown[:-1, :-1] = T.massif_core[:-1, :-1]
-    for ty, tx in np.argwhere(crown & ground & (rng.random((n, n)) < 0.05)):
+    for ty, tx in np.argwhere(crown & ground & (rng.random((n, n)) < 0.03)):
         spire = SPIRES.get(str(biome_of[ty, tx]), 'ZRrs')
         add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.8, 1.2), fixed=4.712389 if spire in ('ORrs', 'IRgc') else None)
 
@@ -288,19 +288,19 @@ def place(T, seed=7):
     for name, cx, cy, _ in geo.CAMPS:
         pool = RUINS.get(str(biome_of[int(cy), int(cx)]))
         if pool:
-            scatter_round(cx, cy, pool, int(rng.integers(2, 5)), 1.0, 7.0)
+            scatter_round(cx, cy, pool, int(rng.integers(1, 4)), 1.0, 7.0)
     # clutter round the towns
     for name, cx, cy, _ in geo.TOWNS:
         b = str(biome_of[int(cy), int(cx)])
         cold = B[b]['cold'] if b in B else False
         pool = VILLAGE_COLD if cold else VILLAGE_DRY if b in ('savanna', 'reddesert', 'needles', 'barren', 'desert', 'amber') else VILLAGE
-        scatter_round(cx, cy, pool, int(rng.integers(3, 6)), 2.5, 7.0, allow_reserved=True)
+        scatter_round(cx, cy, pool, int(rng.integers(2, 5)), 2.5, 7.0, allow_reserved=True)
         if pool is VILLAGE and rng.random() < 0.3:
             scatter_round(cx, cy, ['LSwl'], 1, 1.5, 4.0, allow_reserved=True)
     # boulders, bushes, stumps and the odd relic over open country
     open_country = tile_ok & ~is_tree & ~reserved & ~dilate(occupied, 1) & (T.road_d > 2.5) & ~steep & ~by_cliff
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_country & (roll < 0.07)):
+    for ty, tx in np.argwhere(open_country & (roll < 0.035)):
         pool = SCATTER.get(str(biome_of[ty, tx]))
         if pool:
             ids, weights = zip(*pool)
@@ -349,16 +349,16 @@ def place(T, seed=7):
                 facing = 4.712389 if rock == 'ORrk' else None
                 d = add_detail(rock, tx + 0.5, ty + 0.5, scale=(0.45, 0.75), fixed=facing)
                 bake(d, tx + 0.5, ty + 0.5, 4)
-                for _ in range(int(rng.integers(0, 3))):
+                for _ in range(int(rng.integers(0, 2))):
                     add_detail(rock, tx + 0.5 + rng.uniform(-0.35, 0.35), ty + 0.5 + rng.uniform(-0.35, 0.35),
                                scale=(0.22, 0.38), fixed=facing)
                 placed = True
                 break
-            s_at += (rng.uniform(1.4, 2.4) if rough else rng.uniform(1.8, 3.2)) if placed else 1.0
+            s_at += (rng.uniform(2.2, 3.6) if rough else rng.uniform(3.0, 5.0)) if placed else 1.0
     # shells on the beaches, birds over woods and shores, bats in the dark places, flies over the swamps
     coast = T.land & dilate(T.sea, 1)
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(coast & T.beach & tile_ok & (roll < 0.08)):
+    for ty, tx in np.argwhere(coast & T.beach & tile_ok & (roll < 0.04)):
         add_detail(SHELLS, tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8), variations=10)
     edge_of_wood = dilate(is_tree, 1) & ~is_tree
     dark = np.isin(biome_of, ['plague', 'darkforest', 'crypt', 'fel', 'icecrown'])
@@ -374,7 +374,7 @@ def place(T, seed=7):
     lush = dilate(occupied | blocked, 1) | (T.road_d < 1.6)
     open_ground = tile_ok & ~is_tree & ~lush & ~steep
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_ground & (roll < 0.12)):
+    for ty, tx in np.argwhere(open_ground & (roll < 0.05)):
         plants = PLANTS.get(str(biome_of[ty, tx]))
         if plants:
             add_detail(str(rng.choice(plants)), tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
@@ -382,17 +382,17 @@ def place(T, seed=7):
     # and go along the way.
     patches = Field(n, n, seed + 202).fbm(5, 2)
     verge = tile_ok & (road_tile > 1.5) & (road_tile < 4.0) & ~is_tree & ~reserved & ~occupied
-    for ty, tx in np.argwhere(verge & (rng.random((n, n)) < np.clip(0.5 + patches * 0.9, 0.1, 0.9))):
+    for ty, tx in np.argwhere(verge & (rng.random((n, n)) < np.clip(0.2 + patches * 0.6, 0.0, 0.55))):
         plants = PLANTS.get(str(biome_of[ty, tx]))
         if not plants:
             continue
-        for _ in range(int(rng.integers(2, 5))):
+        for _ in range(int(rng.integers(1, 3))):
             plant = 'ZPfw' if 'ZPfw' in plants and rng.random() < 0.5 else str(rng.choice(plants))
             add_detail(plant, tx + rng.uniform(0.1, 0.9), ty + rng.uniform(0.1, 0.9))
-    for ty, tx in np.argwhere(near_water & tile_ok & ~is_tree & ~lush & (roll > 0.80)):
+    for ty, tx in np.argwhere(near_water & tile_ok & ~is_tree & ~lush & (roll > 0.90)):
         add_detail('APct' if rng.random() < 0.6 else 'LPrs', tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
     lake_pts = T.lake & ~dilate(~T.lake, 1)
-    for ty, tx in np.argwhere(lake_pts & (roll < 0.06)):
+    for ty, tx in np.argwhere(lake_pts & (roll < 0.04)):
         add_detail('LPfp', tx + rng.uniform(-0.3, 0.3), ty + rng.uniform(-0.3, 0.3), z=-89.6)
     O.details = detail
     O.doodads = O.doodads + detail

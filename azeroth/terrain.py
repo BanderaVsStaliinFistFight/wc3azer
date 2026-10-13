@@ -175,20 +175,25 @@ def build(seed=1):
     rough = f.fbm(9, 3)
     crest = f.ridged(11, 4)
     folds = np.random.default_rng(seed * 13 + 7)                  # no mountain range runs ruler-straight
+    summits = np.random.default_rng(seed * 19 + 1)
     for line, width, height in geo.RIDGES:
         w = width * RANGE_WIDTH
-        d = f.segment_distance(meander(line, 2.0, 18, folds, step=2.0), reach=w * 4 + 4) + rough * 2.2
-        env = smoothstep(w * 2.0, 0, d)
-        ridge_h = np.maximum(ridge_h, env ** 1.2 * height * RANGE_HEIGHT * (0.45 + 0.65 * crest))
+        crest_line = meander(line, 2.0, 18, folds, step=2.0)
+        d = f.segment_distance(crest_line, reach=w * 4 + 4) + rough * 2.2
+        shape = np.maximum(np.clip(1 - d / (w * 2.0), 0, 1) ** 1.3 * 0.7, peaks(f, crest_line, w * 2.0, summits, rough))
+        ridge_h = np.maximum(ridge_h, shape * height * RANGE_HEIGHT * (0.6 + 0.5 * crest))
         foothills = np.maximum(foothills, smoothstep(w * 3.6, w * 1.2, d) * height * 0.22)
     z = np.maximum(z + foothills * hill_n * pass_factor, base * 0.6 + ridge_h * pass_factor)
-    # Massifs: the great ranges, broad and towering, only broken where a road finds its pass
+    # Massifs: the great ranges, broad and towering, only broken where a road finds its pass.
+    # Each is a chain of steep summits strung along its crest with saddles between them, so the
+    # range ends in peaks rather than a level top.
     massif_h = np.zeros((n, n))
     massif_d = np.full((n, n), 1e9)            # distance from the crest in half-widths
     for line, width, height in geo.MASSIFS:
-        d = f.segment_distance(meander(line, 2.5, 20, folds, step=2.0), reach=width * 3 + 4) + rough * 2.5
-        env = smoothstep(width * 2.3, width * 0.2, d)
-        massif_h = np.maximum(massif_h, env ** 0.85 * height * MASSIF_HEIGHT * (0.72 + 0.4 * crest))
+        crest_line = meander(line, 2.5, 20, folds, step=2.0)
+        d = f.segment_distance(crest_line, reach=width * 3 + 4) + rough * 2.5
+        shape = np.maximum(np.clip(1 - d / (width * 2.3), 0, 1) ** 1.2 * 0.66, peaks(f, crest_line, width * 2.3, summits, rough))
+        massif_h = np.maximum(massif_h, shape * height * MASSIF_HEIGHT * (0.85 + 0.25 * crest))
         massif_d = np.minimum(massif_d, d / width)
     z = np.maximum(z, base * 0.6 + massif_h * pass_factor)
     in_massif = massif_d < 2.6
@@ -239,7 +244,7 @@ def build(seed=1):
     relief = np.maximum(z - base, 0)
     T.relief = relief
     ledge = relief * pass_factor + f.fbm(13, 3) * 90           # ragged ledges rather than contour rings
-    terrace = np.clip(np.floor((ledge - 200) / 230) + 1, 0, np.where(in_massif, 5, 3)).astype(np.int32)
+    terrace = np.clip(np.floor((ledge - 200) / 230) + 1, 0, 3).astype(np.int32)
     keep_flat = (dc <= 4) | (road_d < 6) | (distance_field(lake | river, 4) < 4) | instance_land
     for tx, ty, r in flat_spots:
         keep_flat |= f.distance(tx, ty) < r
@@ -249,8 +254,22 @@ def build(seed=1):
     for k in (1, 2, 3, 4, 5):                                  # no one-tile slivers of ledge
         tidy += dilate(erode(terrace >= k, 1), 1) & (tidy >= k - 1)
     terrace = tidy
-    z = np.where(z > base + 180, base + 180 + (z - base - 180) * 0.65, z)     # only mountains are compressed
+    # only mountains are compressed, the massifs less so: their upper slopes climb to the summits
+    # as open ground rather than more cliff bands, so they end in peaks, not ledges
+    z = np.where(z > base + 180, base + 180 + (z - base - 180) * np.where(in_massif, 0.85, 0.65), z)
     z = z + (blur(z, 3) - z) * clearing * 0.85
+    # Crowns: the top level of every terraced hill and mountain keeps rising from its rim towards
+    # the middle, so it ends in a rounded crown or a peak rather than a flat table. (Ledges with
+    # a higher level above them stay as they are, so no cliff face loses its height.)
+    rim_d = np.zeros((n, n))
+    for k in (1, 2, 3):
+        lab, sizes = label_regions(terrace == k)
+        if not len(sizes):
+            continue
+        under = np.unique(lab[dilate(terrace > k, 1) & (lab >= 0)])
+        top = (lab >= 0) & ~np.isin(lab, under)
+        rim_d = np.where(top, distance_field(~top, 40), rim_d)
+    z = z + np.minimum(40 * rim_d ** 1.1, 560) * (0.6 + 0.6 * crest)
 
     sea = water & ~lake & ~river
     z_sea = -(16 + 30 * np.minimum(dw, 9)) + f.fbm(10, 2) * 10
@@ -297,7 +316,7 @@ def build(seed=1):
     no_ramp = in_massif | instance_land
     for line, gates in getattr(geo, 'WALLS', []):
         no_ramp |= f.segment_distance(line) < 8
-    T.ramps = stamp_ramps(layer, ramp, z, dry, T.road_lines)
+    T.ramps = stamp_ramps(layer, ramp, z, dry, T.road_lines, avoid=dilate(core, 1))
     T.ramps += edge_ramps(layer, ramp, z, dry & ~no_ramp, T.ramps, f.rng)
     near_core = (massif_d < 1.4) | instance_land                    # pockets may link up anywhere but a massif's heart
     for line, gates in getattr(geo, 'WALLS', []):
@@ -435,6 +454,27 @@ def build(seed=1):
     return T
 
 
+def peaks(f, line, reach, rng, rough):
+    """Steep cones (0..1) for the summits of a mountain chain, spaced out along its crest line."""
+    pts = np.array(line, float)
+    seg = np.hypot(*np.diff(pts, axis=0).T)
+    along = np.concatenate([[0.0], np.cumsum(seg)])
+    out = np.zeros((f.h, f.w))
+    at = rng.uniform(0, reach * 0.4)
+    while at <= along[-1]:
+        i = min(int(np.searchsorted(along, at, side='right')) - 1, len(seg) - 1)
+        t = (at - along[i]) / max(seg[i], 1e-6)
+        sx, sy = pts[i] + (pts[i + 1] - pts[i]) * t
+        r = reach * rng.uniform(0.75, 1.05)
+        x0, x1 = max(int(sx - r) - 1, 0), min(int(sx + r) + 2, f.w)
+        y0, y1 = max(int(sy - r) - 1, 0), min(int(sy + r) + 2, f.h)
+        ds = np.hypot(f.xs[y0:y1, x0:x1] - sx, f.ys[y0:y1, x0:x1] - sy) + rough[y0:y1, x0:x1] * 1.5
+        cone = rng.uniform(0.8, 1.12) * np.clip(1 - ds / r, 0, 1) ** 1.35
+        out[y0:y1, x0:x1] = np.maximum(out[y0:y1, x0:x1], cone)
+        at += reach * rng.uniform(0.5, 0.85)
+    return out
+
+
 def scatter_lakes(f, land, zone_of, road_d, flat_spots, existing, seed, count=50, spacing=16):
     """Pick sites for natural lakes: inland, away from roads, settlements, other lakes and the mountain ranges."""
     rng = np.random.default_rng(seed * 17 + 9)
@@ -469,7 +509,7 @@ def scatter_lakes(f, land, zone_of, road_d, flat_spots, existing, seed, count=50
     return sites
 
 
-def stamp_ramps(layer, ramp, z, dry, roads):
+def stamp_ramps(layer, ramp, z, dry, roads, avoid=None):
     """Cut a ramp wherever a road climbs or drops one cliff level. Returns the ramp centres."""
     crossings = []
     for line in roads:
@@ -491,7 +531,7 @@ def stamp_ramps(layer, ramp, z, dry, roads):
     for cx, cy, dx, dy in crossings:
         if any(np.hypot(cx - px, cy - py) < 6 for px, py in done):
             continue
-        if stamp_ramp(layer, ramp, z, dry, cx, cy, abs(dx) >= abs(dy)):
+        if stamp_ramp(layer, ramp, z, dry, cx, cy, abs(dx) >= abs(dy), avoid):
             done.append((cx, cy))
     return done
 
@@ -573,7 +613,7 @@ def link_pockets(layer, ramp, z, dry, water, core, no_ramp, owner, rounds=6):
                 key = tuple(sorted(int(v) for v in pair))
                 if key in tried:
                     continue
-                if stamp_ramp(layer, ramp, z, dry, cx, cy, horizontal):
+                if stamp_ramp(layer, ramp, z, dry, cx, cy, horizontal, dilate(core, 1)):
                     tried.add(key)
                     new.append((cx, cy))
                     made += 1
@@ -582,7 +622,7 @@ def link_pockets(layer, ramp, z, dry, water, core, no_ramp, owner, rounds=6):
     return new
 
 
-def stamp_ramp(layer, ramp, z, dry, cx, cy, horizontal):
+def stamp_ramp(layer, ramp, z, dry, cx, cy, horizontal, avoid=None):
     """Cut one ramp across the cliff edge at (cx, cy), climbing along x if `horizontal`, else along y.
 
     Ramps follow the World Editor's layout: along a straight stretch of cliff
@@ -612,6 +652,8 @@ def stamp_ramp(layer, ramp, z, dry, cx, cy, horizontal):
         if any(not (0 < si < n - 1 and 0 < ti < n - 1) for si, ti in cells):
             continue
         if any(not dry[at(si, ti)] or layer[at(si, ti)] not in (upper - 1, upper) for si, ti in cells):
+            continue
+        if avoid is not None and any(avoid[at(si, ti)] for si, ti in cells):     # e.g. a massif's impassable heart
             continue
         if any(ramp[at(si + a, ti + b)] for si, ti in cells for a in (-1, 0, 1) for b in (-1, 0, 1)
                if 0 <= si + a < n and 0 <= ti + b < n):
