@@ -6,7 +6,7 @@ from . import geography as geo
 from .biomes import GROUND_TILES
 
 TILE_COLOURS = {
-    'Ldrt': (128, 100, 68), 'Bdrt': (156, 98, 62), 'Bdsr': (206, 176, 116), 'Zsan': (222, 204, 152),
+    'Ldrt': (128, 100, 68), 'Bdrt': (156, 98, 62), 'Bdsr': (206, 176, 116), 'Ybtl': (112, 108, 112),
     'Dlvc': (118, 48, 28), 'Lrok': (118, 112, 104), 'Bgrr': (150, 148, 78), 'Lgrs': (84, 132, 52),
     'Fgrs': (174, 132, 54), 'Agrs': (58, 104, 92), 'Zgrs': (58, 122, 44), 'Lgrd': (46, 86, 40),
     'Cpos': (98, 116, 38), 'Wsng': (188, 198, 186), 'Nsnw': (236, 240, 246), 'Nice': (168, 200, 226),
@@ -33,6 +33,7 @@ def colour_map(T):
     rgb = np.where(wet[..., None], water_rgb * 0.85 + rgb * 0.15, rgb)
     cliff = np.zeros(g.shape, bool)
     cliff[:-1, :-1] = T.cliff_tile
+    cliff &= ~(wet & (depth > 60))                 # sunken cliffs vanish in deep water
     rgb = np.where(cliff[..., None], rgb * 0.55, rgb)
     rgb = np.where(T.edge[..., None], rgb * 0.25, rgb)
     return np.clip(rgb, 0, 255).astype(np.uint8)

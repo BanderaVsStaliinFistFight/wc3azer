@@ -29,7 +29,7 @@ def place(T, seed=7):
     n = MAP_W + 1
     # Tiles where buildings/units can stand: dry, walkable, not a cliff or steep.
     tile_ok = np.zeros((n, n), bool)
-    blocked_tile = T.cliff_tile | T.steep_tile
+    blocked_tile = T.cliff_tile | T.steep_tile | T.ramp_tile
     ok = ~blocked_tile & T.land[:-1, :-1] & T.land[1:, 1:] & T.land[:-1, 1:] & T.land[1:, :-1]
     ok &= ~T.water_flag[:-1, :-1] & ~T.water_flag[1:, 1:] & ~T.water_flag[:-1, 1:] & ~T.water_flag[1:, :-1]
     tile_ok[:-1, :-1] = ok
@@ -176,9 +176,12 @@ def place(T, seed=7):
         elif strength == 1:
             roster = [rng.choice(high)] + [rng.choice(mid) for _ in range(2)]
             drop = ('permanent' if rng.random() < 0.6 else 'charged', int(rng.integers(2, 5)))
-        else:
+        elif strength == 2:
             roster = [rng.choice(high) for _ in range(2)] + [rng.choice(mid) for _ in range(2)]
             drop = ('permanent' if rng.random() < 0.7 else 'artifact', int(rng.integers(5, 8)))
+        else:                                   # a raid boss and its retinue
+            roster = [rng.choice(high) for _ in range(3)] + [rng.choice(mid) for _ in range(2)]
+            drop = ('artifact', 7)
         placed = 0
         for k, uid in enumerate(roster):
             a = rng.uniform(0, 2 * math.pi)
@@ -193,6 +196,8 @@ def place(T, seed=7):
             kw = {}
             if k == 0:
                 kw['drops'] = [[('Y%sI%d' % (ITEM_CLASS[drop[0]], drop[1]), 100)]]
+            elif k == 1 and strength == 3:
+                kw['drops'] = [[('YiI6', 100)]]
             add_unit(str(uid), ux, uy, NEUTRAL_HOSTILE, 'creep', angle=facing, **kw)
             creeps.append((ux, uy))
             placed += 1
@@ -215,14 +220,26 @@ def place(T, seed=7):
                 camp_count += 1
                 break
 
+    # ---- instances: guards and bosses without a gold mine ------------------------------------
+    for name, tx, ty, strength in geo.DUNGEON_CAMPS:
+        spot = find_spot(tx, ty, 1.5, max_search=6)
+        assert spot, 'no room for %s' % name
+        if creep_camp(spot[0], spot[1], strength, zone_at(*spot), label=name):
+            mark(occupied, spot[0], spot[1], 2.5); mark(reserved, spot[0], spot[1], 3)
+            camp_count += 1
+
     # ---- roaming camps spread over every zone ---------------------------------------------
+    # (only on ground big enough to be part of the world, not on sealed-off plateaus)
+    region = walkable_regions(T)
     zone_tiles = {}
-    land_tiles = np.argwhere(tile_ok & ~occupied)
+    land_tiles = np.argwhere(tile_ok & ~occupied & (region >= 600))
     for ty, tx in land_tiles[rng.permutation(len(land_tiles))]:
         zi = T.zone_of[ty, tx]
         zone_tiles.setdefault(zi, []).append((tx + 0.5, ty + 0.5))
     for zi, tiles in zone_tiles.items():
         zdef = geo.ZONES[zi]
+        if zdef.get('instance'):
+            continue
         want = max(1, min(5, len(tiles) // 340))
         made = 0
         for tx, ty in tiles:
@@ -289,3 +306,27 @@ def place(T, seed=7):
         u['x'], u['y'] = world_xy(u['tx'], u['ty'])
         u['z'] = ground_z_at(T, u['tx'], u['ty'])
     return O
+
+
+def walkable_regions(T):
+    """Size (in tiles) of the walkable area each tile belongs to; 0 for unwalkable tiles."""
+    cells = T.pathing.reshape(MAP_H, 4, MAP_W, 4)
+    walk = ((cells & 0x02) == 0).mean(axis=(1, 3)) >= 0.5
+    label = -np.ones((MAP_H, MAP_W), np.int64)
+    sizes = []
+    for sy, sx in np.argwhere(walk):
+        if label[sy, sx] >= 0:
+            continue
+        cid, stack, count = len(sizes), [(sy, sx)], 0
+        label[sy, sx] = cid
+        while stack:
+            y, x = stack.pop()
+            count += 1
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < MAP_H and 0 <= xx < MAP_W and walk[yy, xx] and label[yy, xx] < 0:
+                    label[yy, xx] = cid
+                    stack.append((yy, xx))
+        sizes.append(count)
+    out = np.zeros((MAP_H + 1, MAP_W + 1), np.int64)
+    out[:-1, :-1] = np.where(label >= 0, np.array(sizes + [0])[label], 0)
+    return out

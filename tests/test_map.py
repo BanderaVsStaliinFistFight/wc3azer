@@ -54,7 +54,7 @@ class MapTest(unittest.TestCase):
         w = read_w3e(self.files['war3map.w3e'])
         self.assertEqual((w['w'], w['h']), (481, 481))   # 480 x 480 tiles, the maximum map size
         self.assertLessEqual(len(w['tiles']), 16)
-        self.assertLessEqual(len(w['cliffs']), 2)
+        self.assertLessEqual(len(w['cliffs']), 3)
         pts = np.frombuffer(w['data'], dtype=np.dtype([('h', '<u2'), ('w', '<u2'), ('t', 'u1'), ('v', 'u1'), ('c', 'u1')]))
         pts = pts.reshape(w['h'], w['w'])
         self.assertLess(int((pts['t'] & 15).max()), len(w['tiles']))
@@ -65,6 +65,33 @@ class MapTest(unittest.TestCase):
         spread = np.maximum.reduce(corners) - np.minimum.reduce(corners)
         self.assertLessEqual(int(spread.max()), 2, 'a tile needs a cliff model that does not exist')
         self.assertTrue((pts['h'] < 0x4000).all())
+
+    def test_ramps(self):
+        """Ramps follow the World Editor's layout and their slope is walkable."""
+        w = read_w3e(self.files['war3map.w3e'])
+        pts = np.frombuffer(w['data'], dtype=np.dtype([('h', '<u2'), ('w', '<u2'), ('t', 'u1'), ('v', 'u1'), ('c', 'u1')]))
+        pts = pts.reshape(w['h'], w['w'])
+        ramp = (pts['t'] & 0x10) != 0
+        layer = (pts['c'] & 15).astype(int)
+        self.assertGreater(int(ramp.sum()), 100)
+        # each flagged corner lies on a straight run of three: the upper corner and two lower ones
+        for y, x in np.argwhere(ramp):
+            ok = False
+            for dx, dy in ((1, 0), (0, 1)):
+                for start in (0, -1, -2):
+                    run = [(y + (start + k) * dy, x + (start + k) * dx) for k in range(3)]
+                    if all(0 <= a < w['h'] and 0 <= b < w['w'] and ramp[a, b] for a, b in run):
+                        lv = [layer[a, b] for a, b in run]
+                        ok |= lv in ([lv[0], lv[0] - 1, lv[0] - 1], [lv[2] - 1, lv[2] - 1, lv[2]])
+            self.assertTrue(ok, (x, y))
+        # the sloped tiles of every ramp are walkable
+        cells = np.frombuffer(self.files['war3map.wpm'][16:], dtype=np.uint8).reshape(1920, 1920)
+        c = [ramp[:-1, :-1], ramp[1:, :-1], ramp[:-1, 1:], ramp[1:, 1:]]
+        lc = [layer[:-1, :-1], layer[1:, :-1], layer[:-1, 1:], layer[1:, 1:]]
+        slope = np.logical_and.reduce(c) & (np.maximum.reduce(lc) != np.minimum.reduce(lc))
+        self.assertGreater(int(slope.sum()), 40)
+        for ty, tx in np.argwhere(slope):
+            self.assertFalse((cells[ty * 4:ty * 4 + 4, tx * 4:tx * 4 + 4] & 0x02).any(), (tx, ty))
 
     def test_pathing_and_shadow(self):
         wpm = self.files['war3map.wpm']

@@ -58,12 +58,10 @@ LANDMASSES = {
     'Kezan': ('ellipse', 250, 202, 9, 6),
 }
 
-# The Maelstrom: a ring of jagged rocks around a bottomless whirlpool.
+# The Maelstrom: a whirlpool drawn into the sea floor as spiral arms of shallow water
+# around a bottomless eye: (centre x, centre y), outer radius in tiles.
 MAELSTROM = (247, 246)
-MAELSTROM_ROCKS = [(247, 268, 3), (263, 262, 3), (270, 247, 3), (263, 231, 3), (247, 224, 3),
-                   (231, 230, 3), (224, 246, 3), (231, 262, 3), (255, 256, 2), (239, 238, 2)]
-for i, (x, y, r) in enumerate(MAELSTROM_ROCKS):
-    LANDMASSES['Maelstrom Rock %d' % i] = ('ellipse', x, y, r, r)
+MAELSTROM_RADIUS = 30
 
 # ---------------------------------------------------------------------------
 # Zones: (name, landmass, cx, cy, rx, ry, biome, extra settings)
@@ -83,11 +81,11 @@ zone('Bloodmyst Isle', 'Bloodmyst Isle', 16, 386, 6, 6, 'fel')
 zone('Darkshore', 'Kalimdor', 50, 348, 10, 44, 'nightelf', hills=90)
 zone('Moonglade', 'Kalimdor', 88, 385, 13, 10, 'nightelf', base=110)
 zone('Felwood', 'Kalimdor', 78, 340, 14, 30, 'fel')
-zone('Winterspring', 'Kalimdor', 146, 380, 24, 20, 'snow', base=160)
-zone('Mount Hyjal', 'Kalimdor', 136, 338, 18, 15, 'worldtree', base=180, hills=150)
+zone('Winterspring', 'Kalimdor', 146, 380, 24, 20, 'snow', base=50, level=1)
+zone('Mount Hyjal', 'Kalimdor', 136, 338, 18, 15, 'worldtree', base=60, hills=110, level=1)
 zone('Azshara', 'Kalimdor', 182, 318, 16, 22, 'autumn', hills=90)
 zone('Ashenvale', 'Kalimdor', 100, 290, 55, 17, 'nightelf')
-zone('Stonetalon Mountains', 'Kalimdor', 46, 240, 22, 24, 'rocky', base=120, mountains=260)
+zone('Stonetalon Mountains', 'Kalimdor', 46, 240, 22, 24, 'rocky', base=30, mountains=260, level=1)
 zone('Northern Barrens', 'Kalimdor', 120, 232, 26, 24, 'savanna')
 zone('Durotar', 'Kalimdor', 164, 238, 13, 32, 'reddesert')
 zone('Desolace', 'Kalimdor', 38, 180, 22, 24, 'barren')
@@ -96,7 +94,7 @@ zone('Southern Barrens', 'Kalimdor', 124, 176, 25, 21, 'savanna')
 zone('Feralas', 'Kalimdor', 42, 122, 24, 24, 'jungle', hills=120)
 zone('Thousand Needles', 'Kalimdor', 98, 128, 24, 15, 'needles', base=10, hills=20)
 zone('Dustwallow Marsh', 'Kalimdor', 150, 134, 18, 22, 'swamp', base=18)
-zone("Un'Goro Crater", 'Kalimdor', 82, 84, 18, 18, 'jungle', base=0, hills=60)
+zone("Un'Goro Crater", 'Kalimdor', 82, 84, 18, 18, 'jungle', base=150, hills=50, level=-1)
 zone('Tanaris', 'Kalimdor', 134, 72, 28, 30, 'desert')
 zone('Silithus', 'Kalimdor', 42, 72, 20, 22, 'desert', hills=50)
 zone('Uldum', 'Kalimdor', 82, 36, 42, 17, 'desert', hills=40)
@@ -112,15 +110,15 @@ zone('Western Plaguelands', 'Eastern Kingdoms', 398, 372, 15, 17, 'plague')
 zone('Eastern Plaguelands', 'Eastern Kingdoms', 442, 368, 26, 17, 'plague')
 zone('Silverpine Forest', 'Eastern Kingdoms', 346, 346, 9, 20, 'darkforest')
 zone('Hillsbrad Foothills', 'Eastern Kingdoms', 368, 322, 15, 11, 'temperate')
-zone('Alterac Mountains', 'Eastern Kingdoms', 390, 343, 12, 10, 'snow', base=140)
-zone('The Hinterlands', 'Eastern Kingdoms', 434, 330, 28, 13, 'highland')
+zone('Alterac Mountains', 'Eastern Kingdoms', 390, 343, 12, 10, 'snow', base=40, level=1)
+zone('The Hinterlands', 'Eastern Kingdoms', 434, 330, 28, 13, 'highland', base=20, level=1)
 zone('Arathi Highlands', 'Eastern Kingdoms', 410, 302, 24, 13, 'farmland', base=60)
 zone('Wetlands', 'Eastern Kingdoms', 394, 270, 18, 14, 'swamp', base=20)
 zone('Twilight Highlands', 'Eastern Kingdoms', 452, 272, 17, 22, 'highland')
-zone('Dun Morogh', 'Eastern Kingdoms', 368, 236, 18, 16, 'snow', base=150)
+zone('Dun Morogh', 'Eastern Kingdoms', 368, 236, 18, 16, 'snow', base=40, level=1)
 zone('Loch Modan', 'Eastern Kingdoms', 420, 240, 14, 13, 'highland', base=90, mountains=60)
 zone('Badlands', 'Eastern Kingdoms', 434, 212, 17, 13, 'reddesert')
-zone('Searing Gorge', 'Eastern Kingdoms', 392, 210, 14, 9, 'volcanic', base=110)
+zone('Searing Gorge', 'Eastern Kingdoms', 392, 210, 14, 9, 'volcanic', base=20, level=1)
 zone('Burning Steppes', 'Eastern Kingdoms', 404, 191, 22, 8, 'volcanic', base=90)
 zone('Redridge Mountains', 'Eastern Kingdoms', 434, 172, 17, 10, 'highland', base=70)
 zone('Elwynn Forest', 'Eastern Kingdoms', 378, 170, 22, 10, 'temperate')
@@ -133,11 +131,8 @@ zone('Northern Stranglethorn', 'Eastern Kingdoms', 366, 98, 26, 20, 'jungle')
 zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
 zone('Tol Barad', 'Tol Barad', 352, 292.1, 4, 3.75, 'barren')
 # Northrend
-# Kezan and the Maelstrom
+# Kezan
 zone('Kezan', 'Kezan', 250, 202, 9, 6, 'jungle')
-zone('The Maelstrom', 'Maelstrom Rock 0', 247, 246, 30, 30, 'rocky')
-for i in range(1, len(MAELSTROM_ROCKS)):
-    zone('The Maelstrom', 'Maelstrom Rock %d' % i, 247, 246, 30, 30, 'rocky')
 ZONES = Z
 
 # ---------------------------------------------------------------------------
@@ -229,7 +224,7 @@ WALLS = []
 
 # Basins (bowls): (cx, cy, radius, depth)
 BASINS = [
-    (82, 84, 12, 180),       # Un'Goro crater floor
+    (82, 84, 12, 60),        # Un'Goro crater floor (the crater itself is a sunken cliff level)
 ]
 
 # ---------------------------------------------------------------------------
@@ -288,7 +283,7 @@ CAMPS = [
     ('Shimmering Flats', 116, 116, 1), ('Brackenwall Village', 140, 150, 1), ('Fire Plume Ridge', 82, 82, 2), ('Ahn\'Qiraj', 30, 56, 2),
     ('Zul\'Farrak', 120, 92, 2), ('Lost City of the Tol\'vir', 96, 32, 2), ('Steamwheedle Port', 160, 90, 0), ('Ruins of Ahn\'Qiraj', 46, 52, 1),
     ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 16, 386, 0),
-    ('Maelstrom Rock', 247, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 352, 292.1, 1),
+    ('Kezan', 252, 200, 0), ('Tol Barad', 352, 292.1, 1),
 ]
 
 # Waygates (mage portals): pairs of (name, x, y) linking far-apart lands.
@@ -325,6 +320,9 @@ ROADS = [
     [(96, 254), (70, 246), (52, 230), (44, 210), (40, 198), (36, 176), (46, 150), (58, 126)],
     [(140, 150), (150, 140), (166, 134), (176, 133)],
     [(118, 206), (130, 196), (140, 170), (140, 150)],
+    [(140, 282), (136, 300), (134, 318), (137, 334)],                       # Ashenvale up to Mount Hyjal
+    # Eastern Kingdoms, continued
+    [(428, 300), (426, 316), (422, 334), (436, 332), (446, 326)],          # Arathi up to the Hinterlands
 ]
 
 # Landmark doodads: (doodad id, x, y, scale, angle radians)
@@ -478,11 +476,11 @@ def _nr_zone(name, u, v, ru, rv, biome, **kw):
 _nr_zone('Borean Tundra', 0.13, 0.25, 0.13, 0.18, 'tundra')
 _nr_zone('Sholazar Basin', 0.13, 0.64, 0.12, 0.17, 'jungle', base=30)
 _nr_zone('Wintergrasp', 0.32, 0.50, 0.08, 0.09, 'snow', base=110, mountains=60)
-_nr_zone('Icecrown', 0.38, 0.80, 0.17, 0.16, 'icecrown', base=150)
+_nr_zone('Icecrown', 0.38, 0.80, 0.17, 0.16, 'icecrown', base=40, level=1)
 _nr_zone('Crystalsong Forest', 0.50, 0.52, 0.06, 0.08, 'crystal', base=90)
 _nr_zone('Dragonblight', 0.43, 0.28, 0.16, 0.17, 'snow', base=60, mountains=30, density=0.06)
-_nr_zone('The Storm Peaks', 0.74, 0.82, 0.20, 0.16, 'snow', base=220, mountains=320)
-_nr_zone("Zul'Drak", 0.73, 0.53, 0.14, 0.10, 'tundra', base=170, hills=90, density=0.04)
+_nr_zone('The Storm Peaks', 0.74, 0.82, 0.20, 0.16, 'snow', base=100, mountains=320, level=1)
+_nr_zone("Zul'Drak", 0.73, 0.53, 0.14, 0.10, 'tundra', base=50, hills=90, density=0.04, level=1)
 _nr_zone('Grizzly Hills', 0.70, 0.30, 0.10, 0.11, 'grizzly', base=70)
 _nr_zone('Howling Fjord', 0.87, 0.17, 0.12, 0.15, 'fjord', base=80)
 
@@ -622,7 +620,7 @@ LANDMASSES['Kul Tiras'] = [kt(px, py) for px, py in [
 ]]
 COAST_NOISE['Kul Tiras'] = 0.5
 zone('Stormsong Valley', 'Kul Tiras', *kt(1120, 330), 14, 9, 'farmland', base=50)
-zone('Drustvar', 'Kul Tiras', *kt(720, 940), 10, 11, 'autumn', base=110, hills=110)
+zone('Drustvar', 'Kul Tiras', *kt(720, 940), 10, 11, 'autumn', base=20, hills=110, level=1)
 zone('Tiragarde Sound', 'Kul Tiras', *kt(1230, 960), 9, 11, 'temperate')
 
 SEA_INLETS += [([kt(px, py) for px, py in line], w) for line, w in [
@@ -644,3 +642,111 @@ ROADS += [[kt(px, py) for px, py in line] for line in [
     [(1160, 720), (1260, 880), (1240, 1080)],                       # Boralus south through Tiragarde
     [(1160, 720), (1180, 620), (950, 610), (850, 700), (720, 900)], # Boralus west round the harbour into Drustvar
 ]]
+
+# ---------------------------------------------------------------------------
+# Coasts. Shores are cliffs, as on the classic hand-made Azeroth maps; beaches
+# (land sloping into shallow water) are kept where units must reach the water:
+# along the wading straits and rivers, at every shipyard, all round the small
+# islands, and at the spots listed in BEACHES (x, y, radius).
+# ---------------------------------------------------------------------------
+BEACH_ISLANDS = {'Kezan', 'Tol Barad', 'Azuremyst Isle', 'Bloodmyst Isle', 'Gilneas Isle North', 'Gilneas Isle South',
+                 'Echo Isles', 'Theramore Isle', 'Alcaz Island'}
+BEACHES = []
+
+# ---------------------------------------------------------------------------
+# Instances: dungeons and raids as walled, cliff-edged islands in the corners
+# of the Great Sea, each reached through a waygate from its entrance on the
+# continents (the camp or town named here). Inside: a pillared hall, a guard
+# camp halfway and the boss on a raised dais at the far end. Tile coordinates.
+# (name, (x0, y0, x1, y1), biome, entrance camp/town, side of the waygate)
+# ---------------------------------------------------------------------------
+INSTANCES = [
+    # north-west of Kalimdor: Kalimdor's dungeons and raids, and Azjol-Nerub
+    ("Onyxia's Lair", (12, 444, 34, 466), 'lava', "Onyxia's Lair", 'S'),
+    ("Temple of Ahn'Qiraj", (42, 440, 72, 466), 'temple', "Ahn'Qiraj", 'S'),
+    ('Caverns of Time', (80, 444, 104, 466), 'temple', 'Tanaris Caverns of Time', 'W'),
+    ('Wailing Caverns', (12, 404, 34, 430), 'grotto', 'The Crossroads Oasis', 'E'),
+    ('Maraudon', (42, 406, 66, 430), 'grotto', 'Maraudon', 'S'),
+    ('Dire Maul', (74, 404, 96, 430), 'halls', 'Dire Maul', 'N'),
+    ('Azjol-Nerub', (104, 404, 126, 428), 'frozen', 'Azjol-Nerub', 'E'),
+    ("Zul'Farrak", (12, 362, 36, 386), 'temple', "Zul'Farrak", 'N'),
+    ('Blackfathom Deeps', (44, 362, 68, 386), 'grotto', 'Blackfathom Deeps', 'W'),
+    ('Razorfen Downs', (76, 364, 98, 386), 'grotto', 'Razorfen Kraul', 'E'),
+    # north-east, beyond Quel'Danas: Lordaeron's and Northrend's
+    ('Naxxramas', (388, 440, 414, 466), 'crypt', 'Naxxramas', 'S'),
+    ('Ulduar', (422, 440, 450, 466), 'halls', 'Ulduar', 'W'),
+    ('Icecrown Citadel', (388, 402, 412, 430), 'frozen', "Aldur'thar", 'W'),
+    ('Stratholme', (420, 402, 444, 430), 'crypt', 'Stratholme', 'S'),
+    ("Zul'Aman", (452, 400, 468, 432), 'troll', "Zul'Aman", 'S'),
+    # south, between the continents: the southern Eastern Kingdoms and Uldum
+    ('Molten Core', (208, 110, 236, 136), 'lava', 'Blackrock Spire', 'N'),
+    ('Karazhan', (246, 112, 270, 138), 'halls', 'Karazhan', 'N'),
+    ("Zul'Gurub", (282, 108, 308, 134), 'troll', "Zul'Gurub", 'E'),
+    ('The Deadmines', (210, 66, 234, 90), 'halls', 'Moonbrook', 'E'),
+    ('Sunken Temple', (246, 62, 272, 90), 'grotto', 'Stonard', 'N'),
+    ('Uldaman', (284, 64, 308, 88), 'halls', 'Uldaman', 'E'),
+    ('Halls of Origination', (212, 16, 238, 42), 'temple', "Lost City of the Tol'vir", 'W'),
+    ('Gnomeregan', (250, 16, 272, 40), 'halls', 'Gnomeregan', 'N'),
+    ('Scholomance', (284, 16, 308, 40), 'crypt', 'Andorhal', 'E'),
+]
+
+# Raised rectangles (x0, y0, x1, y1, extra cliff levels): the instances' pillars.
+BLOCKS = []
+# Creep camps without a gold mine: (name, x, y, strength); strength 3 is a raid boss.
+DUNGEON_CAMPS = []
+INSTANCE_NAMES = set()
+
+
+def _instance_layout(name, box, side):
+    """Outline, waygate, guard and boss positions, raised blocks and corridor of an instance.
+
+    Laid out along the hall: `a` runs from the waygate end (0) to the far end (L),
+    `c` across it. The two corners beside the waygate are cut away into a
+    vestibule, pillars line the hall and the boss waits on a raised dais at
+    the far end, reached by a ramp where the corridor climbs onto it.
+    """
+    x0, y0, x1, y1 = box
+    cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+    along_x = side in 'WE'
+    L = (x1 - x0) if along_x else (y1 - y0)
+    W = (y1 - y0) if along_x else (x1 - x0)
+
+    def world(a, c):
+        return {'W': (x0 + a, cy + c), 'E': (x1 - a, cy + c), 'S': (cx + c, y0 + a), 'N': (cx + c, y1 - a)}[side]
+
+    def rect(a0, a1, c0, c1, lv):
+        (ax, ay), (bx, by) = world(a0, c0), world(a1, c1)
+        return (min(ax, bx), min(ay, by), max(ax, bx), max(ay, by), lv)
+
+    h = sum(map(ord, name))
+    na, nl = 4 + h % 3, 5 + (h // 3) % 3                         # vestibule notch: across, along
+    outline = [world(a, c) for a, c in [(0, -W / 2 + na), (0, W / 2 - na), (nl, W / 2 - na), (nl, W / 2), (L, W / 2),
+                                        (L, -W / 2), (nl, -W / 2), (nl, -W / 2 + na)]]
+    gate, mid, boss = world(4.5, 0), world(L * 0.45, 0), world(L - 5, 0)
+    blocks = [rect(L - 9, L - 1, -W / 2 + 3, W / 2 - 3, 1)]       # the boss's dais
+    a = nl + 5
+    while a <= L - 15:
+        for c in (-(W / 2 - 4), W / 2 - 4):
+            blocks.append(rect(a - 1, a + 1, c - 1, c + 1, 1))
+        a += 5
+    return outline, gate, mid, boss, blocks, [gate, boss]
+
+
+def _find_site(ref):
+    for n, x, y, _ in CAMPS + TOWNS:
+        if n == ref:
+            return x, y
+    raise KeyError(ref)
+
+
+for _name, _box, _biome, _ref, _side in INSTANCES:
+    _x0, _y0, _x1, _y1 = _box
+    _outline, _gate, _mid, _boss, _blocks, _corridor = _instance_layout(_name, _box, _side)
+    LANDMASSES[_name] = _outline
+    COAST_NOISE[_name] = 0.0
+    INSTANCE_NAMES.add(_name)
+    zone(_name, _name, (_x0 + _x1) / 2.0, (_y0 + _y1) / 2.0, (_x1 - _x0) / 2.0, (_y1 - _y0) / 2.0, _biome, instance=True)
+    BLOCKS += _blocks
+    ROADS.append(_corridor)
+    PORTALS.append(((_name + ' Entrance',) + _find_site(_ref), (_name + ' Portal',) + _gate))
+    DUNGEON_CAMPS += [(_name + ' Guards', _mid[0], _mid[1], 2), (_name, _boss[0], _boss[1], 3)]

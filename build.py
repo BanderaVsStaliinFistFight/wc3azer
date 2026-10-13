@@ -9,14 +9,16 @@ import os
 import time
 
 from azeroth import formats, jass, mpq, objects, preview, terrain
+from azeroth import geography as geo
 from azeroth.biomes import CLIFF_TILES, GROUND_TILES
 from azeroth.terrain import LEFT, BOTTOM, MAP_W, MAP_H, MARGIN_L, MARGIN_R, MARGIN_B, MARGIN_T
 
 MAP_NAME = 'Azeroth'
 AUTHOR = 'Azeroth map generator (wc3azer)'
 DESCRIPTION = ('The world of Azeroth on the largest map Warcraft III allows (480x480): Kalimdor, the Eastern Kingdoms, '
-               'a vast Northrend, Kul Tiras, Kezan and the Maelstrom. Twelve capitals, mage portals between the '
-               'continents, goblin shipyards and zeppelins.')
+               'a vast Northrend, Kul Tiras, Kezan and the Maelstrom, with cliff coasts, terraced highlands and 24 '
+               'dungeon and raid instances. Twelve capitals, mage portals between the continents, goblin shipyards '
+               'and zeppelins.')
 PLAYER_COLOURS = [(255, 3, 3), (0, 66, 255), (28, 230, 185), (84, 0, 129), (255, 252, 0), (254, 138, 14),
                   (32, 192, 0), (229, 91, 176), (149, 150, 151), (126, 191, 241), (16, 98, 70), (78, 42, 4)]
 RACE_ID = {'human': 1, 'orc': 2, 'undead': 3, 'nightelf': 4, 'random': 0}
@@ -78,8 +80,9 @@ def build(seed, out_path, preview_path):
     with open(out_path, 'wb') as fh:
         fh.write(data)
     if preview_path:
+        links = O.portals[:len(O.portals) - len(geo.INSTANCES)]   # instance waygates are left unlinked
         preview.render(T, preview_path, scale=2, objects=dict(trees=O.trees, mines=O.mines, creeps=O.creeps,
-                                                              shops=O.shops, portals=O.portals))
+                                                              shops=O.shops, portals=links))
     print('wrote %s (%.1f MB) in %.1fs' % (out_path, len(data) / 1e6, time.time() - t0))
     print('  trees: %d, other doodads: %d, units: %d (creeps %d, gold mines %d, shops %d, waygates %d, critters %d)' % (
         len(O.trees), len(O.doodads) - len(O.trees), len(O.units),
