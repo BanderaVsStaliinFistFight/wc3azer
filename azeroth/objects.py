@@ -5,6 +5,7 @@ import numpy as np
 
 from . import geography as geo
 from .biomes import B
+from .decor import BATS, BIRDS, DOODADS, FLIES, RUINS, SCATTER, SHELLS, SIGNPOST, VILLAGE, VILLAGE_COLD, VILLAGE_DRY
 from .raster import dilate, label_regions
 from .terrain import MAP_W, MAP_H, ground_z_at, world_xy
 
@@ -188,59 +189,154 @@ def place(T, seed=7):
     O.trees = trees
     O.doodads = O.doodads + [{k: v for k, v in t.items() if k not in ('tx', 'ty')} for t in trees]
 
-    # ---- ground detail -----------------------------------------------------------------------
-    # Rocks only where the ground is already impassable (steep slopes), so the baked
-    # pathing map stays true; flowers, shrubs, mushrooms and reeds have no pathing.
+    # ---- ground detail and decorations -----------------------------------------------------------
+    # Solid pieces are written into the pathing map (their footprint blocks walking and building)
+    # and any that cut off part of the walkable land are taken away again at the end.
+    # Flowers, shrubs, mushrooms, reeds, shells and the ambient birds, bats and flies have no pathing.
     detail = []
+    blockers = []                       # (doodad, cell box, pathing cells it replaced)
+    blocked = np.zeros((n, n), bool)    # tiles under solid decorations
     biome_of = np.array([z['biome'] for z in geo.ZONES])[T.zone_of]
     is_tree = candidates
     steep = np.zeros((n, n), bool)
     steep[:-1, :-1] = T.steep_tile & ~T.cliff_tile
     near_water = dilate(T.lake | T.river, 2) & ~(T.lake | T.river)
-
-    def add_detail(did, tx, ty, scale=(0.8, 1.2), z=None, fixed=None):
-        x, y = world_xy(tx, ty)
-        detail.append(dict(id=did, var=int(rng.integers(0, DETAIL_VARIATIONS[did])), x=x, y=y,
-                           z=ground_z_at(T, tx, ty) if z is None else z,
-                           angle=fixed if fixed is not None else float(rng.uniform(0, 2 * math.pi)),
-                           scale=float(rng.uniform(*scale)), state=2, life=255))
-
-    roll = rng.random((n, n))
-    # rubble at the foot and brow of mountain cliffs: walkable ground, so its tile is blocked in the pathing map
     by_cliff = np.zeros((n, n), bool)
     by_cliff[:-1, :-1] = T.cliff_tile
-    by_cliff = dilate(by_cliff, 1) & tile_ok & (T.relief > 120) & (T.road_d > 5) & ~T.ramp_near
-    rubble = by_cliff & ~is_tree & ~clear & (roll < 0.10)
+    by_cliff = dilate(by_cliff, 1)
+
+    def add_detail(did, tx, ty, scale=(0.8, 1.2), z=None, fixed=None, variations=None):
+        x, y = world_xy(tx, ty)
+        d = dict(id=did, var=int(rng.integers(0, variations or DETAIL_VARIATIONS[did])), x=x, y=y,
+                 z=ground_z_at(T, tx, ty) if z is None else z,
+                 angle=fixed if fixed is not None else float(rng.uniform(0, 2 * math.pi)),
+                 scale=float(rng.uniform(*scale)), state=2, life=255)
+        detail.append(d)
+        return d
+
+    def footprint(tx, ty, size):
+        c = abs(size)
+        x0, y0 = int(round(tx * 4 - c / 2)), int(round(ty * 4 - c / 2))
+        return y0, y0 + c, x0, x0 + c
+
+    def fits(tx, ty, size, allow_reserved=False):
+        y0, y1, x0, x1 = footprint(tx, ty, size)
+        if x0 < 0 or y0 < 0 or x1 > MAP_W * 4 or y1 > MAP_H * 4:
+            return False
+        tiles = (slice(y0 // 4, (y1 - 1) // 4 + 1), slice(x0 // 4, (x1 - 1) // 4 + 1))
+        ok_here = tile_ok[tiles] & ~occupied[tiles] & ~blocked[tiles] & ~by_cliff[tiles] & ~T.ramp_near[tiles] & ~is_tree[tiles]
+        if not allow_reserved:
+            ok_here &= ~reserved[tiles]
+        return bool(ok_here.all()) and T.road_d[int(ty), int(tx)] > 2.5
+
+    def bake(d, tx, ty, size):
+        y0, y1, x0, x1 = footprint(tx, ty, size)
+        blockers.append((d, (y0, y1, x0, x1), T.pathing[y0:y1, x0:x1].copy()))
+        if size > 0:
+            T.pathing[y0:y1, x0:x1] = 0xCA
+        else:
+            T.pathing[y0:y1, x0:x1] |= 0x08
+        blocked[y0 // 4:(y1 - 1) // 4 + 1, x0 // 4:(x1 - 1) // 4 + 1] = True
+
+    def decorate(did, tx, ty, allow_reserved=False):
+        variations, size, scale, fixed = DOODADS[did]
+        if not fits(tx, ty, size or 1, allow_reserved):
+            return False
+        d = add_detail(did, tx, ty, scale=scale, fixed=fixed, variations=variations)
+        if size:
+            bake(d, tx, ty, size)
+        return True
+
+    roll = rng.random((n, n))
+    # rocks on steep slopes, and rubble at the foot and brow of mountain cliffs
+    rubble = by_cliff & tile_ok & (T.relief > 120) & (T.road_d > 5) & ~T.ramp_near & ~is_tree & ~clear & (roll < 0.10)
     for ty, tx in np.argwhere((steep & ground & ~clear & (roll < 0.2)) | rubble):
         rock, spire = ROCKS.get(str(biome_of[ty, tx]), ('LRrk', None))
         if spire and rng.random() < 0.25:
-            add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.28, 0.42))
+            d = add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.28, 0.42))
         else:
-            add_detail(rock, tx + 0.5, ty + 0.5, scale=(0.8, 1.4), fixed=4.712389 if rock == 'ORrk' else None)
-        if rubble[ty, tx]:
-            detail[-1]['tile'] = (ty, tx)
-            T.pathing[ty * 4:ty * 4 + 4, tx * 4:tx * 4 + 4] = 0xCA
-            occupied[ty, tx] = True
-    unblock_rubble(T, label, sizes, rubble, detail)
+            d = add_detail(rock, tx + 0.5, ty + 0.5, scale=(0.8, 1.4), fixed=4.712389 if rock == 'ORrk' else None)
+        if rubble[ty, tx] and not blocked[ty, tx]:
+            bake(d, tx + 0.5, ty + 0.5, 4)
     # great rock spires and glaciers crown the massifs
     crown = np.zeros((n, n), bool)
     crown[:-1, :-1] = T.massif_core[:-1, :-1]
     for ty, tx in np.argwhere(crown & ground & (rng.random((n, n)) < 0.05)):
         spire = SPIRES.get(str(biome_of[ty, tx]), 'ZRrs')
         add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.8, 1.2), fixed=4.712389 if spire in ('ORrs', 'IRgc') else None)
-    lush = dilate(occupied, 1) | (T.road_d < 1.6)
+
+    # ruins at the named sites
+    def scatter_round(cx, cy, pool, count, r0, r1, allow_reserved=False):
+        made = 0
+        for _ in range(count * 4):
+            if made >= count:
+                break
+            a, r = rng.uniform(0, 2 * math.pi), rng.uniform(r0, r1)
+            tx, ty = round((cx + r * math.cos(a)) * 2) / 2, round((cy + r * math.sin(a)) * 2) / 2
+            if 0 < tx < MAP_W and 0 < ty < MAP_H and decorate(str(rng.choice(pool)), tx, ty, allow_reserved):
+                made += 1
+
+    for name, cx, cy, _ in geo.CAMPS:
+        pool = RUINS.get(str(biome_of[int(cy), int(cx)]))
+        if pool:
+            scatter_round(cx, cy, pool, int(rng.integers(5, 10)), 1.0, 7.0)
+    # clutter round the towns
+    for name, cx, cy, _ in geo.TOWNS:
+        b = str(biome_of[int(cy), int(cx)])
+        cold = B[b]['cold'] if b in B else False
+        pool = VILLAGE_COLD if cold else VILLAGE_DRY if b in ('savanna', 'reddesert', 'needles', 'barren', 'desert', 'amber') else VILLAGE
+        scatter_round(cx, cy, pool, int(rng.integers(6, 11)), 2.5, 7.0, allow_reserved=True)
+        if pool is VILLAGE and rng.random() < 0.5:
+            scatter_round(cx, cy, ['LSwl'], 1, 1.5, 4.0, allow_reserved=True)
+    # props over open country
+    open_country = tile_ok & ~is_tree & ~reserved & ~dilate(occupied, 1) & (T.road_d > 2.5) & ~steep & ~by_cliff
+    roll = rng.random((n, n))
+    for ty, tx in np.argwhere(open_country & (roll < 0.12)):
+        pool = SCATTER.get(str(biome_of[ty, tx]))
+        if pool:
+            ids, weights = zip(*pool)
+            decorate(str(rng.choice(ids, p=np.array(weights) / sum(weights))), tx + 0.5, ty + 0.5)
+    # signposts where roads fork
+    forks = []
+    for line in T.road_lines:
+        for ex, ey in (line[0], line[-1]):
+            if all(math.hypot(ex - fx, ey - fy) > 5 for fx, fy in forks):
+                forks.append((ex, ey))
+    for ex, ey in forks:
+        for ox, oy in ((1.6, 1.6), (-1.6, 1.6), (1.6, -1.6), (-1.6, -1.6)):
+            tx, ty = ex + ox, ey + oy
+            if 0 < tx < MAP_W and 0 < ty < MAP_H and tile_ok[int(ty), int(tx)] and not occupied[int(ty), int(tx)] \
+                    and T.road_d[int(ty), int(tx)] > 1.2:
+                add_detail(SIGNPOST, tx, ty, scale=(0.9, 1.1), variations=1)
+                break
+    # shells on the beaches, birds over woods and shores, bats in the dark places, flies over the swamps
+    coast = T.land & dilate(T.sea, 1)
+    roll = rng.random((n, n))
+    for ty, tx in np.argwhere(coast & T.beach & tile_ok & (roll < 0.08)):
+        add_detail(SHELLS, tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8), variations=10)
+    edge_of_wood = dilate(is_tree, 1) & ~is_tree
+    dark = np.isin(biome_of, ['plague', 'darkforest', 'crypt', 'fel', 'icecrown'])
+    for mask, did, p in ((edge_of_wood | coast, BIRDS, 0.003), (dark & T.land, BATS, 0.002),
+                         (np.isin(biome_of, ['swamp']) & T.land, FLIES, 0.004)):
+        roll = rng.random((n, n))
+        for ty, tx in np.argwhere(mask & (roll < p)):
+            add_detail(did, tx + 0.5, ty + 0.5, variations=1)
+
+    unblock(T, label, sizes, blockers, detail)
+
+    # flowers, shrubs and mushrooms; reeds by the water; lily pads on the lakes
+    lush = dilate(occupied | blocked, 1) | (T.road_d < 1.6)
     open_ground = tile_ok & ~is_tree & ~lush & ~steep
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_ground & (roll < 0.09)):
+    for ty, tx in np.argwhere(open_ground & (roll < 0.12)):
         plants = PLANTS.get(str(biome_of[ty, tx]))
         if plants:
             add_detail(str(rng.choice(plants)), tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
     for ty, tx in np.argwhere(near_water & tile_ok & ~is_tree & ~lush & (roll > 0.80)):
         add_detail('APct' if rng.random() < 0.6 else 'LPrs', tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
     lake_pts = T.lake & ~dilate(~T.lake, 1)
-    for ty, tx in np.argwhere(lake_pts & (roll < 0.05)):
+    for ty, tx in np.argwhere(lake_pts & (roll < 0.06)):
         add_detail('LPfp', tx + rng.uniform(-0.3, 0.3), ty + rng.uniform(-0.3, 0.3), z=-89.6)
-    detail = [{k: v for k, v in d.items() if k != 'tile'} for d in detail]
     O.details = detail
     O.doodads = O.doodads + detail
 
@@ -272,15 +368,20 @@ def main_regions(T, label, sizes):
     return np.isin(label, [lab for _, lab in best.values()]) & (label >= 0)
 
 
-def unblock_rubble(T, label, sizes, rubble, detail):
-    """Take away rubble that cut off part of an area that used to be connected."""
+def unblock(T, label, sizes, blockers, detail):
+    """Take away solid decorations that cut off part of an area that used to be connected."""
     for _ in range(6):
         new_label, new_sizes = walkable_regions(T)
         cut = (label >= 0) & (new_label >= 0) & (sizes[label] >= 600) & (new_sizes[new_label] < 0.9 * sizes[label])
-        culprits = dilate(cut, 1) & rubble
-        if not culprits.any():
+        if not cut.any():
             return
-        for ty, tx in np.argwhere(culprits):
-            T.pathing[ty * 4:ty * 4 + 4, tx * 4:tx * 4 + 4] = 0x40
-            rubble[ty, tx] = False
-        detail[:] = [d for d in detail if not ('tile' in d and not rubble[d['tile']])]
+        near = dilate(cut, 1)
+        keep, gone = [], set()
+        for d, (y0, y1, x0, x1), saved in blockers:
+            if near[y0 // 4:(y1 - 1) // 4 + 1, x0 // 4:(x1 - 1) // 4 + 1].any():
+                T.pathing[y0:y1, x0:x1] = saved
+                gone.add(id(d))
+            else:
+                keep.append((d, (y0, y1, x0, x1), saved))
+        blockers[:] = keep
+        detail[:] = [d for d in detail if id(d) not in gone]

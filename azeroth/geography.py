@@ -198,6 +198,10 @@ LAKES = [
     (402, 270, 4, 3),        # Wetlands marsh
     (390, 276, 3, 2),
     (446, 152, 4, 3),        # Swamp of Sorrows
+    (372, 90, 4, 3),         # Lake Nazferiti (Stranglethorn)
+    (350, 394, 4, 3),        # Brightwater Lake (Tirisfal)
+    (448, 412, 3, 2.5),      # Lake Elrendar (Eversong)
+    (108, 218, 3, 2.5),      # the Lushwater Oasis (the Barrens)
 ]
 
 # Rivers: polyline, half-width. Rivers are shallow (walkable) water.

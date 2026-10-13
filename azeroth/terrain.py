@@ -75,7 +75,8 @@ def build(seed=1):
     lake_sd = np.full((n, n), -1e9)
     for cx, cy, rx, ry in list(geo.LAKES) + ponds:
         lake_sd = np.maximum(lake_sd, f.ellipse_sdf(cx, cy, rx, ry))
-    lake = (lake_sd + f.fbm(5, 3) * 1.2 > 0) & land
+    lake_noise = f.fbm(5, 3)
+    lake = (lake_sd + lake_noise * 1.2 > 0) & land
     river_d = np.full((n, n), 1e9)
     river_w = np.zeros((n, n))
     for line in T.river_lines:
@@ -145,6 +146,17 @@ def build(seed=1):
         pass_factor = np.minimum(pass_factor, smoothstep(r, r + 7, d))
         clearing = np.maximum(clearing, smoothstep(r + 5, r, d))
 
+    # Natural lakes scattered over the interiors, clear of roads, settlements and the great ranges.
+    T.lake_sites = scatter_lakes(f, land, zone_of, road_d, flat_spots, list(geo.LAKES) + ponds, seed)
+    new_lake = np.zeros((n, n), bool)
+    for cx, cy, rx, ry, angle in T.lake_sites:
+        new_lake |= f.ellipse_sdf(cx, cy, rx, ry, angle) + lake_noise * 1.0 > 0
+    new_lake &= land
+    lake |= new_lake
+    land &= ~new_lake
+    T.land = land
+    water = ~land
+
     # ---- 4. heights (relative to the water surface) ---------------------------
     dc = distance_field(water, 40)                 # inland distance from any water
     dw = distance_field(land, 40)                  # distance from land, out at sea
@@ -202,6 +214,7 @@ def build(seed=1):
     for line in geo.SHALLOWS:
         beach_src |= f.segment_distance(line) < 7
     beach_src |= river_d < 4
+    beach_src |= dilate(lake, 2)                                     # lakes lie in hollows with gentle shores
     for name, tx, ty, building in geo.TOWNS:
         if building == 'nshp':
             beach_src |= f.distance(tx, ty) < 6
@@ -420,6 +433,40 @@ def build(seed=1):
     # ---- 9. pathing (4 x 4 cells per tile) ---------------------------------------
     T.pathing = compute_pathing(T)
     return T
+
+
+def scatter_lakes(f, land, zone_of, road_d, flat_spots, existing, seed, count=50, spacing=16):
+    """Pick sites for natural lakes: inland, away from roads, settlements, other lakes and the mountain ranges."""
+    rng = np.random.default_rng(seed * 17 + 9)
+    inland = distance_field(~land, 16)
+    ok = land & (inland >= 9) & (road_d > 6)
+    for tx, ty, r in flat_spots:
+        ok &= f.distance(tx, ty) > r + 9
+    for line, width, height in geo.MASSIFS:
+        ok &= f.segment_distance(line, reach=width * 3 + 4) > width * 2.8
+    for line, width, height in geo.RIDGES:
+        ok &= f.segment_distance(line, reach=width * RANGE_WIDTH * 2.5 + 4) > width * RANGE_WIDTH * 2.2
+    biome = np.array([z['biome'] for z in geo.ZONES])[zone_of]
+    instance = np.array([bool(z.get('instance')) for z in geo.ZONES])[zone_of]
+    plateau = np.array([z.get('level', 0) != 0 for z in geo.ZONES])[zone_of]   # water cannot sit up on a cliff level
+    ok &= ~dilate(plateau, 5)
+    dry_country = np.isin(biome, ['desert', 'savanna', 'reddesert', 'needles', 'barren', 'amber'])
+    ok &= ~instance & ~np.isin(biome, ['volcanic'])
+    ok &= ~dry_country | (rng.random(land.shape) < 0.04)          # only the odd oasis in dry country
+    centres = [(cx, cy) for cx, cy, rx, ry in existing]
+    sites = []
+    cand = np.argwhere(ok)
+    for y, x in cand[rng.permutation(len(cand))]:
+        if len(sites) >= count:
+            break
+        if any((x - cx) ** 2 + (y - cy) ** 2 < spacing ** 2 for cx, cy in centres):
+            continue
+        rx = float(rng.uniform(2.2, 5.5))
+        if inland[y, x] < rx + 5 or road_d[y, x] < rx + 3.5:
+            continue
+        sites.append((float(x), float(y), rx, rx * float(rng.uniform(0.55, 0.95)), float(rng.uniform(0, np.pi))))
+        centres.append((x, y))
+    return sites
 
 
 def stamp_ramps(layer, ramp, z, dry, roads):

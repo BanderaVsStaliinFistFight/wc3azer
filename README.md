@@ -22,6 +22,12 @@
 The terrain follows the style of the big hand-made WoW maps for Warcraft III, such as WoW Reanimated. Only the look was used as a reference; none of that map's terrain or objects were copied.
 
 - **Coasts.** Where high ground meets the sea, the shore is a cliff wall rising out of a pale shelf of shallows. Where the land behind is low, it runs down to a beach, about 30% of the shoreline in all. Beaches are also kept wherever units must reach the water: along the wading straits and river mouths, at every shipyard and round the small islands.
+- **Lakes.** 64 in all:
+  - 20 named lakes, among them Lordamere, Darrowmere, Loch Modan, Lake Everstill, Lake Nazferiti, Brightwater Lake, Lake Elrendar and the Lushwater Oasis;
+  - a spring pond at the head of every river no lake feeds;
+  - 38 natural lakes scattered across the continents' interiors, clear of roads, settlements and the great ranges, with only the odd oasis in dry country.
+
+  Each lies in a hollow with gentle shores, ringed with reeds and dotted with lily pads.
 - **Rivers and valleys.** Rivers wind from side to side, widen from a narrow stream at their spring pond to a broad mouth, and run through valleys. Water running off the land carves a branching network of valleys into everything: shallow swales across the plains, and deep gullies in the mountains. Mountain ranges bend instead of running ruler-straight, and broad swells keep the plains from lying flat.
 - **Hills and elevation.** The land rises from its shores towards the heart of each continent, about 90 units higher inland, and rolls with hills: big swells with smaller knolls on top. Most zones span 150 to 300 units from their valleys to their hilltops, and the median height of the land is about 185, against about 70 before. Only true mountain heights are compressed; the hills keep their full height.
 - **Raised and sunken zones.** Highland zones stand one cliff level above their neighbours: Winterspring, Mount Hyjal, Stonetalon, Mulgore, Alterac, the Hinterlands, Arathi, the Twilight Highlands, Dun Morogh, Searing Gorge, Icecrown, the Storm Peaks, Zul'Drak, the Grizzly Hills and Drustvar. Un'Goro Crater sinks one level below. Ramps, built the way the World Editor builds them, climb these edges wherever a road crosses and every couple of dozen tiles along them.
@@ -33,7 +39,15 @@ The terrain follows the style of the big hand-made WoW maps for Warcraft III, su
   - Wading straits reach Azuremyst, Bloodmyst, Tol Barad and Alcaz Island.
   - About 99% of the walkable land can be reached from the start locations; what is left is small ledges high in the mountains.
 - **Forests.** Woods cover a share of each zone set by its climate. They grow thicker along rivers and lakes, climb the hillsides up to a treeline, break up into clumps and clearings, and fray into scattered trees at their edges. A second species is mixed in here and there: autumn trees among summer ones, pines in the snow, canopy giants in the jungles and Ashenvale. The ground under them is dark forest floor.
-- **Ground detail.** The ground follows the lie of the land: each zone's lusher ground gathers on wet valley floors and along the water, and its dirt and rock on slopes and high, dry ground. Zone borders fray into one another instead of meeting on a line. Roads wander a little, as roads do. Flowers, shrubs and mushrooms dot open ground, reeds and cattails line the water, lily pads float on the lakes, and boulders lie on steep slopes and below cliffs. Boulders on walkable ground are written into the pathing map, and none of them is allowed to cut off a path.
+- **Ground detail.** The ground follows the lie of the land: each zone's lusher ground gathers on wet valley floors and along the water, and its dirt and rock on slopes and high, dry ground. Zone borders fray into one another instead of meeting on a line. Roads wander a little, as roads do. Flowers, shrubs and mushrooms dot open ground, reeds and cattails line the water, lily pads float on the lakes, and boulders lie on steep slopes and below cliffs.
+- **Decorations.** Over 100 kinds of doodad are spread across the whole map:
+  - Each biome has its own props on open ground: hay and wheat on the farms, graves and skulls in the Plaguelands, bones, totems, cacti and rock pillars in the Barrens and deserts, broken columns and stumps in Ashenvale, ruins, mushrooms and vines in the jungles, fire pits and tombstones in Northrend, ice pillars in Icecrown, and magma rocks in the volcanic lands.
+  - Every named camp site has a cluster of ruins in its region's style.
+  - Every town has village clutter round its square: hay, lantern posts, weapon racks, carts, braziers and wells, with fire pits in the cold and totems in the Barrens.
+  - Signposts stand at the forks in the roads and shells lie on the beaches.
+  - Birds circle over woods and shores, bats over the dark places, and flies over the swamps.
+
+  Solid pieces are written into the pathing map, and none of them is allowed to cut off a path.
 - **Instances.** Each dungeon has a vestibule round its waygate, a pillared hall, and a raised dais at the far end, reached up a ramp. Floors are themed: lava cracks in Molten Core and Onyxia's Lair, sand and brick in the desert temples, brick and poison in the crypts, ice in the Northrend raids, and moss in the caverns.
 - **Paved capitals:** a brick square with streets leading out along the roads.
 
@@ -56,7 +70,8 @@ There are 93 zones in all, counting the instances. Each zone has its own ground 
 Shallow straits that ground units can wade across link Teldrassil and Azuremyst to Darkshore, Bloodmyst to Azuremyst, Tol Barad to Gilneas, and Alcaz Island, Theramore and the Echo Isles to the mainland.
 
 **What's placed.**
-- About 30,000 trees and some 3,400 boulders, plants and rock spires.
+- About 29,000 trees.
+- About 7,400 decorations: ruins, props, boulders, plants, rock spires and ambient birds, bats and flies.
 - The landmark doodads.
 - The waygates.
 - Wildlife critters in every zone.
