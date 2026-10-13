@@ -11,7 +11,7 @@ RANGE_WIDTH, RANGE_HEIGHT = 1.45, 1.5  # mountain ranges relative to geography.R
 MASSIF_HEIGHT = 0.9                  # scale of geography.MASSIFS heights
 HILL_SCALE = 2.5                     # rolling hills relative to the biome `hills` amplitudes
 INLAND_RISE = 90                     # how much higher the heart of a landmass stands than its shores
-FOREST_DENSITY = 2.0                 # forest cover relative to the biome densities
+FOREST_DENSITY = 1.45                # forest cover relative to the biome densities
 MARGIN_L, MARGIN_R, MARGIN_B, MARGIN_T = 6, 6, 4, 8
 LEFT = BOTTOM = -MAP_W * 64.0        # world coordinate of the south-west tilepoint
 WATER_RAW = 0x2000                   # default water level; surface sits at z = -89.6
@@ -353,7 +353,7 @@ def build(seed=1):
     density = np.array([zd.get('density', B[zd['biome']]['density']) for zd in geo.ZONES])[zone_of] * FOREST_DENSITY
     density = density * (1 + 0.35 * smoothstep(10, 2, distance_field(lake | river, 10)))
     treeline = np.where(zcold, 420, 700)
-    density = np.clip(density * smoothstep(treeline + 60, treeline - 120, T.h_rel), 0, 0.88)
+    density = np.clip(density * smoothstep(treeline + 60, treeline - 120, T.h_rel), 0, 0.76)
     fn = (f.fbm(16, 4) + f.fbm(6, 3) * 0.6 + f.fbm(40, 2) * 0.5) / 2.1
     land_noise = np.sort(fn[land])
     thresh = land_noise[np.minimum(((1 - density) * (len(land_noise) - 1)).astype(int), len(land_noise) - 1)]

@@ -6,12 +6,16 @@ import numpy as np
 from . import geography as geo
 from .biomes import B
 from .decor import BATS, BIRDS, DOODADS, FLIES, RUINS, SCATTER, SHELLS, SIGNPOST, VILLAGE, VILLAGE_COLD, VILLAGE_DRY
-from .raster import dilate, label_regions
+from .raster import Field, dilate, label_regions
 from .terrain import MAP_W, MAP_H, ground_z_at, world_xy
 
 NEUTRAL_PASSIVE = 15                          # classic (12 player) numbering used by war3mapUnits.doo
-TREE_VARIATIONS = {'LTlt': 10, 'FTtw': 10, 'ATtr': 5, 'CTtr': 5, 'BTtw': 10, 'ZTtw': 10, 'WTst': 10, 'NTtw': 10, 'ITtw': 10,
-                   'ATtc': 3, 'ZTtc': 3, 'CTtc': 3}
+# tree species: (model variations, smallest scale, largest scale) from the game's destructable data
+TREES = {'LTlt': (10, 0.8, 1.2), 'FTtw': (10, 0.8, 1.2), 'WTtw': (10, 0.8, 1.2), 'WTst': (10, 0.8, 1.2), 'JTtw': (10, 0.8, 1.2),
+         'ATtr': (5, 0.8, 1.2), 'CTtr': (5, 0.8, 1.2), 'ITtw': (10, 0.8, 1.0), 'BTtw': (10, 0.8, 1.2), 'NTtw': (10, 0.8, 1.2),
+         'ZTtw': (10, 0.65, 1.05), 'ATtc': (3, 0.8, 1.2), 'BTtc': (3, 0.8, 1.2), 'CTtc': (3, 0.8, 1.2), 'ITtc': (3, 0.8, 1.2),
+         'NTtc': (3, 0.8, 1.2), 'ZTtc': (3, 0.8, 1.2), 'YTct': (2, 0.8, 1.2), 'YTft': (2, 0.8, 1.2), 'YTst': (2, 0.8, 1.2),
+         'KTtw': (10, 0.65, 0.85), 'DTsh': (8, 0.8, 1.2), 'GTsh': (8, 0.8, 1.2)}
 DETAIL_VARIATIONS = {'LRrk': 10, 'ARrk': 10, 'CRrk': 10, 'BRrk': 10, 'BRsp': 8, 'ZRrk': 10, 'ZRsp': 8, 'NRrk': 10, 'IRrs': 10,
                      'ORrk': 10, 'DRrk': 10, 'BRrs': 8, 'CRrs': 8, 'ORrs': 10, 'ZRrs': 8, 'IRgc': 10, 'ZPfw': 5, 'ZPsh': 3, 'APms': 4, 'CPms': 4, 'APct': 1, 'LPrs': 4, 'LPfp': 3}
 # per biome: (rock, rock spire or None) scattered over steep slopes
@@ -162,30 +166,35 @@ def place(T, seed=7):
 
     # ---- trees ----------------------------------------------------------------------------
     # Woods come from the terrain's forest mask (T.forest_score > 0 inside a wood).
-    # They grow on slopes too (anything but cliffs and water), stand a little
-    # thinner inside, and fray at the edges into scattered trees.
+    # They grow on slopes too (anything but cliffs and water), stand with gaps
+    # inside, and fray at the edges into scattered trees. Each zone's woods mix
+    # several species; every species follows its own noise field, so it gathers
+    # in stands (a grove of pines, then snowy trees, then a few canopy giants)
+    # rather than being sprinkled evenly.
     score = T.forest_score
-    tree_ids = np.array([B[z['biome']]['tree'] or '' for z in geo.ZONES])[T.zone_of]
-    mix = [B[z['biome']].get('tree2') for z in geo.ZONES]
+    has_trees = np.array([bool(B[z['biome']]['trees']) for z in geo.ZONES])[T.zone_of]
+    species = sorted({t for b in B.values() for t, _ in b['trees']})
+    nf = Field(n, n, seed + 101)
+    stand = {t: nf.fbm(9, 3) for t in species}
     clear = reserved | dilate(occupied, 1) | (T.road_d < 2.2)
     ground = np.zeros((n, n), bool)
     ground[:-1, :-1] = ~T.cliff_tile & ~T.ramp_tile & T.land[:-1, :-1] & T.land[1:, 1:] & T.land[:-1, 1:] & T.land[1:, :-1]
     ground[:-1, :-1] &= ~T.water_flag[:-1, :-1] & ~T.water_flag[1:, 1:] & ~T.water_flag[:-1, 1:] & ~T.water_flag[1:, :-1]
     ground &= ~T.edge
     near_shore = ~T.land | dilate(~T.land, 1)
-    keep_prob = np.select([score > 0.12, score > 0, score > -0.04, score > -0.12], [0.96, 0.86, 0.32, 0.05], 0.0)
-    candidates = (rng.random((n, n)) < keep_prob) & ground & ~clear & ~near_shore & (tree_ids != '')
+    keep_prob = np.select([score > 0.12, score > 0, score > -0.04, score > -0.12], [0.80, 0.70, 0.24, 0.035], 0.0)
+    candidates = (rng.random((n, n)) < keep_prob) & ground & ~clear & ~near_shore & has_trees
     trees = []
     for ty, tx in np.argwhere(candidates):
-        tid = str(tree_ids[ty, tx])
-        other = mix[T.zone_of[ty, tx]]
-        if other and rng.random() < other[1]:
-            tid = other[0]
+        mix = B[geo.ZONES[T.zone_of[ty, tx]]['biome']]['trees']
+        w = np.array([wt * math.exp(3.0 * stand[t][ty, tx]) for t, wt in mix])
+        tid = mix[int(np.searchsorted(np.cumsum(w), rng.random() * w.sum()))][0]
+        variations, lo, hi = TREES[tid]
         jx, jy = rng.uniform(-0.2, 0.2, 2)
         x, y = world_xy(tx + 0.5 + jx, ty + 0.5 + jy)
-        trees.append(dict(id=tid, var=int(rng.integers(0, TREE_VARIATIONS[tid])), x=x, y=y,
+        trees.append(dict(id=tid, var=int(rng.integers(0, variations)), x=x, y=y,
                           z=ground_z_at(T, tx + 0.5 + jx, ty + 0.5 + jy), angle=4.712389,
-                          scale=float(rng.uniform(0.8, 1.2)), state=2, life=100, tx=tx + 0.5, ty=ty + 0.5))
+                          scale=float(rng.uniform(lo, hi)), state=2, life=100, tx=tx + 0.5, ty=ty + 0.5))
     O.trees = trees
     O.doodads = O.doodads + [{k: v for k, v in t.items() if k not in ('tx', 'ty')} for t in trees]
 

@@ -38,7 +38,7 @@ The terrain follows the style of the big hand-made WoW maps for Warcraft III, su
   - Every camp and town lies on a track to the nearest road.
   - Wading straits reach Azuremyst, Bloodmyst, Tol Barad and Alcaz Island.
   - About 99% of the walkable land can be reached from the start locations; what is left is small ledges high in the mountains.
-- **Forests.** Woods cover a share of each zone set by its climate. They grow thicker along rivers and lakes, climb the hillsides up to a treeline, break up into clumps and clearings, and fray into scattered trees at their edges. A second species is mixed in here and there: autumn trees among summer ones, pines in the snow, canopy giants in the jungles and Ashenvale. The ground under them is dark forest floor.
+- **Forests.** Woods cover a share of each zone set by its climate. They grow thicker along rivers and lakes, climb the hillsides up to a treeline, break up into clumps and clearings, and fray into scattered trees at their edges. Inside, the trees stand with gaps between them rather than as a solid wall. Each climate grows a mix of 3–6 species (23 in all), and each species gathers in its own stands, so a wood shifts from one kind of tree to another as you cross it. Elwynn mixes summer oaks with autumn and winter trees and a few round-crowned ones; Duskwood is mostly gnarled ruin trees, with toadstools in the gloom; Ashenvale has its violet trees under wide canopy giants; the jungles grow palms and canopy trees, with the odd giant mushroom; the Barrens have acacias; the north has pines, snowy trees and frosted canopies. The ground under the woods is dark forest floor.
 - **Ground detail.** The ground follows the lie of the land: each zone's lusher ground gathers on wet valley floors and along the water, and its dirt and rock on slopes and high, dry ground. Zone borders fray into one another instead of meeting on a line. Roads wander a little, as roads do. Flowers, shrubs and mushrooms dot open ground, reeds and cattails line the water, lily pads float on the lakes, and boulders lie on steep slopes and below cliffs.
 - **Decorations.** Over 100 kinds of doodad are spread across the whole map:
   - Each biome has its own props on open ground: hay and wheat on the farms, graves and skulls in the Plaguelands, bones, totems, cacti and rock pillars in the Barrens and deserts, broken columns and stumps in Ashenvale, ruins, mushrooms and vines in the jungles, fire pits and tombstones in Northrend, ice pillars in Icecrown, and magma rocks in the volcanic lands.
@@ -51,7 +51,7 @@ The terrain follows the style of the big hand-made WoW maps for Warcraft III, su
 - **Instances.** Each dungeon has a vestibule round its waygate, a pillared hall, and a raised dais at the far end, reached up a ramp. Floors are themed: lava cracks in Molten Core and Onyxia's Lair, sand and brick in the desert temples, brick and poison in the crypts, ice in the Northrend raids, and moss in the caverns.
 - **Paved capitals:** a brick square with streets leading out along the roads.
 
-There are 93 zones in all, counting the instances. Each zone has its own ground textures, tree type, relief and wildlife: jungle in Stranglethorn, blight in the Plaguelands, lava cracks in the Burning Steppes, cliff mesas in Thousand Needles and at Thunder Bluff, the crater rim around Un'Goro, and the Greymane Wall, a cliff rampart whose gate is the only way into Gilneas on foot. A few landmark doodads are placed too: the World Trees at Teldrassil and Hyjal, the Sunwell, the Frozen Throne, the ruins of Dalaran, the Dark Portal, and volcanoes at Blackrock and Un'Goro.
+There are 93 zones in all, counting the instances. Each zone has its own ground textures, mix of trees, relief and wildlife: jungle in Stranglethorn, blight in the Plaguelands, lava cracks in the Burning Steppes, cliff mesas in Thousand Needles and at Thunder Bluff, the crater rim around Un'Goro, and the Greymane Wall, a cliff rampart whose gate is the only way into Gilneas on foot. A few landmark doodads are placed too: the World Trees at Teldrassil and Hyjal, the Sunwell, the Frozen Throne, the ruins of Dalaran, the Dark Portal, and volcanoes at Blackrock and Un'Goro.
 
 **Start locations** (one per player slot): Stormwind, Orgrimmar, Undercity, Darnassus, Ironforge, Thunder Bluff, Silvermoon City and Boralus, plus four in Northrend: Icecrown Citadel, Dalaran, Warsong Hold and Valgarde. Each stands in its capital's paved square.
 
@@ -70,8 +70,8 @@ There are 93 zones in all, counting the instances. Each zone has its own ground 
 Shallow straits that ground units can wade across link Teldrassil and Azuremyst to Darkshore, Bloodmyst to Azuremyst, Tol Barad to Gilneas, and Alcaz Island, Theramore and the Echo Isles to the mainland.
 
 **What's placed.**
-- About 29,000 trees.
-- About 7,400 decorations: ruins, props, boulders, plants, rock spires and ambient birds, bats and flies.
+- About 19,000 trees of 23 species.
+- About 8,700 decorations: ruins, props, boulders, plants, rock spires and ambient birds, bats and flies.
 - The landmark doodads.
 - The waygates.
 - Wildlife critters in every zone.
