@@ -41,7 +41,7 @@ def build(seed=1):
         else:
             sd = f.polygon_sdf(shape)
             size = 30
-        amp_by_land.append(min(1.0, size / 9.0))
+        amp_by_land.append(min(1.0, size / 9.0) * geo.COAST_NOISE.get(name, 1.0))
         better = sd > land_sd
         land_sd[better] = sd[better]
         land_id[better] = idx

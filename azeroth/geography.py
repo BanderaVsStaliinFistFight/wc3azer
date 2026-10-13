@@ -40,16 +40,13 @@ EASTERN_KINGDOMS = [
     (370, 398), (382, 396), (394, 400), (404, 406), (410, 420), (414, 432),
 ]
 
-KUL_TIRAS = [
-    (276, 180), (278, 194), (286, 204), (298, 208), (310, 206), (318, 196), (318, 182), (312, 172), (304, 166),
-    (300, 172), (294, 163), (284, 164), (278, 170),
-]
+# Coastline noise scale per landmass (default 1.0); traced shapes use less so they keep their outline.
+COAST_NOISE = {}
 
 # name: shape. Polygons are lists of points; ellipses are ('ellipse', cx, cy, rx, ry).
 LANDMASSES = {
     'Kalimdor': KALIMDOR,
     'Eastern Kingdoms': EASTERN_KINGDOMS,
-    'Kul Tiras': KUL_TIRAS,
     'Teldrassil': ('ellipse', 37, 413, 15, 14),
     'Azuremyst Isle': ('ellipse', 22, 366, 8, 12),
     'Bloodmyst Isle': ('ellipse', 16, 386, 6, 6),
@@ -136,10 +133,7 @@ zone('Northern Stranglethorn', 'Eastern Kingdoms', 366, 98, 26, 20, 'jungle')
 zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
 zone('Tol Barad', 'Tol Barad', 352, 291.5, 5, 3.75, 'barren')
 # Northrend
-# Kul Tiras, Kezan, the Maelstrom
-zone('Drustvar', 'Kul Tiras', 284, 187, 10, 11, 'autumn', base=110, hills=110)
-zone('Stormsong Valley', 'Kul Tiras', 306, 199, 11, 9, 'farmland', base=50)
-zone('Tiragarde Sound', 'Kul Tiras', 302, 175, 10, 9, 'temperate')
+# Kezan and the Maelstrom
 zone('Kezan', 'Kezan', 250, 202, 9, 6, 'jungle')
 zone('The Maelstrom', 'Maelstrom Rock 0', 247, 246, 30, 30, 'rocky')
 for i in range(1, len(MAELSTROM_ROCKS)):
@@ -178,8 +172,6 @@ RIDGES = [
     ([(382, 120), (396, 116), (410, 120)], 3, 260),                                # Duskwood / STV ridge
     ([(368, 70), (376, 80), (388, 84)], 3, 220),                                   # STV hills
     ([(430, 256), (440, 248), (448, 236)], 3, 280),                                # Grim Batol hills
-    # Kul Tiras
-    ([(280, 192), (286, 182), (284, 172)], 3, 300),                                # Drustvar
 ]
 
 # Lakes: (cx, cy, rx, ry) or polygon.
@@ -253,7 +245,7 @@ CAPITALS = [
     (4, 'Ironforge', 372, 236, 'human'),
     (5, 'Thunder Bluff', 86, 196, 'orc'),
     (7, 'Silvermoon City', 438, 428, 'human'),
-    (10, 'Boralus', 300, 176, 'human'),
+    (10, 'Boralus', 307.6, 182, 'human'),
 ]
 
 TOWNS = [
@@ -268,7 +260,7 @@ TOWNS = [
     ('Gadgetzan Market', 130, 72, 'ngme'), ('Cenarion Hold', 44, 72, 'nmoo'), ("Marshal's Refuge", 86, 92, 'nfoh'),
     ('Freewind Post', 100, 128, 'nmr4'), ('Camp Mojache', 58, 126, 'ntav'), ("Nijel's Point", 40, 198, 'ngme'),
     ('Sun Rock Retreat', 52, 230, 'nmer'), ('Camp Taurajo', 114, 182, 'nmr4'), ('Ramkahen', 78, 40, 'nmrk'),
-    ('Stormwind Harbor', 344, 186, 'nshp'), ('Brennadam', 306, 200, 'ntav'), ('Arathor', 404, 300, 'nmrk'),
+    ('Stormwind Harbor', 344, 186, 'nshp'), ('Arathor', 404, 300, 'nmrk'),
     ('Aerie Peak', 422, 334, 'nmer'), ('Hammerfall', 428, 300, 'ntav'), ("Thorium Point", 390, 214, 'ngme'),
     ('Morgan\'s Vigil', 418, 190, 'ndrk'), ('Sentinel Hill', 342, 146, 'ntav'), ('Sepulcher', 346, 352, 'nmr2'),
     ('Brill', 370, 384, 'ngme'), ('Chillwind Camp', 404, 360, 'nfoh'), ('Tanaris Caverns of Time', 150, 70, 'ndrz'),
@@ -296,7 +288,6 @@ CAMPS = [
     ('Shimmering Flats', 116, 116, 1), ('Brackenwall Village', 140, 150, 1), ('Fire Plume Ridge', 82, 82, 2), ('Ahn\'Qiraj', 30, 56, 2),
     ('Zul\'Farrak', 120, 92, 2), ('Lost City of the Tol\'vir', 96, 32, 2), ('Steamwheedle Port', 160, 90, 0), ('Ruins of Ahn\'Qiraj', 46, 52, 1),
     ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 16, 386, 0),
-    ('Waycrest Manor', 284, 190, 1), ('Shrine of the Storm', 312, 200, 1), ('Freehold', 290, 168, 1),
     ('Maelstrom Rock', 247, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 352, 291.5, 1),
 ]
 
@@ -305,7 +296,7 @@ PORTALS = [
     (('Stormwind Portal', 362, 180), ('Darnassus Portal', 38, 412)),
     (('Orgrimmar Portal', 152, 262), ('Undercity Portal', 356, 382)),
     (('Thunder Bluff Portal', 78, 202), ('Silvermoon Portal', 432, 420)),
-    (('Stormwind Harbor Portal', 350, 190), ('Boralus Portal', 306, 182)),
+    (('Stormwind Harbor Portal', 350, 190), ('Boralus Portal', 298, 192)),
     (('Ratchet Portal', 152, 206), ('Kezan Portal', 250, 202)),
 ]
 
@@ -334,8 +325,6 @@ ROADS = [
     [(96, 254), (70, 246), (52, 230), (44, 210), (40, 198), (36, 176), (46, 150), (58, 126)],
     [(140, 150), (150, 140), (166, 134), (176, 133)],
     [(118, 206), (130, 196), (140, 170), (140, 150)],
-    # Kul Tiras
-    [(300, 176), (290, 186), (306, 200)],
 ]
 
 # Landmark doodads: (doodad id, x, y, scale, angle radians)
@@ -597,3 +586,61 @@ WALLS += [([(303, 266), (319.5, 266)], [_GATE])]
 
 TOWNS += [('Duskhaven', 303.5, 252, 'ntav'), ('Keel Harbor', 306.5, 261, 'nshp')]
 CAMPS += [('The Blackwald', 322, 246, 2)]
+
+
+# ---------------------------------------------------------------------------
+# Kul Tiras, traced from the Battle for Azeroth zone map (without Mechagon and
+# Nazjatar): Stormsong Valley to the north with a mountain band along its south,
+# Drustvar's peaks to the south-west, Tiragarde Sound to the south-east with
+# Boralus on the harbour at its north-west tip. A strait runs south from the
+# harbour between Drustvar and Tiragarde, and an inlet cuts in from the west.
+# Authored in that map's pixel coordinates and fitted into KUL_TIRAS_BOX.
+# ---------------------------------------------------------------------------
+KUL_TIRAS_BOX = (276, 160, 320, 210)       # x0, y0, x1, y1 in tiles
+_KT_PX = (470, 110, 1430, 1200)            # the zone map's islands: left, top, right, bottom
+
+
+def kt(px, py):
+    x0, y0, x1, y1 = KUL_TIRAS_BOX
+    l, t, r, b = _KT_PX
+    return round(x0 + (px - l) / (r - l) * (x1 - x0), 1), round(y0 + (b - py) / (b - t) * (y1 - y0), 1)
+
+
+LANDMASSES['Kul Tiras'] = [kt(px, py) for px, py in [
+    # Stormsong Valley, north coast west to east
+    (690, 450), (740, 420), (800, 380), (860, 320), (900, 260), (950, 220), (1000, 170), (1070, 145), (1140, 140),
+    (1190, 170), (1230, 175), (1270, 140), (1330, 150), (1390, 210), (1430, 290), (1410, 345), (1360, 365),
+    (1335, 410), (1365, 470), (1380, 560), (1345, 630), (1300, 690),
+    # Tiragarde Sound
+    (1330, 740), (1360, 800), (1405, 850), (1425, 930), (1405, 1020), (1360, 1085), (1300, 1125), (1255, 1170),
+    (1190, 1150), (1120, 1105), (1070, 1050),
+    # Drustvar
+    (990, 1150), (900, 1190), (800, 1205), (700, 1185), (655, 1125), (590, 1065), (510, 1035), (470, 960),
+    (490, 880), (475, 810), (515, 750), (560, 690), (640, 670),
+    # Stormsong's south-western lobe
+    (670, 600), (665, 520),
+]]
+COAST_NOISE['Kul Tiras'] = 0.5
+zone('Stormsong Valley', 'Kul Tiras', *kt(1120, 330), 14, 9, 'farmland', base=50)
+zone('Drustvar', 'Kul Tiras', *kt(720, 940), 10, 11, 'autumn', base=110, hills=110)
+zone('Tiragarde Sound', 'Kul Tiras', *kt(1230, 960), 9, 11, 'temperate')
+
+SEA_INLETS += [([kt(px, py) for px, py in line], w) for line, w in [
+    ([(1150, 680), (1090, 720), (1030, 770), (1010, 850), (1020, 950), (1030, 1060), (1040, 1180)], 1.5),  # Boralus harbour and the strait
+    ([(560, 650), (660, 670), (760, 700)], 1.4),                                                          # the western inlet
+    ([(1230, 160), (1232, 230), (1250, 300)], 1.0),                                                       # bay on Stormsong's north coast
+]]
+RIDGES += [([kt(px, py) for px, py in line], w, h) for line, w, h in [
+    ([(700, 520), (850, 560), (1000, 560), (1150, 540), (1300, 500)], 2.0, 360),     # Stormsong's southern mountains
+    ([(640, 780), (760, 900), (800, 1080)], 2.0, 380),                                # Drustvar's peaks
+    ([(1100, 1060), (1250, 1030)], 1.5, 260),                                         # Tiragarde's southern hills
+]]
+TOWNS += [('Brennadam',) + kt(1050, 300) + ('ntav',)]
+CAMPS += [(name,) + kt(px, py) + (strength,) for name, px, py, strength in [
+    ('Shrine of the Storm', 1360, 280, 1), ('Waycrest Manor', 600, 690, 1),
+]]
+ROADS += [[kt(px, py) for px, py in line] for line in [
+    [(1160, 720), (1200, 600), (1050, 300), (1360, 280)],          # Boralus north through Stormsong to the Shrine
+    [(1160, 720), (1260, 880), (1240, 1080)],                       # Boralus south through Tiragarde
+    [(1160, 720), (1180, 620), (950, 610), (850, 700), (720, 900)], # Boralus west round the harbour into Drustvar
+]]
