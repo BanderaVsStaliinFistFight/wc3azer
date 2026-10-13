@@ -35,8 +35,8 @@ EASTERN_KINGDOMS = [
     (366, 15), (354, 18), (346, 26), (342, 40), (338, 56), (336, 72), (334, 88), (332, 104), (330, 118),
     (326, 130), (324, 144), (326, 158), (330, 170), (338, 176), (342, 186), (344, 200), (346, 214), (344, 228),
     (346, 242), (350, 254), (360, 262), (368, 268), (372, 276), (366, 284), (378, 288), (390, 291), (382, 296),
-    (372, 302), (362, 306), (354, 312), (348, 318), (343, 322), (338, 329), (330, 331.5), (320, 331.5),
-    (312, 333), (310, 338), (314, 345), (322, 348.5), (334, 350), (338, 364), (336, 376), (340, 388), (348, 396), (358, 400),
+    (372, 302), (362, 306), (354, 312), (348, 318), (343, 322), (336, 329), (328, 335), (320, 336), (317, 332.6),
+    (307, 332.6), (305, 337), (310, 345), (322, 348.5), (334, 350), (338, 364), (336, 376), (340, 388), (348, 396), (358, 400),
     (370, 398), (382, 396), (394, 400), (404, 406), (410, 420), (414, 432),
 ]
 
@@ -558,63 +558,42 @@ LANDMARKS += [('IZft',) + nr(0.28, 0.82) + (1.0, 4.71)]   # The Frozen Throne
 
 
 # ---------------------------------------------------------------------------
-# Gilneas, traced from the in-game zone map. Authored in that map's pixel
-# coordinates (x right, y down) and fitted into GILNEAS_BOX, after the squash.
+# Gilneas: a compact peninsula hanging south from the land below Dalaran, as on
+# the "City-States of Arathor" map. Its western lobe reaches furthest south, a
+# small harbour on the north-east side opens onto Baradin Bay with Gilneas City
+# at its head, and two islets lie off the west coast. Tile coordinates, added
+# after the squash.
 # ---------------------------------------------------------------------------
-GILNEAS_BOX = (289, 222, 343, 263)        # x0, y0, x1, y1 in tiles
-_GILNEAS_PX = (100, 30, 640, 440)         # the zone map's frame: left, top, right, bottom
-
-
-def gl(px, py):
-    x0, y0, x1, y1 = GILNEAS_BOX
-    l, t, r, b = _GILNEAS_PX
-    return round(x0 + (px - l) / (r - l) * (x1 - x0), 1), round(y0 + (b - py) / (b - t) * (y1 - y0), 1)
-
-
-LANDMASSES['Gilneas'] = [gl(px, py) for px, py in [
-    (290, -10), (478, -10), (478, 60), (470, 100), (500, 105), (540, 110), (560, 120), (548, 165), (550, 220),
-    (538, 275), (552, 325), (532, 365), (548, 405), (500, 425), (445, 415), (395, 428), (335, 432), (282, 420),
-    (268, 370), (276, 312), (240, 302), (195, 306), (150, 300), (118, 290), (108, 250), (118, 205), (132, 165),
-    (150, 120), (172, 88), (210, 70),
-]]
-zone('Gilneas', 'Gilneas', *gl(330, 230), 30, 24, 'darkforest', base=70)
+LANDMASSES['Gilneas'] = [
+    (306.4, 268), (317.1, 268), (317.1, 264.5), (320.8, 262.9), (324, 261.6), (325.6, 259), (326.7, 255.2),
+    (328, 251.2), (327.4, 247.2), (325.1, 244.8), (321.6, 242.7), (317.6, 241.1), (313.6, 240.3), (309.6, 242.2),
+    (306.4, 245.6), (303.7, 249.6), (301.1, 253.6), (300, 257.6), (301.6, 261.3), (304, 263.5), (305.6, 264.5),
+]
+LANDMASSES['Gilneas Isle North'] = ('ellipse', 290, 248.5, 3, 2.4)
+LANDMASSES['Gilneas Isle South'] = ('ellipse', 291.5, 240, 3, 2.4)
+zone('Gilneas', 'Gilneas', 314, 253, 16, 14, 'darkforest', base=60)
+zone('Gilneas', 'Gilneas Isle North', 290, 248.5, 3, 2.4, 'darkforest')
+zone('Gilneas', 'Gilneas Isle South', 291.5, 240, 3, 2.4, 'darkforest')
 zone('Silverpine Forest', 'Eastern Kingdoms', 322, 274, 12, 7, 'darkforest')       # the land just north of the wall
 
-SEA_INLETS += [([gl(px, py) for px, py in line], w) for line, w in [
-    ([(195, 30), (235, 70), (270, 115), (300, 160), (330, 205), (352, 238)], 1.0),   # the estuary into Gilneas City
-    ([(530, 85), (490, 95), (468, 125), (458, 160), (450, 190)], 0.9),                # the north-east channel
-    ([(600, 70), (540, 80)], 1.6),                                                     # its mouth on Baradin Bay
-]]
-RIDGES += [([gl(px, py) for px, py in line], w, h) for line, w, h in [
-    ([(130, 225), (190, 222), (250, 235), (300, 245), (335, 258)], 2.2, 440),         # western mountains
-    ([(285, 320), (296, 360), (305, 405)], 2.0, 400),                                  # southern mountains
-    ([(345, 318), (358, 330)], 1.4, 200),                                              # the hill south of the city
-    ([(505, 115), (528, 140)], 1.2, 180),                                              # north-eastern hills
-]]
+SEA_INLETS += [([(329.5, 258.6), (323.5, 257.1), (318.4, 255.6)], 1.1)]          # Gilneas City's harbour
+RIDGES += [([(304, 247), (309, 244)], 1.6, 260)]                                   # hills above Tempest's Reach
 
-# Rugged highlands drawn as cliff plateaus, like the hatched mountains on the zone map
-MESAS += [gl(px, py) + (r, 1) for px, py, r in [
-    (175, 215, 2.0), (240, 222, 2.2), (300, 232, 1.8),          # western mountains
-    (290, 345, 2.0), (300, 395, 1.8),                           # southern mountains
-]]
-
-# Gilneas City: a ring road with four spokes around Greymane's statue
-_CITY, _CITY_R = gl(410, 245), 4.5
+# Gilneas City: a ring road around Greymane's statue, at the head of the harbour
+_CITY, _CITY_R = (313, 253.4), 3.4
 _ring = [(round(_CITY[0] + _CITY_R * math.cos(a), 1), round(_CITY[1] + _CITY_R * math.sin(a), 1))
          for a in [2 * math.pi * k / 16 for k in range(17)]]
+_GATE = (311.5, 266)
 ROADS += [
     _ring,
-    [(_CITY[0] - _CITY_R, _CITY[1]), (_CITY[0] + _CITY_R, _CITY[1])],
-    [(_CITY[0], _CITY[1] - _CITY_R), (_CITY[0], _CITY[1] + _CITY_R)],
-    [(_CITY[0], _CITY[1] + _CITY_R), gl(400, 20), (330, 272), (346, 282.8)],          # north gate to the Greymane Gate and Silverpine
-    [(_CITY[0] - _CITY_R, _CITY[1]), gl(290, 285), gl(250, 300)],                      # west gate to Duskhaven
-    [(_CITY[0], _CITY[1] - _CITY_R), gl(420, 395)],                                    # south gate to Stormglen
+    [(_CITY[0], _CITY[1] + _CITY_R), _GATE, (318, 272), (330, 276), (346, 282.8)],   # north to the Greymane Gate and Silverpine
+    [(_CITY[0] - _CITY_R, _CITY[1]), (303.5, 252)],                                    # west to Duskhaven
+    [(_CITY[0], _CITY[1] - _CITY_R), (318, 246)],                                      # south to the Blackwald
 ]
-LANDMARKS += [('YOst',) + _CITY + (0.95, 4.71)]                                         # Greymane's statue
+LANDMARKS += [('YOst',) + _CITY + (0.9, 4.71)]                                          # Greymane's statue
 
-# The Greymane Wall: a cliff rampart across the neck to Silverpine; its gate is the only way in on foot.
-WALLS += [([(305, 264), (331, 264)], [gl(400, 20)])]
+# The Greymane Wall: a cliff rampart across the neck, reaching a couple of tiles past each shore.
+WALLS += [([(303, 266), (319.5, 266)], [_GATE])]
 
-TOWNS += [('Duskhaven',) + gl(250, 300) + ('ntav',), ('Keel Harbor',) + gl(265, 60) + ('nshp',)]
-CAMPS += [('Gilneas City',) + gl(470, 300) + (1,), ('The Blackwald',) + gl(330, 360) + (2,),
-          ('Emberstone Mine',) + gl(200, 150) + (0,)]
+TOWNS += [('Duskhaven', 303.5, 252, 'ntav'), ('Keel Harbor', 306.5, 261, 'nshp')]
+CAMPS += [('The Blackwald', 322, 246, 2)]
