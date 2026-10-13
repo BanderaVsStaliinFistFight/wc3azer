@@ -33,8 +33,9 @@ EASTERN_KINGDOMS = [
     (366, 15), (354, 18), (346, 26), (342, 40), (338, 56), (336, 72), (334, 88), (332, 104), (330, 118),
     (326, 130), (324, 144), (326, 158), (330, 170), (338, 176), (342, 186), (344, 200), (346, 214), (344, 228),
     (346, 242), (350, 254), (360, 262), (368, 268), (372, 276), (366, 284), (378, 288), (390, 291), (382, 296),
-    (370, 300), (362, 302), (354, 308), (346, 309), (340, 302), (332, 294), (324, 290), (319, 298), (318, 310),
-    (322, 322), (330, 328), (336, 336), (334, 350), (338, 364), (336, 376), (340, 388), (348, 396), (358, 400),
+    (372, 302), (362, 306), (354, 312), (348, 318), (343, 317), (339, 311), (335, 306), (329, 302), (320, 303),
+    (310, 304), (302, 307), (297, 312), (295, 320), (299, 328), (306, 333), (312, 330), (317, 335), (324, 338),
+    (331, 341), (334, 350), (338, 364), (336, 376), (340, 388), (348, 396), (358, 400),
     (370, 398), (382, 396), (394, 400), (404, 406), (410, 420), (414, 432),
 ]
 
@@ -55,7 +56,7 @@ LANDMASSES = {
     'Echo Isles': ('ellipse', 176, 206, 4, 3),
     'Theramore Isle': ('ellipse', 179, 133, 3, 3),
     'Alcaz Island': ('ellipse', 182, 152, 4, 3),
-    'Tol Barad': ('ellipse', 338, 274, 5, 4),
+    'Tol Barad': ('ellipse', 350, 294, 6, 4),
     'Kezan': ('ellipse', 250, 202, 9, 6),
 }
 
@@ -112,7 +113,7 @@ zone('Tirisfal Glades', 'Eastern Kingdoms', 362, 382, 22, 14, 'autumn', density=
 zone('Western Plaguelands', 'Eastern Kingdoms', 398, 372, 15, 17, 'plague')
 zone('Eastern Plaguelands', 'Eastern Kingdoms', 442, 368, 26, 17, 'plague')
 zone('Silverpine Forest', 'Eastern Kingdoms', 346, 346, 9, 20, 'darkforest')
-zone('Gilneas', 'Eastern Kingdoms', 330, 306, 11, 13, 'darkforest', base=70)
+zone('Gilneas', 'Eastern Kingdoms', 316, 320, 18, 14, 'darkforest', base=70)
 zone('Hillsbrad Foothills', 'Eastern Kingdoms', 368, 322, 15, 11, 'temperate')
 zone('Alterac Mountains', 'Eastern Kingdoms', 390, 343, 12, 10, 'snow', base=140)
 zone('The Hinterlands', 'Eastern Kingdoms', 434, 330, 28, 13, 'highland')
@@ -133,7 +134,7 @@ zone('Swamp of Sorrows', 'Eastern Kingdoms', 448, 150, 15, 12, 'swamp')
 zone('Blasted Lands', 'Eastern Kingdoms', 446, 104, 18, 22, 'volcanic', base=40)
 zone('Northern Stranglethorn', 'Eastern Kingdoms', 366, 98, 26, 20, 'jungle')
 zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
-zone('Tol Barad', 'Tol Barad', 338, 274, 5, 4, 'barren')
+zone('Tol Barad', 'Tol Barad', 350, 294, 6, 4, 'barren')
 # Northrend
 # Kul Tiras, Kezan, the Maelstrom
 zone('Drustvar', 'Kul Tiras', 284, 207, 10, 11, 'autumn', base=110, hills=110)
@@ -177,6 +178,7 @@ RIDGES = [
     ([(382, 120), (396, 116), (410, 120)], 3, 260),                                # Duskwood / STV ridge
     ([(368, 70), (376, 80), (388, 84)], 3, 220),                                   # STV hills
     ([(430, 256), (440, 248), (448, 236)], 3, 280),                                # Grim Batol hills
+    ([(299, 310), (300, 320), (305, 328)], 3, 220),                                # Gilneas headlands
     # Kul Tiras
     ([(280, 212), (286, 202), (284, 192)], 3, 300),                                # Drustvar
 ]
@@ -231,6 +233,11 @@ MESAS = [
     (30, 170, 2.0, 1),
 ]
 
+# Walls: (polyline, gate gaps) built as a one-tile raised cliff rampart, also out into shallow water.
+WALLS = [
+    ([(325, 345), (352, 310)], [(338, 327)]),     # the Greymane Wall and its gate; it runs a few tiles out to sea
+]
+
 # Basins (bowls): (cx, cy, radius, depth)
 BASINS = [
     (82, 84, 12, 180),       # Un'Goro crater floor
@@ -270,6 +277,7 @@ TOWNS = [
     ('Brill', 370, 384, 'ngme'), ('Chillwind Camp', 404, 360, 'nfoh'), ('Tanaris Caverns of Time', 150, 70, 'ndrz'),
     ('Onyxia\'s Lair', 150, 106, 'ndrk'), ('Feathermoon', 26, 118, 'nshp'), ('Rut\'theran', 44, 404, 'nshp'),
     ('Splintertree Post', 140, 282, 'nmr5'), ('Razor Hill', 166, 232, 'ngme'), ('Kezan Trade', 250, 202, 'ngad'),
+    ('Duskhaven', 301, 313, 'ntav'), ('Keel Harbor', 310, 329, 'nshp'),
 ]
 
 CAMPS = [
@@ -280,7 +288,7 @@ CAMPS = [
     ('Stonewatch', 440, 176, 0), ('Blackrock Spire', 396, 196, 2), ('Uldaman', 426, 224, 1), ('Dun Algaz', 396, 246, 0),
     ('Kharanos', 380, 232, 0), ('Gnomeregan', 356, 246, 1), ('Grim Batol', 444, 248, 2), ('Dragonmaw Gates', 458, 262, 1),
     ('Thandol Span', 386, 290, 0), ('Stromgarde', 396, 310, 1), ('Dalaran Crater', 378, 344, 2), ('Durnholde Keep', 382, 316, 1),
-    ('Shadowfang Keep', 340, 340, 1), ('Gilneas City', 332, 308, 1), ('Andorhal', 404, 368, 1), ('Stratholme', 448, 382, 2),
+    ('Shadowfang Keep', 340, 340, 1), ('Gilneas City', 330, 318, 1), ('The Blackwald', 312, 314, 2), ('Stormglen Village', 322, 307, 0), ('Andorhal', 404, 368, 1), ('Stratholme', 448, 382, 2),
     ('Zul\'Aman', 456, 408, 2), ('Sunwell Plateau', 442, 456, 2), ('Jintha\'Alor', 446, 326, 2), ('Scarlet Monastery', 378, 390, 1),
     ('Naxxramas Shadow', 432, 362, 2), ('Highbank', 462, 290, 1), ('Ruins of Lordaeron', 364, 366, 0),
     ('Shadowglen', 38, 420, 0), ('Ruins of Mathystra', 58, 384, 1), ('Bashal\'Aran', 50, 330, 0), ('Felwood Jaedenar', 76, 322, 1),
@@ -293,7 +301,7 @@ CAMPS = [
     ('Zul\'Farrak', 120, 92, 2), ('Lost City of the Tol\'vir', 96, 32, 2), ('Steamwheedle Port', 160, 90, 0), ('Ruins of Ahn\'Qiraj', 46, 52, 1),
     ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 16, 386, 0),
     ('Waycrest Manor', 284, 210, 1), ('Shrine of the Storm', 312, 220, 1), ('Freehold', 290, 188, 1),
-    ('Maelstrom Rock', 252, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 338, 274, 1),
+    ('Maelstrom Rock', 252, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 350, 294, 1),
 ]
 
 # Waygates (mage portals): pairs of (name, x, y) linking far-apart lands.
@@ -347,6 +355,7 @@ LANDMARKS = [
     ('BOth', 156, 258, 0.95, 4.71),      # Hellscream's throne
     ('YOst', 360, 180, 0.95, 4.71),      # Stormwind statue
     ('AOgs', 40, 406, 1.0, 4.71),        # Sentinel statue
+    ('YOst', 324, 320, 0.95, 4.71),      # Greymane's statue, Gilneas City
 ]
 # Destructable landmarks (volcanoes etc.): (id, x, y, scale)
 DESTRUCTABLE_LANDMARKS = [
@@ -396,7 +405,7 @@ def _squash_points(points):
 
 def _squash_everything():
     global RIDGES, LAKES, RIVERS, SHALLOWS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, PORTALS, ROADS
-    global LANDMARKS, DESTRUCTABLE_LANDMARKS
+    global LANDMARKS, DESTRUCTABLE_LANDMARKS, WALLS
     near = _near_squashed
     for z in ZONES:
         if z['land'] in _SQUASHED_LANDS:
@@ -407,6 +416,7 @@ def _squash_everything():
     SHALLOWS = [_squash_points(l) if near(*l[0]) else l for l in SHALLOWS]
     MESAS = [(x, _sy(y), r, lv) if near(x, y) else (x, y, r, lv) for x, y, r, lv in MESAS]
     BASINS = [(x, _sy(y), r * 0.9, d) if near(x, y) else (x, y, r, d) for x, y, r, d in BASINS]
+    WALLS = [(_squash_points(l), _squash_points(g)) if near(*l[0]) else (l, g) for l, g in WALLS]
     CAPITALS = [(i, n, x, _sy(y), race) if near(x, y) else (i, n, x, y, race) for i, n, x, y, race in CAPITALS]
     TOWNS = [(n, x, _sy(y), b) if near(x, y) else (n, x, y, b) for n, x, y, b in TOWNS]
     CAMPS = [(n, x, _sy(y), st) if near(x, y) else (n, x, y, st) for n, x, y, st in CAMPS]

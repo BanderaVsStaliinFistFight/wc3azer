@@ -161,6 +161,11 @@ def build(seed=1):
             m = np.maximum(m, shift(layer, dx, dy, 2) - 1)
         layer = m
     layer = np.where(dc > 1.5, layer, 2)
+    for line, gates in getattr(geo, 'WALLS', []):     # ramparts: a raised line of corners, cliffs on both sides
+        wall = (f.segment_distance(line) <= 0.8) & (land | (dw <= 4))
+        for gx, gy in gates:
+            wall &= f.distance(gx, gy) > 2.4
+        layer = np.where(wall, np.maximum(layer, 3), layer)
     T.layer = layer
 
     z_world = SEA_Z + z
