@@ -35,8 +35,8 @@ EASTERN_KINGDOMS = [
     (366, 15), (354, 18), (346, 26), (342, 40), (338, 56), (336, 72), (334, 88), (332, 104), (330, 118),
     (326, 130), (324, 144), (326, 158), (330, 170), (338, 176), (342, 186), (344, 200), (346, 214), (344, 228),
     (346, 242), (350, 254), (360, 262), (368, 268), (372, 276), (366, 284), (378, 288), (390, 291), (382, 296),
-    (372, 302), (362, 306), (354, 312), (348, 318), (343, 322), (336, 329), (328, 335), (320, 336), (317, 332.6),
-    (307, 332.6), (305, 337), (310, 345), (322, 348.5), (334, 350), (338, 364), (336, 376), (340, 388), (348, 396), (358, 400),
+    (372, 302), (362, 306), (356, 312), (355, 318), (352, 324), (348, 329), (343, 330), (334, 329.5), (327, 331.5),
+    (328, 340.25), (334, 350), (338, 364), (336, 376), (340, 388), (348, 396), (358, 400),
     (370, 398), (382, 396), (394, 400), (404, 406), (410, 420), (414, 432),
 ]
 
@@ -54,7 +54,7 @@ LANDMASSES = {
     'Echo Isles': ('ellipse', 176, 206, 4, 3),
     'Theramore Isle': ('ellipse', 179, 133, 3, 3),
     'Alcaz Island': ('ellipse', 182, 152, 4, 3),
-    'Tol Barad': ('ellipse', 352, 291.5, 5, 3.75),
+    'Tol Barad': ('ellipse', 352, 292.1, 4, 3.75),
     'Kezan': ('ellipse', 250, 202, 9, 6),
 }
 
@@ -131,7 +131,7 @@ zone('Swamp of Sorrows', 'Eastern Kingdoms', 448, 150, 15, 12, 'swamp')
 zone('Blasted Lands', 'Eastern Kingdoms', 446, 104, 18, 22, 'volcanic', base=40)
 zone('Northern Stranglethorn', 'Eastern Kingdoms', 366, 98, 26, 20, 'jungle')
 zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
-zone('Tol Barad', 'Tol Barad', 352, 291.5, 5, 3.75, 'barren')
+zone('Tol Barad', 'Tol Barad', 352, 292.1, 4, 3.75, 'barren')
 # Northrend
 # Kezan and the Maelstrom
 zone('Kezan', 'Kezan', 250, 202, 9, 6, 'jungle')
@@ -288,7 +288,7 @@ CAMPS = [
     ('Shimmering Flats', 116, 116, 1), ('Brackenwall Village', 140, 150, 1), ('Fire Plume Ridge', 82, 82, 2), ('Ahn\'Qiraj', 30, 56, 2),
     ('Zul\'Farrak', 120, 92, 2), ('Lost City of the Tol\'vir', 96, 32, 2), ('Steamwheedle Port', 160, 90, 0), ('Ruins of Ahn\'Qiraj', 46, 52, 1),
     ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 16, 386, 0),
-    ('Maelstrom Rock', 247, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 352, 291.5, 1),
+    ('Maelstrom Rock', 247, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 352, 292.1, 1),
 ]
 
 # Waygates (mage portals): pairs of (name, x, y) linking far-apart lands.
@@ -547,46 +547,46 @@ LANDMARKS += [('IZft',) + nr(0.28, 0.82) + (1.0, 4.71)]   # The Frozen Throne
 
 
 # ---------------------------------------------------------------------------
-# Gilneas: a compact peninsula hanging south from the land below Dalaran, as on
-# the "City-States of Arathor" map. Its western lobe reaches furthest south, a
-# small harbour on the north-east side opens onto Baradin Bay with Gilneas City
-# at its head, and two islets lie off the west coast. Tile coordinates, added
-# after the squash.
+# Gilneas, after the "City-States of Arathor" map: a compact peninsula that
+# continues Lordaeron's west coast south of Silverpine, west of Southshore and
+# level with Stromgarde. Its south-western lobe reaches furthest south, a
+# harbour on the east side holds Gilneas City, two islets lie off the west
+# coast and Baradin Bay opens to the south-east. Tile coordinates, added after
+# the squash.
 # ---------------------------------------------------------------------------
 LANDMASSES['Gilneas'] = [
-    (306.4, 268), (317.1, 268), (317.1, 264.5), (320.8, 262.9), (324, 261.6), (325.6, 259), (326.7, 255.2),
-    (328, 251.2), (327.4, 247.2), (325.1, 244.8), (321.6, 242.7), (317.6, 241.1), (313.6, 240.3), (309.6, 242.2),
-    (306.4, 245.6), (303.7, 249.6), (301.1, 253.6), (300, 257.6), (301.6, 261.3), (304, 263.5), (305.6, 264.5),
+    (325.5, 271), (343, 269), (339.5, 263.5), (337, 260), (337.8, 257.5), (339.5, 255.6), (343.5, 252), (344.5, 248.5),
+    (343.5, 244.5), (340, 241.5), (335.5, 240), (331, 238.5), (327, 236.5), (323, 237.5), (320, 240.5),
+    (318.5, 244.5), (318, 249), (319, 253.5), (320.5, 257.5), (322.5, 261), (324.5, 264), (325.5, 266.5),
 ]
-LANDMASSES['Gilneas Isle North'] = ('ellipse', 290, 248.5, 3, 2.4)
-LANDMASSES['Gilneas Isle South'] = ('ellipse', 291.5, 240, 3, 2.4)
-zone('Gilneas', 'Gilneas', 314, 253, 16, 14, 'darkforest', base=60)
-zone('Gilneas', 'Gilneas Isle North', 290, 248.5, 3, 2.4, 'darkforest')
-zone('Gilneas', 'Gilneas Isle South', 291.5, 240, 3, 2.4, 'darkforest')
-zone('Silverpine Forest', 'Eastern Kingdoms', 322, 274, 12, 7, 'darkforest')       # the land just north of the wall
+LANDMASSES['Gilneas Isle North'] = ('ellipse', 308.5, 248, 2.8, 2.3)
+LANDMASSES['Gilneas Isle South'] = ('ellipse', 310, 241.5, 2.8, 2.3)
+COAST_NOISE['Gilneas'] = 0.6
+zone('Gilneas', 'Gilneas', 331, 251, 15, 16, 'darkforest', base=60)
+zone('Gilneas', 'Gilneas Isle North', 308.5, 248, 2.8, 2.3, 'darkforest')
+zone('Gilneas', 'Gilneas Isle South', 310, 241.5, 2.8, 2.3, 'darkforest')
 
-SEA_INLETS += [([(329.5, 258.6), (323.5, 257.1), (318.4, 255.6)], 1.1)]          # Gilneas City's harbour
-RIDGES += [([(304, 247), (309, 244)], 1.6, 260)]                                   # hills above Tempest's Reach
+SEA_INLETS += [([(347, 254.5), (341, 254.3), (338.5, 254)], 1.1)]                 # Gilneas City's harbour
+RIDGES += [([(321, 243), (326, 239.5)], 1.6, 260)]                                 # hills above Tempest's Reach
 
 # Gilneas City: a ring road around Greymane's statue, at the head of the harbour
-_CITY, _CITY_R = (313, 253.4), 3.4
+_CITY, _CITY_R = (333.3, 253.6), 3.2
 _ring = [(round(_CITY[0] + _CITY_R * math.cos(a), 1), round(_CITY[1] + _CITY_R * math.sin(a), 1))
          for a in [2 * math.pi * k / 16 for k in range(17)]]
-_GATE = (311.5, 266)
+_GATE = (333.5, 265.5)
 ROADS += [
     _ring,
-    [(_CITY[0], _CITY[1] + _CITY_R), _GATE, (318, 272), (330, 276), (346, 282.8)],   # north to the Greymane Gate and Silverpine
-    [(_CITY[0] - _CITY_R, _CITY[1]), (303.5, 252)],                                    # west to Duskhaven
-    [(_CITY[0], _CITY[1] - _CITY_R), (318, 246)],                                      # south to the Blackwald
+    [(_CITY[0], _CITY[1] + _CITY_R), _GATE, (334, 272), (346, 282.8)],   # north to the Greymane Gate and Silverpine
+    [(_CITY[0] - _CITY_R, _CITY[1]), (321.5, 250)],                        # west to Duskhaven
+    [(_CITY[0], _CITY[1] - _CITY_R), (329, 241.5)],                        # south to Stormglen
 ]
-LANDMARKS += [('YOst',) + _CITY + (0.9, 4.71)]                                          # Greymane's statue
+LANDMARKS += [('YOst',) + _CITY + (0.9, 4.71)]                              # Greymane's statue
 
 # The Greymane Wall: a cliff rampart across the neck, reaching a couple of tiles past each shore.
-WALLS += [([(303, 266), (319.5, 266)], [_GATE])]
+WALLS += [([(322.5, 265.5), (345.5, 265.5)], [_GATE])]
 
-TOWNS += [('Duskhaven', 303.5, 252, 'ntav'), ('Keel Harbor', 306.5, 261, 'nshp')]
-CAMPS += [('The Blackwald', 322, 246, 2)]
-
+TOWNS += [('Duskhaven', 321.5, 250, 'ntav'), ('Keel Harbor', 323.5, 259.5, 'nshp')]
+CAMPS += [('The Blackwald', 339, 245, 2), ('Stormglen Village', 327, 241, 0)]
 
 # ---------------------------------------------------------------------------
 # Kul Tiras, traced from the Battle for Azeroth zone map (without Mechagon and
