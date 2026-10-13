@@ -2,9 +2,11 @@
 
 Coordinates are in tiles with (0, 0) at the south-west corner of the map and
 y growing northwards. The playable area is x 6..474, y 4..472.
-Kalimdor lies to the west, the Eastern Kingdoms to the east and a greatly
-enlarged Northrend across the north. The Maelstrom sits in the middle of the
-Great Sea with the goblin isle of Kezan below it and Kul Tiras to the east.
+Kalimdor lies to the west and the Eastern Kingdoms to the east; both are drawn
+in tile coordinates and then squashed vertically (SQUASH) to leave the top of
+the map for Northrend, which follows the Wrath of the Lich King continent map
+inside NORTHREND_BOX. The Maelstrom sits in the middle of the Great Sea with the
+goblin isle of Kezan below it and Kul Tiras to the east.
 """
 
 # ---------------------------------------------------------------------------
@@ -36,15 +38,6 @@ EASTERN_KINGDOMS = [
     (370, 398), (382, 396), (394, 400), (404, 406), (410, 420), (414, 432),
 ]
 
-NORTHREND = [
-    (76, 432), (71, 444), (75, 456), (86, 463), (102, 466), (122, 464), (142, 467), (164, 465), (186, 467),
-    (208, 466), (230, 468), (254, 466), (278, 467), (302, 465), (326, 467), (350, 466), (372, 464), (390, 459),
-    (398, 449), (395, 437), (389, 427), (380, 421), (368, 418), (355, 416), (343, 413), (332, 407), (324, 397),
-    (321, 384), (320, 370), (317, 356), (311, 344), (303, 333), (297, 321), (291, 310), (281, 302), (269, 298),
-    (257, 300), (247, 307), (240, 318), (236, 330), (231, 342), (225, 353), (214, 362), (204, 372), (197, 384),
-    (192, 396), (188, 409), (182, 421), (170, 427), (156, 429), (140, 426), (124, 430), (108, 427), (92, 430),
-]
-
 KUL_TIRAS = [
     (276, 200), (278, 214), (286, 224), (298, 228), (310, 226), (318, 216), (318, 202), (312, 192), (304, 186),
     (300, 192), (294, 183), (284, 184), (278, 190),
@@ -54,11 +47,10 @@ KUL_TIRAS = [
 LANDMASSES = {
     'Kalimdor': KALIMDOR,
     'Eastern Kingdoms': EASTERN_KINGDOMS,
-    'Northrend': NORTHREND,
     'Kul Tiras': KUL_TIRAS,
-    'Teldrassil': ('ellipse', 37, 413, 13, 11),
+    'Teldrassil': ('ellipse', 37, 413, 15, 14),
     'Azuremyst Isle': ('ellipse', 22, 366, 8, 12),
-    'Bloodmyst Isle': ('ellipse', 18, 392, 7, 7),
+    'Bloodmyst Isle': ('ellipse', 16, 386, 6, 6),
     "Isle of Quel'Danas": ('ellipse', 441, 455, 10, 7),
     'Echo Isles': ('ellipse', 176, 206, 4, 3),
     'Theramore Isle': ('ellipse', 179, 133, 3, 3),
@@ -86,9 +78,9 @@ def zone(name, land, cx, cy, rx, ry, biome, **kw):
 
 
 # Kalimdor
-zone('Teldrassil', 'Teldrassil', 37, 413, 13, 11, 'worldtree', base=90)
+zone('Teldrassil', 'Teldrassil', 37, 413, 15, 14, 'worldtree', base=90)
 zone('Azuremyst Isle', 'Azuremyst Isle', 22, 366, 8, 12, 'nightelf')
-zone('Bloodmyst Isle', 'Bloodmyst Isle', 18, 392, 7, 7, 'fel')
+zone('Bloodmyst Isle', 'Bloodmyst Isle', 16, 386, 6, 6, 'fel')
 zone('Darkshore', 'Kalimdor', 50, 348, 10, 44, 'nightelf', hills=90)
 zone('Moonglade', 'Kalimdor', 88, 385, 13, 10, 'nightelf', base=110)
 zone('Felwood', 'Kalimdor', 78, 340, 14, 30, 'fel')
@@ -143,17 +135,6 @@ zone('Northern Stranglethorn', 'Eastern Kingdoms', 366, 98, 26, 20, 'jungle')
 zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
 zone('Tol Barad', 'Tol Barad', 338, 274, 5, 4, 'barren')
 # Northrend
-zone('Borean Tundra', 'Northrend', 112, 442, 34, 13, 'tundra')
-zone('Sholazar Basin', 'Northrend', 166, 450, 20, 16, 'jungle', base=30)
-zone('Icecrown', 'Northrend', 214, 452, 24, 16, 'icecrown', base=150)
-zone('Wintergrasp', 'Northrend', 222, 416, 14, 12, 'snow', base=110, mountains=60)
-zone('Crystalsong Forest', 'Northrend', 260, 420, 12, 10, 'crystal', base=90)
-zone('The Storm Peaks', 'Northrend', 302, 455, 44, 12, 'snow', base=220, mountains=320)
-zone("Zul'Drak", 'Northrend', 306, 424, 18, 12, 'tundra', base=170, hills=90, density=0.04)
-zone('Dragonblight', 'Northrend', 256, 380, 30, 20, 'snow', base=60, mountains=40, density=0.06)
-zone('Dragonblight', 'Northrend', 262, 330, 26, 22, 'tundra', base=40, density=0.14)
-zone('Grizzly Hills', 'Northrend', 304, 374, 16, 22, 'grizzly', base=70)
-zone('Howling Fjord', 'Northrend', 360, 436, 34, 16, 'fjord', base=80)
 # Kul Tiras, Kezan, the Maelstrom
 zone('Drustvar', 'Kul Tiras', 284, 207, 10, 11, 'autumn', base=110, hills=110)
 zone('Stormsong Valley', 'Kul Tiras', 306, 219, 11, 9, 'farmland', base=50)
@@ -196,14 +177,6 @@ RIDGES = [
     ([(382, 120), (396, 116), (410, 120)], 3, 260),                                # Duskwood / STV ridge
     ([(368, 70), (376, 80), (388, 84)], 3, 220),                                   # STV hills
     ([(430, 256), (440, 248), (448, 236)], 3, 280),                                # Grim Batol hills
-    # Northrend
-    ([(200, 467), (214, 464), (230, 467), (246, 465)], 5, 520),                    # Icecrown glacier
-    ([(270, 456), (292, 462), (318, 464), (342, 460), (360, 465)], 7, 640),        # Storm Peaks
-    ([(148, 436), (160, 434), (176, 438), (186, 448)], 3, 320),                    # Sholazar rim
-    ([(286, 410), (298, 416), (318, 414)], 3, 300),                                # Zul'Drak cliffs
-    ([(204, 400), (214, 392), (226, 392)], 3, 260),                                # Wintergrasp foothills
-    ([(330, 400), (338, 412), (334, 424)], 3, 300),                                # Grizzly Hills / Howling Fjord divide
-    ([(244, 330), (256, 322), (270, 318)], 3, 240),                                # Dragonblight coast hills
     # Kul Tiras
     ([(280, 212), (286, 202), (284, 192)], 3, 300),                                # Drustvar
 ]
@@ -223,9 +196,6 @@ LAKES = [
     (402, 270, 4, 3),        # Wetlands marsh
     (390, 276, 3, 2),
     (446, 152, 4, 3),        # Swamp of Sorrows
-    (248, 360, 3, 2),        # Dragonblight lake
-    (168, 452, 3, 3),        # Sholazar lake
-    (296, 384, 3, 2),        # Grizzly Hills lake
 ]
 
 # Rivers: polyline, half-width. Rivers are shallow (walkable) water.
@@ -238,7 +208,6 @@ RIVERS = [
     [(398, 352), (404, 362), (420, 372), (440, 374), (458, 372)],            # Thondroril / Darrowmere
     [(414, 234), (420, 226), (430, 218)],                                    # Loch Modan outflow
     [(380, 176), (372, 168), (360, 166), (344, 170)],                        # Elwynn river
-    [(168, 452), (160, 442), (154, 432), (152, 426)],                        # Sholazar river
 ]
 
 # Shallow straits that ground units can wade across: polyline, half-width.
@@ -258,8 +227,6 @@ MESAS = [
     (116, 122, 2.6, 2), (92, 116, 2.0, 1), (100, 140, 1.8, 1), (120, 132, 2.0, 2), (86, 140, 2.0, 1),
     # Durotar / Badlands buttes
     (170, 226, 1.8, 1), (156, 218, 1.6, 1), (440, 206, 2.4, 1), (426, 218, 2.0, 1),
-    # Howling Fjord cliffs, Zul'Drak plateau
-    (378, 446, 2.5, 1), (392, 440, 2.0, 1), (316, 430, 3.0, 1), (300, 426, 2.6, 1),
     # Desolace
     (30, 170, 2.0, 1),
 ]
@@ -267,7 +234,6 @@ MESAS = [
 # Basins (bowls): (cx, cy, radius, depth)
 BASINS = [
     (82, 84, 12, 180),       # Un'Goro crater floor
-    (166, 452, 10, 60),      # Sholazar basin
 ]
 
 # ---------------------------------------------------------------------------
@@ -282,12 +248,8 @@ CAPITALS = [
     (3, 'Darnassus', 33, 418, 'nightelf'),
     (4, 'Ironforge', 372, 236, 'human'),
     (5, 'Thunder Bluff', 86, 196, 'orc'),
-    (6, 'Icecrown Citadel', 216, 452, 'undead'),
     (7, 'Silvermoon City', 438, 428, 'human'),
-    (8, 'Dalaran', 260, 420, 'random'),
-    (9, 'Warsong Hold', 112, 440, 'orc'),
     (10, 'Boralus', 300, 196, 'human'),
-    (11, 'Valgarde', 360, 428, 'human'),
 ]
 
 TOWNS = [
@@ -308,11 +270,6 @@ TOWNS = [
     ('Brill', 370, 384, 'ngme'), ('Chillwind Camp', 404, 360, 'nfoh'), ('Tanaris Caverns of Time', 150, 70, 'ndrz'),
     ('Onyxia\'s Lair', 150, 106, 'ndrk'), ('Feathermoon', 26, 118, 'nshp'), ('Rut\'theran', 44, 404, 'nshp'),
     ('Splintertree Post', 140, 282, 'nmr5'), ('Razor Hill', 166, 232, 'ngme'), ('Kezan Trade', 250, 202, 'ngad'),
-    # Northrend
-    ('Valiance Keep', 136, 430, 'nshp'), ('Fizzcrank Airstrip', 92, 448, 'ngad'), ("River's Heart", 168, 444, 'nmoo'),
-    ('Wyrmrest Temple', 262, 362, 'ndru'), ("Moa'ki Harbor", 262, 306, 'nshp'), ("Agmar's Hammer", 238, 372, 'ntav'),
-    ('Amberpine Lodge', 304, 390, 'ngme'), ('K3', 300, 460, 'nmr7'), ("Zim'Torga", 326, 420, 'nfoh'),
-    ('Vengeance Landing', 384, 432, 'nshp'), ('Argent Tournament Grounds', 238, 464, 'nmrk'), ('Violet Gate Market', 244, 420, 'nmr9'),
 ]
 
 CAMPS = [
@@ -334,15 +291,7 @@ CAMPS = [
     ('Razorfen Kraul', 112, 156, 1), ('Bael Modan', 132, 168, 1), ('Dire Maul', 50, 132, 2), ('Twin Colossals', 34, 108, 1),
     ('Shimmering Flats', 116, 116, 1), ('Brackenwall Village', 140, 150, 1), ('Fire Plume Ridge', 82, 82, 2), ('Ahn\'Qiraj', 30, 56, 2),
     ('Zul\'Farrak', 120, 92, 2), ('Lost City of the Tol\'vir', 96, 32, 2), ('Steamwheedle Port', 160, 90, 0), ('Ruins of Ahn\'Qiraj', 46, 52, 1),
-    ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 18, 392, 0),
-    ('Coldarra', 82, 448, 1), ('Amber Ledge', 94, 432, 0), ('Kaskala', 140, 438, 0), ("Bor'gorok Outpost", 126, 458, 0),
-    ('Nesingwary Base Camp', 150, 452, 1), ('Rainspeaker Canopy', 176, 458, 1), ('Frenzyheart Hill', 182, 440, 0),
-    ('Ymirheim', 238, 446, 1), ('The Shadow Vault', 194, 462, 2), ('Argent Vanguard', 236, 432, 1), ('Wintergrasp Fortress', 222, 412, 1),
-    ('Azjol-Nerub', 240, 384, 2), ('Naxxramas', 288, 368, 2), ("Star's Rest", 236, 348, 0), ('New Hearthglen', 284, 338, 1),
-    ('Icemist Village', 252, 396, 1), ("Moa'ki Ruins", 274, 314, 0), ("Drak'Tharon Keep", 296, 404, 1), ('Grizzlemaw', 312, 380, 1),
-    ('Gundrak', 328, 432, 2), ("Drak'Sotra", 292, 432, 1), ('Ulduar', 318, 460, 2), ('Dun Niffelem', 282, 458, 1),
-    ('Brunnhildar Village', 346, 458, 1), ('Utgarde Keep', 352, 448, 1), ('Utgarde Pinnacle', 388, 452, 2), ('Kamagua', 386, 426, 0),
-    ('Fort Wildervar', 336, 440, 0),
+    ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 16, 386, 0),
     ('Waycrest Manor', 284, 210, 1), ('Shrine of the Storm', 312, 220, 1), ('Freehold', 290, 188, 1),
     ('Maelstrom Rock', 252, 268, 2), ('Kezan', 252, 200, 0), ('Tol Barad', 338, 274, 1),
 ]
@@ -351,12 +300,8 @@ CAMPS = [
 PORTALS = [
     (('Stormwind Portal', 362, 180), ('Darnassus Portal', 38, 412)),
     (('Orgrimmar Portal', 152, 262), ('Undercity Portal', 356, 382)),
-    (('Ironforge Portal', 378, 244), ('Dalaran Portal', 276, 404)),
     (('Thunder Bluff Portal', 78, 202), ('Silvermoon Portal', 432, 420)),
     (('Stormwind Harbor Portal', 350, 190), ('Boralus Portal', 306, 202)),
-    (('Undercity Gate', 368, 370), ('Icecrown Portal', 236, 438)),
-    (('Orgrimmar Gate', 166, 262), ('Warsong Hold Portal', 132, 432)),
-    (('Menethil Harbor Portal', 378, 280), ('Valgarde Portal', 340, 424)),
     (('Ratchet Portal', 152, 206), ('Kezan Portal', 250, 202)),
 ]
 
@@ -385,23 +330,15 @@ ROADS = [
     [(96, 254), (70, 246), (52, 230), (44, 210), (40, 198), (36, 176), (46, 150), (58, 126)],
     [(140, 150), (150, 140), (166, 134), (176, 133)],
     [(118, 206), (130, 196), (140, 170), (140, 150)],
-    # Northrend
-    [(112, 440), (130, 438), (150, 444), (170, 446), (190, 440), (208, 430), (230, 422), (260, 420)],
-    [(260, 420), (262, 392), (262, 362), (262, 330), (262, 306)],
-    [(260, 420), (240, 438), (216, 452)],
-    [(260, 420), (284, 424), (306, 426), (330, 432), (360, 428)],
-    [(262, 392), (286, 390), (306, 388), (326, 404), (344, 420), (360, 428)],
-    [(260, 420), (280, 440), (300, 458)],
     # Kul Tiras
     [(300, 196), (290, 206), (306, 220)],
 ]
 
 # Landmark doodads: (doodad id, x, y, scale, angle radians)
 LANDMARKS = [
-    ('ASwt', 37, 414, 1.0, 4.71),        # Teldrassil
+    ('ASwt', 44, 418, 1.0, 4.71),        # Teldrassil
     ('ASwt', 138, 343, 1.0, 4.71),       # Nordrassil on Mount Hyjal
     ('YOsw', 441, 457, 0.9, 4.71),       # The Sunwell
-    ('IZft', 232, 458, 1.0, 4.71),       # The Frozen Throne
     ('ZOvr', 378, 344, 0.9, 4.71),       # Ruined Violet Citadel (Dalaran crater)
     ('OZsp', 446, 92, 1.0, 4.71),        # The Dark Portal
     ('LZth', 162, 246, 1.0, 4.71),       # Thrall's hut
@@ -416,3 +353,200 @@ DESTRUCTABLE_LANDMARKS = [
     ('Volc', 82, 82, 1.0),      # Fire Plume Ridge
     ('Volc', 392, 202, 1.1),    # Blackrock Mountain
 ]
+
+
+# ---------------------------------------------------------------------------
+# Squash Kalimdor and the Eastern Kingdoms towards the south edge so the top
+# of the map is free for a correctly proportioned Northrend.
+# ---------------------------------------------------------------------------
+SQUASH_BASE, SQUASH = 14.0, 0.8
+_SQUASHED_LANDS = {'Kalimdor', 'Eastern Kingdoms', 'Teldrassil', 'Azuremyst Isle', 'Bloodmyst Isle',
+                   "Isle of Quel'Danas", 'Echo Isles', 'Theramore Isle', 'Alcaz Island', 'Tol Barad'}
+
+
+def _sy(y):
+    return round(SQUASH_BASE + (y - SQUASH_BASE) * SQUASH, 2)
+
+
+def _near_squashed(x, y, margin=10.0):
+    """True if (x, y), in pre-squash coordinates, lies on or near Kalimdor, the Eastern Kingdoms or their isles."""
+    for name in _SQUASHED_LANDS:
+        shape = LANDMASSES[name]
+        if shape[0] == 'ellipse':
+            _, cx, cy, rx, ry = shape
+            if ((x - cx) / (rx + margin)) ** 2 + ((y - cy) / (ry + margin)) ** 2 <= 1:
+                return True
+            continue
+        inside = False
+        for (ax, ay), (bx, by) in zip(shape, shape[1:] + shape[:1]):
+            if (ay > y) != (by > y) and x < ax + (y - ay) * (bx - ax) / (by - ay):
+                inside = not inside
+            dx, dy = bx - ax, by - ay
+            t = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / float(dx * dx + dy * dy)))
+            if (x - ax - t * dx) ** 2 + (y - ay - t * dy) ** 2 <= margin * margin:
+                return True
+        if inside:
+            return True
+    return False
+
+
+def _squash_points(points):
+    return [(x, _sy(y)) for x, y in points]
+
+
+def _squash_everything():
+    global RIDGES, LAKES, RIVERS, SHALLOWS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, PORTALS, ROADS
+    global LANDMARKS, DESTRUCTABLE_LANDMARKS
+    near = _near_squashed
+    for z in ZONES:
+        if z['land'] in _SQUASHED_LANDS:
+            z['cy'], z['ry'] = _sy(z['cy']), z['ry'] * SQUASH
+    RIDGES = [(_squash_points(l), w, h) if near(*l[0]) else (l, w, h) for l, w, h in RIDGES]
+    LAKES = [(x, _sy(y), rx, ry * SQUASH) if near(x, y) else (x, y, rx, ry) for x, y, rx, ry in LAKES]
+    RIVERS = [_squash_points(l) if near(*l[0]) else l for l in RIVERS]
+    SHALLOWS = [_squash_points(l) if near(*l[0]) else l for l in SHALLOWS]
+    MESAS = [(x, _sy(y), r, lv) if near(x, y) else (x, y, r, lv) for x, y, r, lv in MESAS]
+    BASINS = [(x, _sy(y), r * 0.9, d) if near(x, y) else (x, y, r, d) for x, y, r, d in BASINS]
+    CAPITALS = [(i, n, x, _sy(y), race) if near(x, y) else (i, n, x, y, race) for i, n, x, y, race in CAPITALS]
+    TOWNS = [(n, x, _sy(y), b) if near(x, y) else (n, x, y, b) for n, x, y, b in TOWNS]
+    CAMPS = [(n, x, _sy(y), st) if near(x, y) else (n, x, y, st) for n, x, y, st in CAMPS]
+    PORTALS = [tuple((n, x, _sy(y)) if near(x, y) else (n, x, y) for n, x, y in pair) for pair in PORTALS]
+    ROADS = [_squash_points(l) if near(*l[0]) else l for l in ROADS]
+    LANDMARKS = [(d, x, _sy(y), sc, a) if near(x, y) else (d, x, y, sc, a) for d, x, y, sc, a in LANDMARKS]
+    DESTRUCTABLE_LANDMARKS = [(d, x, _sy(y), sc) if near(x, y) else (d, x, y, sc) for d, x, y, sc in DESTRUCTABLE_LANDMARKS]
+    # landmass outlines last: the membership test above needs the original shapes
+    for name in _SQUASHED_LANDS:
+        shape = LANDMASSES[name]
+        if shape[0] == 'ellipse':
+            _, cx, cy, rx, ry = shape
+            LANDMASSES[name] = ('ellipse', cx, _sy(cy), rx, ry * SQUASH)
+        else:
+            LANDMASSES[name] = _squash_points(shape)
+
+
+_squash_everything()
+
+# ---------------------------------------------------------------------------
+# Northrend, after the Wrath of the Lich King continent map.
+# Authored in normalised coordinates: u = 0 west .. 1 east, v = 0 south .. 1 north.
+# ---------------------------------------------------------------------------
+NORTHREND_BOX = (144, 330, 386, 468)      # x0, y0, x1, y1 in tiles
+
+
+def nr(u, v):
+    x0, y0, x1, y1 = NORTHREND_BOX
+    return round(x0 + u * (x1 - x0), 1), round(y0 + v * (y1 - y0), 1)
+
+
+def nr_size(ru, rv):
+    x0, y0, x1, y1 = NORTHREND_BOX
+    return round(ru * (x1 - x0), 1), round(rv * (y1 - y0), 1)
+
+
+NORTHREND_UV = [
+    # south coast, west to east: Borean Tundra, Dragonblight's bay, Venture Bay, Howling Fjord's fjords
+    (0.03, 0.22), (0.06, 0.12), (0.10, 0.06), (0.15, 0.03), (0.20, 0.05), (0.24, 0.09), (0.27, 0.15),
+    (0.29, 0.10), (0.33, 0.12), (0.38, 0.16), (0.42, 0.12), (0.45, 0.17), (0.50, 0.15), (0.55, 0.18),
+    (0.59, 0.16), (0.62, 0.21), (0.65, 0.14), (0.69, 0.10), (0.72, 0.04), (0.75, 0.09), (0.78, 0.01),
+    (0.82, 0.06), (0.85, 0.02), (0.89, 0.07), (0.93, 0.03), (0.97, 0.09),
+    # east coast: Howling Fjord, Grizzly Hills, Zul'Drak, the Storm Peaks
+    (1.00, 0.17), (0.97, 0.25), (1.00, 0.31), (0.96, 0.37), (0.93, 0.44), (0.95, 0.52), (0.92, 0.60),
+    (0.95, 0.70), (0.93, 0.80), (0.96, 0.88), (0.90, 0.96),
+    # north coast: the Storm Peaks and the Icecrown glacier
+    (0.82, 0.99), (0.72, 0.97), (0.64, 1.00), (0.56, 0.97), (0.50, 0.93), (0.44, 0.97), (0.36, 0.93),
+    (0.30, 0.96), (0.24, 0.90), (0.18, 0.86), (0.10, 0.84), (0.05, 0.78),
+    # west coast: Sholazar Basin, Coldarra, Borean Tundra
+    (0.02, 0.70), (0.04, 0.60), (0.01, 0.52), (0.04, 0.47), (-0.02, 0.45), (-0.05, 0.39), (-0.04, 0.32),
+    (0.01, 0.28),
+]
+LANDMASSES['Northrend'] = [nr(u, v) for u, v in NORTHREND_UV]
+
+# Narrow sea inlets cut after the coastline noise so they stay crisp: (polyline in u/v, half-width in tiles)
+SEA_INLETS = [
+    ([nr(u, v) for u, v in line], w) for line, w in [
+        ([(-0.07, 0.30), (0.02, 0.34), (0.04, 0.40), (0.03, 0.48)], 1.3),      # strait around Coldarra
+        ([(0.28, 0.04), (0.28, 0.12), (0.30, 0.19)], 2.2),                     # bay between Borean Tundra and Dragonblight
+        ([(0.46, 0.08), (0.47, 0.15), (0.49, 0.20)], 1.8),                     # Moa'ki Harbor
+        ([(0.60, 0.10), (0.61, 0.18), (0.63, 0.24)], 2.4),                     # Venture Bay
+        ([(0.70, -0.02), (0.71, 0.08), (0.73, 0.15)], 1.5),                    # Kamagua fjord
+        ([(0.90, -0.02), (0.90, 0.10), (0.92, 0.17), (0.95, 0.21)], 1.8),      # the Howling Fjord
+        ([(1.03, 0.22), (0.96, 0.26), (0.91, 0.31)], 1.5),                     # Vengeance Landing fjord
+    ]
+]
+
+
+def _nr_zone(name, u, v, ru, rv, biome, **kw):
+    cx, cy = nr(u, v)
+    rx, ry = nr_size(ru, rv)
+    zone(name, 'Northrend', cx, cy, rx, ry, biome, **kw)
+
+
+_nr_zone('Borean Tundra', 0.13, 0.25, 0.13, 0.18, 'tundra')
+_nr_zone('Sholazar Basin', 0.13, 0.64, 0.12, 0.17, 'jungle', base=30)
+_nr_zone('Wintergrasp', 0.32, 0.50, 0.08, 0.09, 'snow', base=110, mountains=60)
+_nr_zone('Icecrown', 0.38, 0.80, 0.17, 0.16, 'icecrown', base=150)
+_nr_zone('Crystalsong Forest', 0.50, 0.52, 0.06, 0.08, 'crystal', base=90)
+_nr_zone('Dragonblight', 0.43, 0.28, 0.16, 0.17, 'snow', base=60, mountains=30, density=0.06)
+_nr_zone('The Storm Peaks', 0.74, 0.82, 0.20, 0.16, 'snow', base=220, mountains=320)
+_nr_zone("Zul'Drak", 0.73, 0.53, 0.14, 0.10, 'tundra', base=170, hills=90, density=0.04)
+_nr_zone('Grizzly Hills', 0.70, 0.30, 0.10, 0.11, 'grizzly', base=70)
+_nr_zone('Howling Fjord', 0.87, 0.17, 0.12, 0.15, 'fjord', base=80)
+
+RIDGES += [
+    ([nr(0.55, 0.70), nr(0.65, 0.82), nr(0.78, 0.86), nr(0.90, 0.78)], 6, 640),       # the Storm Peaks
+    ([nr(0.28, 0.88), nr(0.38, 0.90), nr(0.48, 0.86)], 5, 520),                       # Icecrown glacier
+    ([nr(0.05, 0.50), nr(0.12, 0.47), nr(0.21, 0.50), nr(0.25, 0.60), nr(0.22, 0.74)], 3, 360),  # Sholazar rim
+    ([nr(0.60, 0.42), nr(0.70, 0.40), nr(0.82, 0.42)], 3, 280),                       # Zul'Drak escarpment
+    ([nr(0.72, 0.22), nr(0.80, 0.26), nr(0.90, 0.28)], 3, 260),                       # Howling Fjord highlands
+    ([nr(0.25, 0.40), nr(0.30, 0.36), nr(0.38, 0.38)], 3, 240),                       # Wintergrasp foothills
+]
+LAKES += [nr(0.36, 0.24) + (3, 2), nr(0.52, 0.36) + (2.5, 2), nr(0.66, 0.26) + (3, 2)]   # Indu'le, Wyrmrest, Grizzly
+RIVERS += [[nr(0.13, 0.64), nr(0.07, 0.57), nr(0.02, 0.51)]]                               # Sholazar's river
+MESAS += [nr(0.68, 0.52) + (3.0, 1), nr(0.78, 0.50) + (2.6, 1), nr(0.92, 0.20) + (2.2, 1)]  # Zul'Drak, Howling Fjord
+BASINS += [nr(0.13, 0.64) + (12, 70)]                                                     # Sholazar Basin
+
+CAPITALS += [
+    (6, 'Icecrown Citadel') + nr(0.34, 0.72) + ('undead',),
+    (8, 'Dalaran') + nr(0.50, 0.52) + ('random',),
+    (9, 'Warsong Hold') + nr(0.10, 0.28) + ('orc',),
+    (11, 'Valgarde') + nr(0.80, 0.10) + ('human',),
+]
+CAPITALS.sort()
+
+TOWNS += [(name,) + nr(u, v) + (building,) for name, u, v, building in [
+    ('Valiance Keep', 0.20, 0.08, 'nshp'), ('Fizzcrank Airstrip', 0.18, 0.38, 'ngad'), ("River's Heart", 0.13, 0.60, 'nmoo'),
+    ('Wyrmrest Temple', 0.52, 0.30, 'ndru'), ("Moa'ki Harbor", 0.42, 0.16, 'nshp'), ("Agmar's Hammer", 0.40, 0.36, 'ntav'),
+    ('Amberpine Lodge', 0.70, 0.30, 'ngme'), ('K3', 0.66, 0.66, 'nmr7'), ("Zim'Torga", 0.74, 0.50, 'nfoh'),
+    ('Vengeance Landing', 0.96, 0.26, 'nshp'), ('Argent Tournament Grounds', 0.50, 0.88, 'nmrk'), ('Violet Gate Market', 0.44, 0.50, 'nmr9'),
+]]
+
+CAMPS += [(name,) + nr(u, v) + (strength,) for name, u, v, strength in [
+    ('Coldarra', 0.03, 0.37, 1), ('Amber Ledge', 0.06, 0.18, 0), ('Kaskala', 0.24, 0.18, 0), ("Bor'gorok Outpost", 0.18, 0.44, 0),
+    ('Nesingwary Base Camp', 0.09, 0.56, 1), ('Rainspeaker Canopy', 0.18, 0.70, 1), ('Frenzyheart Hill', 0.21, 0.57, 0),
+    ('Ymirheim', 0.42, 0.74, 1), ('The Shadow Vault', 0.30, 0.86, 2), ('Argent Vanguard', 0.50, 0.72, 1), ("Aldur'thar", 0.42, 0.88, 2),
+    ('Wintergrasp Fortress', 0.30, 0.52, 1), ('Azjol-Nerub', 0.34, 0.30, 2), ('Naxxramas', 0.58, 0.34, 2), ("Star's Rest", 0.30, 0.20, 0),
+    ('New Hearthglen', 0.56, 0.22, 1), ('Icemist Village', 0.40, 0.42, 1), ("Drak'Tharon Keep", 0.66, 0.42, 1), ('Grizzlemaw', 0.73, 0.27, 1),
+    ('Camp Oneqwah', 0.78, 0.34, 0), ('Gundrak', 0.88, 0.48, 2), ("Drak'Sotra", 0.63, 0.53, 1), ('Ulduar', 0.72, 0.88, 2),
+    ('Dun Niffelem', 0.84, 0.74, 1), ('Brunnhildar Village', 0.60, 0.80, 1), ('Utgarde Keep', 0.85, 0.20, 1),
+    ('Utgarde Pinnacle', 0.93, 0.31, 2), ('Kamagua', 0.70, 0.08, 0), ('Westguard Keep', 0.74, 0.18, 0),
+]]
+
+PORTALS += [
+    (('Ironforge Portal', 378, _sy(244)), ('Dalaran Portal',) + nr(0.57, 0.44)),
+    (('Undercity Gate', 368, _sy(370)), ('Icecrown Portal',) + nr(0.40, 0.64)),
+    (('Orgrimmar Gate', 166, _sy(262)), ('Warsong Hold Portal',) + nr(0.20, 0.22)),
+    (('Menethil Harbor Portal', 378, _sy(280)), ('Valgarde Portal',) + nr(0.70, 0.16)),
+]
+
+ROADS += [[nr(u, v) for u, v in line] for line in [
+    [(0.10, 0.28), (0.18, 0.30), (0.26, 0.36), (0.32, 0.46), (0.42, 0.50), (0.50, 0.52)],
+    [(0.20, 0.08), (0.20, 0.20), (0.18, 0.30)],
+    [(0.50, 0.52), (0.50, 0.40), (0.52, 0.30), (0.45, 0.20), (0.42, 0.16)],
+    [(0.50, 0.52), (0.42, 0.62), (0.34, 0.72)],
+    [(0.52, 0.30), (0.62, 0.30), (0.70, 0.30), (0.76, 0.22), (0.80, 0.10)],
+    [(0.50, 0.52), (0.60, 0.54), (0.72, 0.52), (0.86, 0.48)],
+    [(0.50, 0.52), (0.58, 0.62), (0.66, 0.66), (0.70, 0.80)],
+    [(0.80, 0.10), (0.88, 0.18), (0.96, 0.26)],
+]]
+
+LANDMARKS += [('IZft',) + nr(0.28, 0.82) + (1.0, 4.71)]   # The Frozen Throne

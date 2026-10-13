@@ -12,7 +12,7 @@
 |---|---|
 | **Kalimdor** | Teldrassil, Darkshore, Moonglade, Felwood, Winterspring, Mount Hyjal, Azshara, Ashenvale, Stonetalon, the Barrens, Durotar, Desolace, Mulgore, Feralas, Thousand Needles, Dustwallow Marsh, Un'Goro Crater, Tanaris, Silithus, Uldum, plus Azuremyst, Bloodmyst, the Echo Isles and Theramore |
 | **Eastern Kingdoms** | Quel'Danas, Eversong, Ghostlands, Tirisfal, both Plaguelands, Silverpine, Gilneas, Hillsbrad, Alterac, the Hinterlands, Arathi, Wetlands, Twilight Highlands, Dun Morogh, Loch Modan, Badlands, Searing Gorge, Burning Steppes, Redridge, Elwynn, Westfall, Duskwood, Deadwind Pass, Swamp of Sorrows, Blasted Lands, Stranglethorn, Tol Barad |
-| **Northrend** | Spans the whole top of the map, from Borean Tundra above Kalimdor to Howling Fjord above Lordaeron: Borean Tundra, Sholazar Basin, Icecrown, Wintergrasp, Crystalsong Forest, Dragonblight, the Storm Peaks, Zul'Drak, Grizzly Hills, Howling Fjord |
+| **Northrend** | Follows the Wrath of the Lich King continent map across the top of the map: Borean Tundra and Howling Fjord as the southern lobes with Dragonblight's bay between them, Coldarra off Borean, Sholazar Basin, Wintergrasp, Icecrown, Crystalsong Forest, the Storm Peaks, Zul'Drak, the Grizzly Hills with Venture Bay, and the fjords of Howling Fjord |
 | **The Great Sea** | The Maelstrom, the goblin isle of Kezan, and Kul Tiras (Drustvar, Stormsong Valley, Tiragarde Sound) |
 
 There are 70 zones in all. Each zone has its own ground textures, tree type, relief and creeps: jungle in Stranglethorn, blight in the Plaguelands, lava cracks in the Burning Steppes, cliff mesas in Thousand Needles and at Thunder Bluff, and the crater rim around Un'Goro. A few landmark doodads are placed too: the World Trees at Teldrassil and Hyjal, the Sunwell, the Frozen Throne, the ruins of Dalaran, the Dark Portal, and volcanoes at Blackrock and Un'Goro.
@@ -33,7 +33,7 @@ There are 70 zones in all. Each zone has its own ground textures, tree type, rel
 
 Goblin shipyards sit at the ports (Booty Bay, Ratchet, Theramore, Menethil, Auberdine, Valiance Keep, Vengeance Landing and others), and goblin laboratories sell zeppelins. Teldrassil connects to Darkshore through a shallow strait that ground units can wade across.
 
-**Neutral content.** About 105 gold mines, roughly 300 creep camps (each camp leader drops an item), 58 shops (taverns, merchants, mercenary camps, marketplaces, dragon roosts, fountains), critters, and about 21,500 trees.
+**Neutral content.** About 100 gold mines, roughly 270 creep camps (each camp leader drops an item), 60 shops (taverns, merchants, mercenary camps, marketplaces, dragon roosts, fountains), critters, and about 16,000 trees.
 
 ## Playing it
 
@@ -77,5 +77,5 @@ python3 -m unittest discover tests
 ## Limits
 
 - 12 players, not 24, so the map loads on every patch that supports 480 × 480 maps.
-- The geography is hand-drawn from the world map, not traced from game data. Distances are squeezed to fit a square map.
+- The geography is hand-drawn from the world map, not traced from game data. Kalimdor and the Eastern Kingdoms are drawn about 20% shorter than their true proportions so a correctly shaped Northrend fits above them on a square map.
 - Pandaria, the Broken Isles, Zandalar, Outland, the Dragon Isles and Khaz Algar are left out, which leaves room for a much larger Northrend.
