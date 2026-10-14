@@ -26,6 +26,20 @@ class Terrain:
     pass
 
 
+def tidy_paint(tex, free, rounds=2):
+    """Paint the way a careful hand would: a point whose texture has at most one neighbour of its
+    own kind (a speck, or a ragged one-point fringe along a border) takes the texture most common
+    round it. Only points in `free` change."""
+    for _ in range(rounds):
+        kinds = np.unique(tex)
+        counts = np.stack([sum(shift(tex == k, dx, dy, False).astype(np.int8) for dx in (-1, 0, 1) for dy in (-1, 0, 1))
+                           for k in kinds])
+        own = np.take_along_axis(counts, np.searchsorted(kinds, tex)[None], 0)[0]
+        change = free & (own <= 2) & (counts.max(0) >= 4)
+        tex = np.where(change, kinds[counts.argmax(0)], tex)
+    return tex
+
+
 def build(seed=1):
     T = Terrain()
     f = Field(MAP_W + 1, MAP_H + 1, seed)
@@ -421,6 +435,11 @@ def build(seed=1):
     alpine = land & (T.relief > 210 + noises[0] * 70) & ~instance_zone      # bare rock and scree up high
     tex = np.where(alpine & (noises[1] > -0.15), rock, np.where(alpine & (noises[2] > 0.2), TILE['Ldrt'], tex))
     tex = np.where(steep & land & ~instance_zone, rock, tex)
+    # Bare rock shows where the ground is too steep to hold soil; level ground up high is gravel
+    # and rough earth (snow in the cold) rather than a pavement of rock.
+    level = slope_pt < 22 + noises[1] * 10
+    rocky = np.isin(tex, [TILE['Lrok'], TILE['Wrok']]) & level & land & ~instance_zone
+    tex = np.where(rocky, np.where(cold, TILE['Wsnw'], TILE['Ldro']), tex)
     height = T.h_rel
     snowcap = land & (height > np.where(cold, 420, 700) + noises[0] * 60) & (noises[1] > -0.4) & ~instance_zone
     tex = np.where(snowcap, TILE['Wsnw'], tex)
@@ -429,6 +448,11 @@ def build(seed=1):
     tex = np.where(beach, beach_tile, tex)
     tex = np.where(water, per_zone('seabed'), tex)
     tex = np.where(lake | river, TILE['Ldrt'], tex)
+    # mud banks: bare earth along some stretches of the shores of the lakes and rivers, where
+    # the water laps at the land, and grass running down to the water along the others
+    bank = (land & ~steep & ~cold & ~beach & ~instance_zone & (noises[1] > 0.0)
+            & (distance_field(lake | river, 3) < 1.3 + noises[2] * 0.8))
+    tex = np.where(bank, TILE['Ldrt'], tex)
     road = land & (road_d < 1.05 + noises[2] * 0.3)
     desertish = np.isin(biome_arr, ['savanna', 'desert', 'reddesert', 'needles', 'volcanic', 'amber'])
     tex = np.where(road, np.where(desertish, TILE['Ldrt'], np.where(cold, TILE['Wsng'], TILE['Ldrt'])), tex)
@@ -438,6 +462,7 @@ def build(seed=1):
         dist = f.distance(cx, cy) + noises[0] * 2.0
         paved = land & ~(lake | river) & ((dist < 3.5) | ((dist < 10) & (road_d < 1.4 + noises[2] * 0.4)))
         tex = np.where(paved, TILE['Ybtl'], tex)
+    tex = tidy_paint(tex, land & ~instance_zone, rounds=3)
     # Cliff types. The game draws every corner beside a cliff or on a ramp with the cliff type's
     # own ground (dirt, snow or grass) whatever is painted there, and the cliff face takes that
     # type's look too. So each cliff takes the type that suits the ground around it: snow cliffs
@@ -469,6 +494,7 @@ def build(seed=1):
     apron = dilate(shown, 1) & ~shown & spill & (noises[1] > -0.25)
     apron |= dilate(apron, 1) & ~shown & spill & (noises[2] > 0.3)
     tex = np.where(apron, cliff_ground, tex)
+    tex = tidy_paint(tex, land & ~shown & ~instance_zone)
     T.cliff_type = cliff_type
     T.tex = tex
 
