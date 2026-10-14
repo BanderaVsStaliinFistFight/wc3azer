@@ -564,7 +564,9 @@ ROADS += [[nr(u, v) for u, v in line] for line in [
     [(0.80, 0.10), (0.88, 0.18), (0.96, 0.26)],
 ]]
 
-LANDMARKS += [('IZft',) + nr(0.28, 0.82) + (1.0, 4.71)]   # The Frozen Throne
+# The Frozen Throne: the Icecrown throne the game itself uses on its maps (the cinematic
+# Frozen Throne doodad is a whole glacier mountain, built to the cinematic's scale)
+DESTRUCTABLE_LANDMARKS += [('IOt0',) + nr(0.28, 0.82) + (1.0,)]
 
 
 # ---------------------------------------------------------------------------

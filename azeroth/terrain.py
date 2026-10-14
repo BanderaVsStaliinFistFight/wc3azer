@@ -140,6 +140,7 @@ def build(seed=1):
     # settlements, camps and portals keep the mountains at arm's length and stand in a levelled clearing
     flat_spots = [(c[2], c[3], 14) for c in geo.CAPITALS] + [(t[1], t[2], 5) for t in geo.TOWNS + geo.CAMPS]
     flat_spots += [(x, y, 6) for pair in geo.PORTALS for _, x, y in pair] + [(l[1], l[2], 6) for l in geo.LANDMARKS]
+    flat_spots += [(d[1], d[2], 6) for d in geo.DESTRUCTABLE_LANDMARKS if d[0] != 'Volc']   # the Frozen Throne
     clearing = np.zeros((n, n))
     for tx, ty, r in flat_spots:
         d = f.distance(tx, ty)

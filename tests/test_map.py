@@ -135,6 +135,8 @@ class MapTest(unittest.TestCase):
         self.assertGreater(len(doodads), 15000)
         for d in doodads:
             self.assertIn(d['id'], DESTRUCTABLE_IDS | DOODAD_IDS)
+            # the cinematic Frozen Throne is a whole glacier mountain at cinematic scale
+            self.assertNotEqual(d['id'], 'IZft')
             self.assertTrue(-29952 < d['x'] < 29952 and -30208 < d['y'] < 29696)
         _, _, units = read_units(self.files['war3mapUnits.doo'])
         for u in units:
