@@ -4,7 +4,7 @@ Capitals get a stone curtain wall (a rectangle of 320-unit wall segments with co
 open gateways wherever a road passes through it (and at least one on every side), and houses
 lining the streets and filling the ring round the open square in the middle, where the start
 location stays clear. The bigger towns (ports, markets, goblin towns) get a smaller stone wall;
-the others a wooden fence or, in dry country, a spiked palisade. Each place is built in the
+the others a wooden fence, and Horde outposts a spiked palisade. Each place is built in the
 style of its people or its land.
 
 Every piece is a stock game object. Footprints are in 32-unit pathing cells, (width, height)
@@ -41,7 +41,7 @@ CITY_STYLES = {
                 monuments=[('BOtt', (2, 2), 2), ('NOfg', (4, 4), 1)], light=('LOtz', None), houses_n=16),
     'tauren': dict(palisade=True, houses=CAMP_PROPS[:3] + CAMP_PROPS[4:],
                    monuments=[('BOtt', (2, 2), 2)], light=('LOtz', None), houses_n=12),
-    'undead': dict(wall=RUINS, post=('LObr', (2, 2)), ruined=0.3,
+    'undead': dict(wall=STONE, post=('LObr', (2, 2)), ruined=0.3,       # Lordaeron's own walls, left broken
                    houses=[('YSr3', (12, 12), 1), ('YSr4', (12, 12), 1), ('YSr5', (12, 12), 1), ('YSr9', (12, 12), 1),
                            ('YSra', (12, 12), 1), ('YSrb', (12, 12), 1), ('YSrc', (16, 16), 1), ('YSre', (16, 16), 1)],
                    monuments=[('YScr', (20, 20), 1)], light=('LObr', (2, 2)), houses_n=18),
@@ -57,9 +57,12 @@ CAPITAL_STYLE = {'Stormwind': 'human', 'Orgrimmar': 'orc', 'Undercity': 'undead'
 CAPITAL_WALL_SIDE = 11          # wall segments along each side of a capital (27.5 tiles)
 TOWN_WALL_SIDE = 5              # ... and of a walled town (12.5 tiles)
 WALLED_TOWNS = ('nshp', 'ngad', 'nmrk', 'ngme')     # ports, goblin towns and markets
+# Horde outposts are camps behind spiked palisades, wherever they stand, never stone-walled
+HORDE_TOWNS = {'Crossroads', 'Kargath', "Grom'gol", 'Hammerfall', 'Razor Hill', 'Camp Taurajo', 'Camp Mojache',
+               'Freewind Post', 'Sun Rock Retreat', 'Splintertree Post', "Agmar's Hammer", "Zim'Torga"}
 
-# Town styles by biome: a stone wall for the bigger towns, else a fence or palisade, houses,
-# a centrepiece and lights.
+# Town styles by biome: a stone wall for the bigger towns, else a fence, houses, a centrepiece
+# and lights. Horde outposts take the camp style and a palisade.
 TOWN_STYLES = {
     'village': dict(wall=STONE, post=('YSco', (4, 4)), fence=('VOfl', (8, 2)), houses=VILLAGE_HOUSES,
                     centre=('LSwl', (4, 4), 1), light=('YOlp', (2, 2))),
@@ -68,7 +71,7 @@ TOWN_STYLES = {
                  light=('YOlp', (2, 2))),
     'cold': dict(wall=STONE, post=('YSco', (4, 4)), fence=('NOfl', (8, 2)), houses=VILLAGE_HOUSES[:4],
                  centre=('NOfp', (4, 4), 1), light=('LOtz', None)),
-    'dry': dict(wall=STONE, post=('LOss', (2, 2)), palisade=True, houses=CAMP_PROPS + VILLAGE_HOUSES[:1],
+    'dry': dict(wall=STONE, post=('LOss', (2, 2)), houses=CAMP_PROPS + VILLAGE_HOUSES[:1],
                 centre=('NOfg', (4, 4), 1), light=('LOtz', None)),
     'elven': dict(houses=ELVEN_HOUSES, centre=('YOfn', (8, 8), 1), light=None),
 }
@@ -263,19 +266,20 @@ def plan(T, rng, tile_ok, occupied, starts):
     # ---- towns ---------------------------------------------------------------------------------
     for name, cx, cy, building in geo.TOWNS:
         biome = geo.ZONES[T.zone_of[int(cy), int(cx)]]['biome']
-        style = TOWN_STYLES[TOWN_STYLE_OF_BIOME.get(biome, 'village')]
+        horde = name in HORDE_TOWNS
+        style = TOWN_STYLES['dry' if horde else TOWN_STYLE_OF_BIOME.get(biome, 'village')]
         for dx in (0.0, 1.5, -1.5, 3.0):
             if place_thing(style['centre'], LEFT + (cx + dx) * 128.0, BOTTOM + cy * 128.0, road_clear=1.2):
                 break
         # a town beside a capital or another walled town (Brill, the Booty Bay and Gadgetzan
         # markets) shares its neighbour's wall rather than raising one of its own
         alone = all(math.hypot(cx - ex, cy - ey) > reach for ex, ey, reach in enclosed)
-        walled = alone and building in WALLED_TOWNS and style.get('wall')
+        walled = alone and not horde and building in WALLED_TOWNS and style.get('wall')
         if alone:
             enclosed.append((cx, cy, 9.5))
         if walled:
             wall_ring(cx, cy, TOWN_WALL_SIDE, style['wall'], style.get('post'), style['light'])
-        elif alone and style.get('palisade'):
+        elif alone and horde:
             palisade(cx, cy, 7.0)
         elif alone and style.get('fence'):
             fence(cx, cy, 7.5, style['fence'])
