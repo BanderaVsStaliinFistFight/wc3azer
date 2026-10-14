@@ -349,7 +349,7 @@ def place(T, seed=7):
     def small_ok(tx, ty, plant=False):
         """Room for a stone or a plant: dry, open ground off the road (and for a plant, not snow)."""
         ix, iy = int(tx), int(ty)
-        return (0 < ix < MAP_W and 0 < iy < MAP_H and tile_ok[iy, ix] and T.road_d[iy, ix] > 1.6
+        return (0 < ix < MAP_W and 0 < iy < MAP_H and tile_ok[iy, ix] and not occupied[iy, ix] and T.road_d[iy, ix] > 1.6
                 and not (plant and snow_ground[iy:iy + 2, ix:ix + 2].sum() >= 2))
 
     def around(did, tx, ty, count, r0, r1, scale, downhill=False, variations=None, fixed=None):
@@ -558,6 +558,36 @@ def place(T, seed=7):
                 placed = True
                 break
             s_at += (rng.uniform(2.2, 3.6) if rough else rng.uniform(3.0, 5.0)) if placed else 1.0
+    # Boulders stand in the shallows off the rocky shores, in groups, where the land meets the sea
+    # without a beach; each blocks its patch of the shallows as it would on land.
+    inner = ~dilate(T.edge, 2)
+    inner[MAP_H:, :] = inner[:, MAP_W:] = False
+    instance_zone = np.array([bool(z.get('instance')) for z in geo.ZONES])[T.zone_of]
+    cliff_here = np.zeros((n, n), bool)
+    cliff_here[:-1, :-1] = T.cliff_tile
+
+    def in_shallows(px, py):
+        """Open, shallow water round the point, clear of any cliff and of the fords."""
+        ix, iy = int(px), int(py)
+        return (0 < ix < MAP_W - 1 and 0 < iy < MAP_H - 1 and not cliff_here[iy, ix] and T.road_d[iy, ix] > 2.0
+                and bool(T.water_flag[iy:iy + 2, ix:ix + 2].all()) and ground_z_at(T, px, py) > SEA_Z - 90)
+
+    rocky_shallows = (T.sea & dilate(T.land & ~T.beach, 3) & inner & ~dilate(instance_zone & T.land, 3))
+    roll = rng.random((n, n))
+    for ty, tx in np.argwhere(rocky_shallows & (beds > 0.15) & (roll < 0.1)):
+        rock = ROCKS.get(str(biome_of[ty, tx]), ('LRrk', None))[0]
+        facing = 4.712389 if rock == 'ORrk' else None
+        px, py = tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8)
+        if not in_shallows(px, py):
+            continue
+        d = add_detail(rock, px, py, scale=(0.9, 1.5), fixed=facing)
+        if not blocked[int(py), int(px)]:
+            bake(d, px, py, 4)
+        for _ in range(int(rng.integers(0, 3))):
+            a, r = rng.uniform(0, 2 * math.pi), rng.uniform(0.6, 1.1)
+            qx, qy = px + r * math.cos(a), py + r * math.sin(a)
+            if in_shallows(qx, qy):
+                add_detail(rock, qx, qy, scale=(0.3, 0.4), fixed=facing)
     # shells washed up in drifts along the tide line; birds over the woods and shores, bats in the
     # dark woods and under the cliffs, flies over the swamp water
     coast = T.land & dilate(T.sea, 1)
@@ -584,7 +614,7 @@ def place(T, seed=7):
         clump(str(biome_of[ty, tx]), tx + 0.5, ty + 0.5, int(rng.integers(2, 4)))
     # Along the roadsides they grow thick, in patches that come and go along the way.
     patches = Field(n, n, seed + 202).fbm(5, 2)
-    verge = tile_ok & (road_tile > 1.5) & (road_tile < 4.0) & ~is_tree & ~reserved & ~occupied
+    verge = tile_ok & (road_tile > 1.75) & (road_tile < 4.0) & ~is_tree & ~reserved & ~occupied
     for ty, tx in np.argwhere(verge & (rng.random((n, n)) < np.clip(0.2 + patches * 0.6, 0.0, 0.55))):
         b = str(biome_of[ty, tx])
         wild = ['ZPfw'] if 'ZPfw' in PLANTS.get(b, []) and rng.random() < 0.5 else None     # wild flowers line the roads
@@ -640,6 +670,21 @@ def place(T, seed=7):
             px, py = tx + 0.5 + rng.normal(0, 0.4), ty + 0.5 + rng.normal(0, 0.4)
             if afloat(px, py):
                 add_detail(SEAWEED, px, py, scale=(1.5, 2.0), z=SEA_Z, variations=5)
+    # a rowboat or two moored off each harbour
+    mooring = T.sea & dilate(T.land, 2) & ~dilate(T.land, 1) & in_map & (T.road_d > 2.5)
+    for name, cx, cy, building in geo.TOWNS:
+        if building != 'nshp':
+            continue
+        y0, x0 = max(int(cy) - 9, 0), max(int(cx) - 9, 0)
+        spots = sorted((math.hypot(x0 + x + 0.5 - cx, y0 + y + 0.5 - cy), x0 + x + 0.5, y0 + y + 0.5)
+                       for y, x in np.argwhere(mooring[y0:int(cy) + 10, x0:int(cx) + 10]))
+        moored = []
+        for _, px, py in spots:
+            if len(moored) >= int(rng.integers(1, 3)):
+                break
+            if afloat(px, py) and all(math.hypot(px - mx, py - my) > 2.5 for mx, my in moored):
+                add_detail('NWrw', px, py, scale=(0.9, 1.1), z=SEA_Z, variations=1)
+                moored.append((px, py))
     for ty, tx in np.argwhere(drift & cold_zone & (meadow > 0.15) & (roll > 0.985)):
         px, py = tx + rng.uniform(0, 1), ty + rng.uniform(0, 1)
         if afloat(px, py):

@@ -114,7 +114,7 @@ def plan(T, rng, tile_ok, occupied, starts):
         """True if no part of the footprint lies on a road's surface."""
         y0, y1, x0, x1 = box
         sub = T.road_d[max(y0 // 4, 0):(y1 - 1) // 4 + 2, max(x0 // 4, 0):(x1 - 1) // 4 + 2]
-        return sub.size == 0 or sub.min() >= 0.9
+        return sub.size == 0 or sub.min() >= 1.15
 
     def claim(box, margin=0):
         taken[tiles(box, margin)] = True

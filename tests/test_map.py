@@ -87,7 +87,7 @@ class MapTest(unittest.TestCase):
         self.assertTrue((tex[beside] == cliff_ground[cliff_type[beside]]).all(), 'painted ground differs from what the game draws')
         # grass cliffs stand in grass: most open ground near them is grassy (roads, beaches and the
         # odd rock patch make up the rest; with one cliff type per zone it was only about half)
-        grassy = np.isin(tex, [w['tiles'].index(t) for t in ('Lgrs', 'Lgrd', 'Fgrs', 'Agrs', 'Zgrs') if t in w['tiles']])
+        grassy = np.isin(tex, [w['tiles'].index(t) for t in ('Lgrs', 'Lgrd', 'Fgrs', 'Vgrt') if t in w['tiles']])
         open_ground = ~beside & ((pts['t'] & 0x40) == 0)
         near_grass_cliff = np.zeros_like(ramp)
         for dy in range(-2, 3):

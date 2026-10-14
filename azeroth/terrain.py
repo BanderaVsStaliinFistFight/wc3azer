@@ -431,7 +431,9 @@ def build(seed=1):
     steep = slope_pt > 70
     instance_zone = np.array([bool(zd.get('instance')) for zd in geo.ZONES])[zone_of]
     forest_floor = per_zone('floor')
-    tex = np.where(T.forest & (forest_floor >= 0) & (noises[2] > -0.45), forest_floor, tex)
+    # the forest floor lies under the denser stands; the lighter woods keep the open ground's cover
+    tex = np.where(T.forest & (T.forest_score > 0.1 + noises[1] * 0.1) & (forest_floor >= 0) & (noises[2] > -0.45),
+                   forest_floor, tex)
     alpine = land & (T.relief > 210 + noises[0] * 70) & ~instance_zone      # bare rock and scree up high
     tex = np.where(alpine & (noises[1] > -0.15), rock, np.where(alpine & (noises[2] > 0.2), TILE['Ldrt'], tex))
     tex = np.where(steep & land & ~instance_zone, rock, tex)
@@ -453,10 +455,15 @@ def build(seed=1):
     bank = (land & ~steep & ~cold & ~beach & ~instance_zone & (noises[1] > 0.0)
             & (distance_field(lake | river, 3) < 1.3 + noises[2] * 0.8))
     tex = np.where(bank, TILE['Ldrt'], tex)
-    road = land & (road_d < 1.05 + noises[2] * 0.3)
+    # Roads: wide cobbled roads through the old human lands, worn to bare earth in stretches;
+    # earthen tracks elsewhere, with ruts of darker earth, and packed snow in the cold.
+    paving = per_zone('road')
+    cobbled = paving == TILE['Vcbp']
+    road = land & (road_d < np.where(cobbled, 1.3, 1.05) + noises[2] * 0.3)
     desertish = np.isin(biome_arr, ['savanna', 'desert', 'reddesert', 'needles', 'volcanic', 'amber'])
-    tex = np.where(road, np.where(desertish, TILE['Ldrt'], np.where(cold, TILE['Wsng'], TILE['Ldrt'])), tex)
-    tex = np.where(road & ~desertish & ~cold & (noises[1] > 0.3), TILE['Bdrt'], tex)
+    tex = np.where(road, np.where(cold & ~cobbled, TILE['Wsng'], paving), tex)
+    tex = np.where(road & cobbled & (noises[1] > 0.4), TILE['Ldrt'], tex)
+    tex = np.where(road & ~cobbled & ~desertish & ~cold & (noises[1] > 0.3), TILE['Bdrt'], tex)
     # the capitals: a paved square with streets leading out along the roads
     for idx, name, cx, cy, race in geo.CAPITALS:
         dist = f.distance(cx, cy) + noises[0] * 2.0
@@ -478,7 +485,7 @@ def build(seed=1):
     # the vote looks past the cliff's own steep (rock-painted) edge to the dry ground on either side
     voters = ~shown & land & ~water
     snowy = np.isin(tex, [TILE[t] for t in ('Wsnw', 'Wsng')]) & voters
-    grassy = np.isin(tex, [TILE[t] for t in ('Lgrs', 'Lgrd', 'Fgrs', 'Agrs', 'Zgrs')]) & voters
+    grassy = np.isin(tex, [TILE[t] for t in ('Lgrs', 'Lgrd', 'Fgrs', 'Vgrt')]) & voters    # grassy earth counts as earth
     bare = voters & ~snowy & ~grassy
     zone_cliff = np.array([B[b]['cliff'] for b in biome_names])[zone_of]
     icy = zone_cliff == CLIFF_SNOW                                 # in the cold, bare rock ledges hold snow
