@@ -66,6 +66,63 @@ class MapTest(unittest.TestCase):
         self.assertLessEqual(int(spread.max()), 2, 'a tile needs a cliff model that does not exist')
         self.assertTrue((pts['h'] < 0x4000).all())
 
+    def test_slopes(self):
+        """No open ground steeper than the game can texture cleanly, and no stretched cliff faces."""
+        w = read_w3e(self.files['war3map.w3e'])
+        pts = np.frombuffer(w['data'], dtype=np.dtype([('h', '<u2'), ('w', '<u2'), ('t', 'u1'), ('v', 'u1'), ('c', 'u1')]))
+        pts = pts.reshape(w['h'], w['w'])
+        layer = (pts['c'] & 15).astype(int)
+        z = (pts['h'].astype(float) - 8192) / 4 + (layer - 2) * 128
+        dry = (pts['t'] & 0x40) == 0
+        ramp = (pts['t'] & 0x10) != 0
+        near_ramp = np.zeros_like(ramp)
+        for dy in range(-3, 4):
+            for dx in range(-3, 4):
+                near_ramp |= np.roll(np.roll(ramp, dy, 0), dx, 1)
+        c = lambda a: [a[:-1, :-1], a[1:, :-1], a[:-1, 1:], a[1:, 1:]]
+        zc, lc = c(z), c(layer)
+        ok = np.logical_and.reduce(c(dry)) & ~near_ramp[:-1, :-1]
+        flat = np.maximum.reduce(lc) == np.minimum.reduce(lc)
+        rise = np.maximum.reduce(zc) - np.minimum.reduce(zc)
+        self.assertLessEqual(float(rise[ok & flat].max()), 185, 'a slope steep enough to smear its texture')
+        top = np.maximum.reduce(lc)
+        bottom = np.minimum.reduce(lc)
+        hi = np.maximum.reduce([np.where(l == top, zz, -1e9) for l, zz in zip(lc, zc)])
+        lo = np.minimum.reduce([np.where(l == bottom, zz, 1e9) for l, zz in zip(lc, zc)])
+        face = ((hi - lo) / ((top - bottom) * 128.0))[ok & ~flat]
+        self.assertGreaterEqual(float(face.min()), 0.5, 'a squashed cliff face')
+        self.assertLessEqual(float(face.max()), 1.6, 'a stretched cliff face')
+
+    def test_cliff_ground(self):
+        """Beside every cliff the game draws the cliff type's own ground; it must suit the land around it."""
+        w = read_w3e(self.files['war3map.w3e'])
+        pts = np.frombuffer(w['data'], dtype=np.dtype([('h', '<u2'), ('w', '<u2'), ('t', 'u1'), ('v', 'u1'), ('c', 'u1')]))
+        pts = pts.reshape(w['h'], w['w'])
+        layer = (pts['c'] & 15).astype(int)
+        cliff_type = (pts['c'] >> 4).astype(int)
+        tex = (pts['t'] & 15).astype(int)
+        ramp = (pts['t'] & 0x10) != 0
+        tile = np.zeros_like(ramp)
+        tile[:-1, :-1] = (layer[:-1, :-1] != layer[:-1, 1:]) | (layer[:-1, :-1] != layer[1:, :-1]) | (layer[:-1, :-1] != layer[1:, 1:])
+        beside = tile.copy()
+        beside[1:, :] |= tile[:-1, :]
+        beside[:, 1:] |= tile[:, :-1]
+        beside[1:, 1:] |= tile[:-1, :-1]
+        beside &= ~ramp
+        ground = {'CLdi': 'Ldrt', 'CNsn': 'Nsnw', 'CLgr': 'Lgrs'}
+        cliff_ground = np.array([w['tiles'].index(ground[c]) for c in w['cliffs']])
+        self.assertTrue((tex[beside] == cliff_ground[cliff_type[beside]]).all(), 'painted ground differs from what the game draws')
+        # grass cliffs stand in grass: most open ground near them is grassy (roads, beaches and the
+        # odd rock patch make up the rest; with one cliff type per zone it was only about half)
+        grassy = np.isin(tex, [w['tiles'].index(t) for t in ('Lgrs', 'Lgrd', 'Fgrs', 'Agrs', 'Zgrs') if t in w['tiles']])
+        open_ground = ~beside & ((pts['t'] & 0x40) == 0)
+        near_grass_cliff = np.zeros_like(ramp)
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                near_grass_cliff |= np.roll(np.roll(beside & (cliff_type == w['cliffs'].index('CLgr')), dy, 0), dx, 1)
+        sel = near_grass_cliff & open_ground
+        self.assertGreater(float(grassy[sel].mean()), 0.68, 'grass cliffs on snow or rock')
+
     def test_ramps(self):
         """Ramps follow the World Editor's layout and their slope is walkable."""
         w = read_w3e(self.files['war3map.w3e'])

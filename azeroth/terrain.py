@@ -2,7 +2,7 @@
 import numpy as np
 
 from . import geography as geo
-from .biomes import B, GROUND_TILES, TILE
+from .biomes import B, CLIFF_SNOW, GROUND_TILES, TILE
 from .raster import (Field, blur, dilate, distance_field, erode, flow_accumulation, label_regions, meander, shift,
                      smoothstep, NEIGHBOURS8)
 
@@ -333,8 +333,12 @@ def build(seed=1):
     T.ramp = ramp
     T.ramp_near = dilate(ramp, 3)
 
+    # The game stretches ground textures over steep slopes and cliff models over uneven ground,
+    # so the land is shaved down wherever a tile climbs more than about 45 degrees or a cliff's
+    # top and foot stray far from one cliff level apart. Ramps are left exactly as cut.
+    floor = np.where(dry, 12 - 128 * (layer - 2), -np.inf)       # land stays above the water line
+    z = limit_slopes(np.maximum(z, floor), layer, dry, dry & ~dilate(ramp, 2), floor)
     # ground offsets: land keeps its own height, water keeps its depth below the surface
-    z = np.where(dry, np.maximum(z, 12 - 128 * (layer - 2)), z)
     z_raw = np.where(water, z - 128 * (layer - 2), z)
     raw = np.clip(np.round(8192 + 4 * (SEA_Z + z_raw)), 256, 16000).astype(np.int32)
     T.height_raw = raw
@@ -431,6 +435,31 @@ def build(seed=1):
         dist = f.distance(cx, cy) + noises[0] * 2.0
         paved = land & ~(lake | river) & ((dist < 3.5) | ((dist < 10) & (road_d < 1.4 + noises[2] * 0.4)))
         tex = np.where(paved, TILE['Ybtl'], tex)
+    # Cliff types. The game draws every corner beside a cliff or on a ramp with the cliff type's
+    # own ground (dirt, snow or grass) whatever is painted there, and the cliff face takes that
+    # type's look too. So each cliff takes the type that suits the ground around it: snow cliffs
+    # in the snow (and on bare rock in cold zones), grass cliffs in the meadows, dirt cliffs on rock,
+    # dirt and sand, with the zone's own type breaking ties. Those corners are then painted with
+    # what the game will show, so the editor, the minimap and the game all agree.
+    cliff_at = np.zeros((n, n), bool)
+    cliff_at[:-1, :-1] = cliff_tile
+    ramp_at = np.zeros((n, n), bool)
+    ramp_at[:-1, :-1] = entrance
+    around = lambda m: m | shift(m, 1, 0, False) | shift(m, 0, 1, False) | shift(m, 1, 1, False)
+    shown = (around(cliff_at) & ~ramp) | around(ramp_at)
+    # the vote looks past the cliff's own steep (rock-painted) edge to the dry ground on either side
+    voters = ~shown & land & ~water
+    snowy = np.isin(tex, [TILE[t] for t in ('Nsnw', 'Wsng')]) & voters
+    grassy = np.isin(tex, [TILE[t] for t in ('Lgrs', 'Lgrd', 'Fgrs', 'Agrs', 'Zgrs')]) & voters
+    bare = voters & ~snowy & ~grassy
+    zone_cliff = np.array([B[b]['cliff'] for b in biome_names])[zone_of]
+    icy = zone_cliff == CLIFF_SNOW                                 # in the cold, bare rock ledges hold snow
+    votes = np.stack([blur((bare & ~icy).astype(float), 2), blur((snowy | (bare & icy)).astype(float), 2),
+                      blur(grassy.astype(float), 2)])
+    votes += 0.03 * (np.arange(3)[:, None, None] == zone_cliff[None])
+    cliff_type = votes.argmax(0).astype(np.int32)                 # CLIFF_DIRT, CLIFF_SNOW, CLIFF_GRASS
+    tex = np.where(shown, np.array([TILE['Ldrt'], TILE['Nsnw'], TILE['Lgrs']])[cliff_type], tex)
+    T.cliff_type = cliff_type
     T.tex = tex
 
     blight_zone = np.array([B[b]['blight'] for b in biome_names])[zone_of]
@@ -447,11 +476,36 @@ def build(seed=1):
     T.edge = ((ii < MARGIN_L) | (ii >= MAP_W - MARGIN_R) | (jj < MARGIN_B) | (jj >= MAP_H - MARGIN_T)) & (ii < MAP_W) & (jj < MAP_H)
     w = np.array(VARIATION_WEIGHTS, dtype=np.float64)
     T.variation = f.rng.choice(len(w), size=(n, n), p=w / w.sum()).astype(np.int32)
-    T.cliff_tex = np.array([B[b]['cliff'] for b in biome_names])[zone_of]
+    T.cliff_tex = T.cliff_type
 
     # ---- 9. pathing (4 x 4 cells per tile) ---------------------------------------
     T.pathing = compute_pathing(T)
     return T
+
+
+def limit_slopes(z, layer, land, movable, floor, open_slope=128.0, cliff_slack=44.0):
+    """Even out ground offsets until no two neighbouring land corners differ by more than `open_slope`
+    per tile on the same cliff level, or by more than `cliff_slack` across a cliff (so every cliff face
+    stays within about 0.5 to 1.5 times its proper height). Corners that are too high are lowered
+    (never below `floor`); where a floor holds one up, the corners above it are raised to match.
+    Only `movable` corners change."""
+    limits = []
+    for dx, dy in NEIGHBOURS8:
+        step = 1.4142 if dx and dy else 1.0
+        same = shift(layer, dx, dy, -1) == layer
+        limits.append((dx, dy, shift(land, dx, dy, False), np.where(same, open_slope, cliff_slack) * step))
+    for sign in (1, -1):                      # lower the peaks first, then lift what the floor props up
+        for _ in range(600):
+            bound = np.full(z.shape, sign * np.inf)
+            for dx, dy, nb_land, k in limits:
+                nb = np.where(nb_land, shift(z, dx, dy, 0.0) + sign * k, sign * np.inf)
+                bound = np.minimum(bound, nb) if sign > 0 else np.maximum(bound, nb)
+            new = np.minimum(z, bound) if sign > 0 else np.maximum(z, bound)
+            new = np.where(movable, np.maximum(new, floor), z)
+            if np.abs(z - new).max() < 0.5:
+                break
+            z = new
+    return z
 
 
 def peaks(f, line, reach, rng, rough):
