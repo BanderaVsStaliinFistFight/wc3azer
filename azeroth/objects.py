@@ -6,19 +6,26 @@ import numpy as np
 from . import cities
 from . import geography as geo
 from .biomes import B
-from .decor import BATS, BIRDS, DOODADS, FLIES, RUINS, SCATTER, SHELLS, SIGNPOST, VILLAGE, VILLAGE_COLD, VILLAGE_DRY
+from .decor import (BATS, BIRDS, DOODADS, FLIES, ICE_FLOES, LILIES, RUINS, RUSHES, SCATTER, SEAWEED, SHELLS, SIGNPOST,
+                    VILLAGE, VILLAGE_COLD, VILLAGE_DRY, WATER_VARIATIONS)
 from .raster import Field, dilate, label_regions
-from .terrain import MAP_W, MAP_H, ground_z_at, world_xy
+from .terrain import MAP_W, MAP_H, SEA_Z, ground_z_at, world_xy
 
 NEUTRAL_PASSIVE = 15                          # classic (12 player) numbering used by war3mapUnits.doo
-# tree species: (model variations, smallest scale, largest scale) from the game's destructable data
+# tree species: (model variations, smallest scale, largest scale) from the game's destructable data;
+# a tree's size is drawn round the middle of its species' range (see TREE_SIZE)
 TREES = {'LTlt': (10, 0.8, 1.2), 'FTtw': (10, 0.8, 1.2), 'WTtw': (10, 0.8, 1.2), 'WTst': (10, 0.8, 1.2), 'JTtw': (10, 0.8, 1.2),
          'ATtr': (5, 0.8, 1.2), 'CTtr': (5, 0.8, 1.2), 'ITtw': (10, 0.8, 1.0), 'BTtw': (10, 0.8, 1.2), 'NTtw': (10, 0.8, 1.2),
          'ZTtw': (10, 0.65, 1.05), 'ATtc': (3, 0.8, 1.2), 'BTtc': (3, 0.8, 1.2), 'CTtc': (3, 0.8, 1.2), 'ITtc': (3, 0.8, 1.2),
          'NTtc': (3, 0.8, 1.2), 'ZTtc': (3, 0.8, 1.2), 'YTct': (2, 0.8, 1.2), 'YTft': (2, 0.8, 1.2), 'YTst': (2, 0.8, 1.2),
          'KTtw': (10, 0.65, 0.85), 'DTsh': (8, 0.8, 1.2), 'GTsh': (8, 0.8, 1.2)}
+# Tree sizes, as a share of the species' middle size: groves of old trees and of young growth
+# come and go across a wood, trees grow taller deep inside it than at its fraying edge, and
+# each tree differs from its neighbours. (smallest, largest)
+TREE_SIZE = (0.6, 1.6)
 DETAIL_VARIATIONS = {'LRrk': 10, 'ARrk': 10, 'CRrk': 10, 'BRrk': 10, 'BRsp': 8, 'ZRrk': 10, 'ZRsp': 8, 'NRrk': 10, 'IRrs': 10,
-                     'ORrk': 10, 'DRrk': 10, 'BRrs': 8, 'CRrs': 8, 'ORrs': 10, 'ZRrs': 8, 'IRgc': 10, 'ZPfw': 5, 'ZPsh': 3, 'APms': 4, 'CPms': 4, 'APct': 1, 'LPrs': 4, 'LPfp': 3}
+                     'ORrk': 10, 'DRrk': 10, 'BRrs': 8, 'CRrs': 8, 'ORrs': 10, 'ZRrs': 8, 'IRgc': 10, 'ZPfw': 5, 'ZPsh': 3, 'APms': 4,
+                     'CPms': 4, 'APct': 1, 'LPrs': 4, 'LPfp': 3, 'LPwh': 1, 'LPcw': 2, 'ZPru': 2}
 # per biome: (rock, rock spire or None) scattered over steep slopes
 ROCKS = {'nightelf': ('ARrk', None), 'worldtree': ('ARrk', None), 'crystal': ('ARrk', None), 'fel': ('CRrk', None),
          'savanna': ('BRrk', None), 'reddesert': ('BRrk', 'BRsp'), 'needles': ('BRrk', 'BRsp'), 'barren': ('BRrk', None),
@@ -28,12 +35,24 @@ ROCKS = {'nightelf': ('ARrk', None), 'worldtree': ('ARrk', None), 'crystal': ('A
 # per biome: the great spire raised on the heights of a massif
 SPIRES = {'snow': 'IRgc', 'tundra': 'IRgc', 'icecrown': 'IRgc', 'crystal': 'IRgc', 'savanna': 'BRrs', 'reddesert': 'BRrs',
           'needles': 'BRrs', 'barren': 'BRrs', 'desert': 'BRrs', 'amber': 'BRrs', 'volcanic': 'ORrs', 'fel': 'CRrs'}
-# per biome: small plants without pathing, dotted over open ground
-PLANTS = {'temperate': ['ZPfw', 'ZPsh'], 'farmland': ['ZPfw', 'ZPsh'], 'plains': ['ZPfw', 'ZPsh'], 'autumn': ['ZPsh', 'ZPfw'],
-          'highland': ['ZPsh', 'ZPfw'], 'darkforest': ['ZPsh', 'APms'], 'nightelf': ['APms', 'ZPfw', 'ZPsh'],
-          'worldtree': ['APms', 'ZPfw'], 'jungle': ['ZPsh', 'ZPfw'], 'swamp': ['ZPsh', 'APms'], 'grotto': ['APms', 'ZPsh'],
-          'troll': ['ZPsh'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'], 'grizzly': ['ZPsh', 'ZPfw'], 'fjord': ['ZPsh', 'ZPfw'],
-          'savanna': ['ZPsh'], 'barren': ['ZPsh'], 'tundra': ['ZPsh'], 'reddesert': ['ZPsh'], 'needles': ['ZPsh'], 'crystal': ['APms', 'ZPfw']}
+# per biome: small plants without pathing, dotted over open ground: wild flowers, shrubs,
+# mushrooms and tufts of wild grass (wheat), and withered stalks (scorched wheat) on blighted land
+PLANTS = {'temperate': ['ZPfw', 'ZPsh', 'LPwh', 'APms'], 'farmland': ['ZPfw', 'ZPsh', 'LPwh'],
+          'plains': ['ZPfw', 'ZPsh', 'LPwh'], 'autumn': ['ZPsh', 'ZPfw', 'APms', 'LPwh'],
+          'highland': ['ZPsh', 'ZPfw', 'LPwh'], 'darkforest': ['ZPsh', 'APms', 'CPms'], 'nightelf': ['APms', 'ZPfw', 'ZPsh'],
+          'worldtree': ['APms', 'ZPfw', 'ZPsh'], 'jungle': ['ZPsh', 'ZPfw', 'APms'], 'swamp': ['ZPsh', 'APms', 'CPms'],
+          'grotto': ['APms', 'ZPsh', 'CPms'], 'troll': ['ZPsh', 'ZPfw'], 'fel': ['CPms', 'ZPsh', 'LPcw'],
+          'plague': ['CPms', 'LPcw'], 'grizzly': ['ZPsh', 'ZPfw', 'APms', 'LPwh'], 'fjord': ['ZPsh', 'ZPfw', 'LPwh'],
+          'savanna': ['ZPsh', 'LPwh'], 'barren': ['ZPsh'], 'tundra': ['ZPsh'],
+          'reddesert': ['ZPsh'], 'needles': ['ZPsh'], 'crystal': ['APms', 'ZPfw']}
+# per biome: the fallen log lying at the edges of its woods
+LOGS = {'temperate': 'AOlg', 'autumn': 'AOlg', 'highland': 'AOlg', 'grizzly': 'AOlg', 'fjord': 'AOlg', 'nightelf': 'AOlg',
+        'worldtree': 'AOlg', 'jungle': 'AOlg', 'darkforest': 'COlg', 'fel': 'COlg', 'plague': 'COlg', 'swamp': 'COlg'}
+# per biome: what grows on the floor of the woods, between the trunks
+FOREST_FLOOR = {'temperate': ['ZPsh', 'APms'], 'autumn': ['ZPsh', 'APms'], 'highland': ['ZPsh'], 'grizzly': ['ZPsh', 'APms'],
+                'fjord': ['ZPsh'], 'darkforest': ['APms', 'CPms', 'ZPsh'], 'nightelf': ['APms', 'ZPsh'],
+                'worldtree': ['APms', 'ZPsh'], 'crystal': ['APms'], 'jungle': ['ZPsh', 'APms', 'ZPfw'], 'swamp': ['APms', 'ZPsh'],
+                'troll': ['ZPsh'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'], 'farmland': ['ZPsh'], 'plains': ['ZPsh']}
 FACING = 270.0
 
 
@@ -190,6 +209,7 @@ def place(T, seed=7):
     species = sorted({t for b in B.values() for t, _ in b['trees']})
     nf = Field(n, n, seed + 101)
     stand = {t: nf.fbm(9, 3) for t in species}
+    grove_age = nf.fbm(12, 3)
     clear = reserved | dilate(occupied, 1) | (T.road_d < 2.2)
     ground = np.zeros((n, n), bool)
     ground[:-1, :-1] = ~T.cliff_tile & ~T.ramp_tile & T.land[:-1, :-1] & T.land[1:, 1:] & T.land[:-1, 1:] & T.land[1:, :-1]
@@ -204,11 +224,13 @@ def place(T, seed=7):
         w = np.array([wt * math.exp(3.0 * stand[t][ty, tx]) for t, wt in mix])
         tid = mix[int(np.searchsorted(np.cumsum(w), rng.random() * w.sum()))][0]
         variations, lo, hi = TREES[tid]
+        age = 1.0 + 0.5 * grove_age[ty, tx] + 0.12 * min(score[ty, tx] / 0.15, 1.0)
+        size = float(np.clip(age * math.exp(rng.normal(0.0, 0.15)), *TREE_SIZE))
         jx, jy = rng.uniform(-0.2, 0.2, 2)
         x, y = world_xy(tx + 0.5 + jx, ty + 0.5 + jy)
         trees.append(dict(id=tid, var=int(rng.integers(0, variations)), x=x, y=y,
                           z=ground_z_at(T, tx + 0.5 + jx, ty + 0.5 + jy), angle=4.712389,
-                          scale=float(rng.uniform(lo, hi)), state=2, life=100, tx=tx + 0.5, ty=ty + 0.5))
+                          scale=(lo + hi) / 2 * size, state=2, life=100, tx=tx + 0.5, ty=ty + 0.5))
     O.trees = trees
     O.doodads = O.doodads + [{k: v for k, v in t.items() if k not in ('tx', 'ty')} for t in trees]
 
@@ -238,9 +260,9 @@ def place(T, seed=7):
         return d
 
     def footprint(tx, ty, size):
-        c = abs(size)
-        x0, y0 = int(round(tx * 4 - c / 2)), int(round(ty * 4 - c / 2))
-        return y0, y0 + c, x0, x0 + c
+        w, h = size if isinstance(size, tuple) else (abs(size), abs(size))
+        x0, y0 = int(round(tx * 4 - w / 2)), int(round(ty * 4 - h / 2))
+        return y0, y0 + h, x0, x0 + w
 
     def fits(tx, ty, size, allow_reserved=False):
         y0, y1, x0, x1 = footprint(tx, ty, size)
@@ -255,7 +277,7 @@ def place(T, seed=7):
     def bake(d, tx, ty, size):
         y0, y1, x0, x1 = footprint(tx, ty, size)
         blockers.append((d, (y0, y1, x0, x1), T.pathing[y0:y1, x0:x1].copy()))
-        if size > 0:
+        if isinstance(size, tuple) or size > 0:
             T.pathing[y0:y1, x0:x1] = 0xCA
         else:
             T.pathing[y0:y1, x0:x1] |= 0x08
@@ -276,6 +298,8 @@ def place(T, seed=7):
 
     def decorate(did, tx, ty, allow_reserved=False):
         variations, size, scale, fixed = DOODADS[did]
+        if isinstance(size, tuple) and rng.random() < 0.5:
+            size, fixed = size[::-1], 0.0          # laid north-south: its pathing turns with it
         if not fits(tx, ty, size or 1, allow_reserved):
             return False
         d = add_detail(did, tx, ty, scale=scale, fixed=fixed, variations=variations)
@@ -315,16 +339,14 @@ def place(T, seed=7):
     for name, cx, cy, _ in geo.CAMPS:
         pool = RUINS.get(str(biome_of[int(cy), int(cx)]))
         if pool:
-            scatter_round(cx, cy, pool, int(rng.integers(1, 4)), 1.0, 7.0)
+            scatter_round(cx, cy, pool, int(rng.integers(0, 2)), 1.0, 7.0)
     # clutter round the towns
     for name, cx, cy, _ in geo.TOWNS:
         b = str(biome_of[int(cy), int(cx)])
         cold = B[b]['cold'] if b in B else False
         pool = VILLAGE_COLD if cold else VILLAGE_DRY if b in ('savanna', 'reddesert', 'needles', 'barren', 'desert', 'amber') else VILLAGE
-        scatter_round(cx, cy, pool, int(rng.integers(2, 5)), 2.5, 7.0, allow_reserved=True)
-        if pool is VILLAGE and rng.random() < 0.3:
-            scatter_round(cx, cy, ['LSwl'], 1, 1.5, 4.0, allow_reserved=True)
-    # boulders, bushes, stumps and the odd relic over open country
+        scatter_round(cx, cy, pool, int(rng.integers(0, 3)), 2.5, 7.0, allow_reserved=True)
+    # boulders, bushes, thorns, stumps, logs and fissures over open country
     open_country = tile_ok & ~is_tree & ~reserved & ~dilate(occupied, 1) & (T.road_d > 2.5) & ~steep & ~by_cliff
     roll = rng.random((n, n))
     for ty, tx in np.argwhere(open_country & (roll < 0.035)):
@@ -332,13 +354,19 @@ def place(T, seed=7):
         if pool:
             ids, weights = zip(*pool)
             decorate(str(rng.choice(ids, p=np.array(weights) / sum(weights))), tx + 0.5, ty + 0.5)
+    # fallen logs at the edges of the woods
+    roll = rng.random((n, n))
+    for ty, tx in np.argwhere(open_country & dilate(is_tree, 2) & ~dilate(is_tree, 1) & (roll < 0.08)):
+        log = LOGS.get(str(biome_of[ty, tx]))
+        if log:
+            decorate(log, tx + 0.5, ty + 0.5)
     # signposts where roads fork
     forks = []
     for line in T.road_lines:
         for ex, ey in (line[0], line[-1]):
             if all(math.hypot(ex - fx, ey - fy) > 5 for fx, fy in forks):
                 forks.append((ex, ey))
-    for ex, ey in forks:
+    for ex, ey in forks[::2]:
         for ox, oy in ((1.6, 1.6), (-1.6, 1.6), (1.6, -1.6), (-1.6, -1.6)):
             tx, ty = ex + ox, ey + oy
             if 0 < tx < MAP_W and 0 < ty < MAP_H and tile_ok[int(ty), int(tx)] and not occupied[int(ty), int(tx)] \
@@ -416,11 +444,32 @@ def place(T, seed=7):
         for _ in range(int(rng.integers(1, 3))):
             plant = 'ZPfw' if 'ZPfw' in plants and rng.random() < 0.5 else str(rng.choice(plants))
             add_detail(plant, tx + rng.uniform(0.1, 0.9), ty + rng.uniform(0.1, 0.9))
-    for ty, tx in np.argwhere(near_water & tile_ok & ~is_tree & ~lush & (roll > 0.90)):
-        add_detail('APct' if rng.random() < 0.6 else 'LPrs', tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
+    # under the trees: shrubs and mushrooms between the trunks
+    for ty, tx in np.argwhere(is_tree & (rng.random((n, n)) < 0.05)):
+        plants = FOREST_FLOOR.get(str(biome_of[ty, tx]))
+        if plants:
+            a, r = rng.uniform(0, 2 * math.pi), rng.uniform(0.3, 0.5)
+            add_detail(str(rng.choice(plants)), tx + 0.5 + r * math.cos(a), ty + 0.5 + r * math.sin(a))
+    # rushes and cattails on the banks, lily pads on the lakes, each in the kinds of its land
+    for ty, tx in np.argwhere(near_water & tile_ok & ~is_tree & ~lush & (roll > 0.88)):
+        reeds = RUSHES.get(str(biome_of[ty, tx]), ['APct', 'APct', 'LPrs'])
+        did = str(rng.choice(reeds))
+        add_detail(did, tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8), variations=WATER_VARIATIONS[did])
     lake_pts = T.lake & ~dilate(~T.lake, 1)
-    for ty, tx in np.argwhere(lake_pts & (roll < 0.04)):
-        add_detail('LPfp', tx + rng.uniform(-0.3, 0.3), ty + rng.uniform(-0.3, 0.3), z=-89.6)
+    for ty, tx in np.argwhere(lake_pts & (roll < 0.05)):
+        did = LILIES.get(str(biome_of[ty, tx]), 'LPfp')
+        add_detail(did, tx + rng.uniform(-0.3, 0.3), ty + rng.uniform(-0.3, 0.3), z=SEA_Z, variations=WATER_VARIATIONS[did])
+    # seaweed in the shallows off the warmer coasts, ice floes drifting in the cold seas
+    cold_zone = np.array([B[z['biome']]['cold'] for z in geo.ZONES])[T.zone_of]
+    in_map = ~dilate(T.edge, 2)
+    in_map[MAP_H:, :] = in_map[:, MAP_W:] = False
+    shallows = T.sea & dilate(T.land, 3) & ~dilate(T.land, 1) & in_map
+    open_sea = T.sea & ~dilate(T.land, 3) & in_map
+    roll = rng.random((n, n))
+    for ty, tx in np.argwhere(shallows & ~cold_zone & (roll < 0.03)):
+        add_detail(SEAWEED, tx + rng.uniform(0, 1), ty + rng.uniform(0, 1), scale=(1.5, 2.0), z=SEA_Z, variations=5)
+    for ty, tx in np.argwhere(open_sea & cold_zone & (roll > 0.994)):
+        add_detail(str(rng.choice(ICE_FLOES)), tx + rng.uniform(0, 1), ty + rng.uniform(0, 1), z=SEA_Z, variations=1)
     O.details = detail
     O.doodads = O.doodads + detail
 

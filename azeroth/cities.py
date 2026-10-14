@@ -34,21 +34,21 @@ CAMP_PROPS = [('NOfg', (4, 4), 1), ('BOtt', (2, 2), 2), ('OOst', (2, 2), 2), ('L
 CITY_STYLES = {
     'human': dict(wall=STONE, post=('YSco', (4, 4)), houses=CITY_HOUSES + VILLAGE_HOUSES[:2],
                   monuments=[('YOfn', (8, 8), 1), ('YOks', (8, 8), 1), ('YOst', (8, 8), 1)], light=('YOlp', (2, 2)),
-                  houses_n=28),
+                  houses_n=15),
     'elf': dict(wall=STONE, post=('YSco', (4, 4)), houses=ELVEN_HOUSES,
-                monuments=[('YOfn', (8, 8), 1), ('YOst', (8, 8), 1)], light=('YOlp', (2, 2)), houses_n=24),
+                monuments=[('YOfn', (8, 8), 1), ('YOst', (8, 8), 1)], light=('YOlp', (2, 2)), houses_n=13),
     'orc': dict(wall=RUINS, post=('LOss', (2, 2)), houses=CAMP_PROPS,
-                monuments=[('BOtt', (2, 2), 2), ('NOfg', (4, 4), 1)], light=('LOtz', None), houses_n=16),
+                monuments=[('BOtt', (2, 2), 2), ('NOfg', (4, 4), 1)], light=('LOtz', None), houses_n=9),
     'tauren': dict(palisade=True, houses=CAMP_PROPS[:3] + CAMP_PROPS[4:],
-                   monuments=[('BOtt', (2, 2), 2)], light=('LOtz', None), houses_n=12),
+                   monuments=[('BOtt', (2, 2), 2)], light=('LOtz', None), houses_n=7),
     'undead': dict(wall=STONE, post=('LObr', (2, 2)), ruined=0.3,       # Lordaeron's own walls, left broken
                    houses=[('YSr3', (12, 12), 1), ('YSr4', (12, 12), 1), ('YSr5', (12, 12), 1), ('YSr9', (12, 12), 1),
                            ('YSra', (12, 12), 1), ('YSrb', (12, 12), 1), ('YSrc', (16, 16), 1), ('YSre', (16, 16), 1)],
-                   monuments=[('YScr', (20, 20), 1)], light=('LObr', (2, 2)), houses_n=18),
+                   monuments=[('YScr', (20, 20), 1)], light=('LObr', (2, 2)), houses_n=10),
     'icecrown': dict(wall=ICE, post=('IOpr', (4, 4)),
                      houses=[('IOob', (4, 4), 3), ('IOpr', (4, 4), 3)],          # one crypt only, by the square
-                     monuments=[('NSct', (8, 8), 1)], light=('IOst', (2, 2)), houses_n=12),
-    'nightelf': dict(houses=ELVEN_HOUSES, monuments=[('AOgs', (8, 8), 1), ('AOks', (8, 8), 1)], light=None, houses_n=20),
+                     monuments=[('NSct', (8, 8), 1)], light=('IOst', (2, 2)), houses_n=7),
+    'nightelf': dict(houses=ELVEN_HOUSES, monuments=[('AOgs', (8, 8), 1), ('AOks', (8, 8), 1)], light=None, houses_n=11),
 }
 CAPITAL_STYLE = {'Stormwind': 'human', 'Orgrimmar': 'orc', 'Undercity': 'undead', 'Darnassus': 'nightelf',
                  'Ironforge': 'human', 'Thunder Bluff': 'tauren', 'Icecrown Citadel': 'icecrown',
@@ -177,13 +177,14 @@ def plan(T, rng, tile_ok, occupied, starts):
                 for s in (-1, 1):
                     if built[k] and 0 <= k + s < len(centres) and gateway[k + s]:
                         posts.append((x + s * 176, y) if along_x else (x, y + s * 176))
-        for x, y in posts:
+        for k, (x, y) in enumerate(posts):
             if post:
                 box = cell_box(x, y, *post[1])
                 if flat_free(box, overlap=True):
                     parts.append(piece(post[0], x, y, FACING_DEFAULT, box=box))
                     claim(box)
-            light(lamp, x + 96, y + 96)
+            if k >= 4:                                 # lights at the gateways, not at the corners
+                light(lamp, x + 96, y + 96)
 
     def perimeter(mx, my, half, step):
         """Points every `step` units round a square of half-width `half` tiles, with along-x flags."""
@@ -259,8 +260,8 @@ def plan(T, rng, tile_ok, occupied, starts):
                 if place_thing(spec, LEFT + (mx + rad * math.cos(a)) * 128, BOTTOM + (my + rad * math.sin(a)) * 128):
                     break
         houses(mx, my, 6.5, half - 2.0, style['houses'], style['houses_n'])
-        for k in range(10):
-            a = 2 * math.pi * k / 10 + rng.uniform(-0.2, 0.2)
+        for k in range(6):
+            a = 2 * math.pi * k / 6 + rng.uniform(-0.2, 0.2)
             light(style['light'], LEFT + (mx + 6.2 * math.cos(a)) * 128, BOTTOM + (my + 6.2 * math.sin(a)) * 128)
 
     # ---- towns ---------------------------------------------------------------------------------
@@ -284,9 +285,9 @@ def plan(T, rng, tile_ok, occupied, starts):
         elif alone and style.get('fence'):
             fence(cx, cy, 7.5, style['fence'])
         outer = TOWN_WALL_SIDE * SEGMENT / 256.0 - 1.2 if walled else 7.5
-        houses(cx, cy, 2.0, outer, style['houses'], int(rng.integers(5, 9)))
-        for k in range(4):
-            a = 2 * math.pi * (k + 0.5) / 4
+        houses(cx, cy, 2.0, outer, style['houses'], int(rng.integers(2, 5)))
+        for k in range(2):
+            a = 2 * math.pi * (k + 0.25) / 2
             light(style['light'], LEFT + (cx + 2.6 * math.cos(a)) * 128, BOTTOM + (cy + 2.6 * math.sin(a)) * 128)
     return walls, parts
 
