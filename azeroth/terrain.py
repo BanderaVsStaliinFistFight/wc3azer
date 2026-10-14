@@ -428,7 +428,7 @@ def build(seed=1):
     beach = land & T.beach & (dc < 1.6 + noises[2]) & (height < 45) & ~lake_adjacent(lake | river)
     tex = np.where(beach, beach_tile, tex)
     tex = np.where(water, per_zone('seabed'), tex)
-    tex = np.where(lake | river, np.where(cold, TILE['Nice'], TILE['Ldrt']), tex)
+    tex = np.where(lake | river, TILE['Ldrt'], tex)
     road = land & (road_d < 1.05 + noises[2] * 0.3)
     desertish = np.isin(biome_arr, ['savanna', 'desert', 'reddesert', 'needles', 'volcanic', 'amber'])
     tex = np.where(road, np.where(desertish, TILE['Ldrt'], np.where(cold, TILE['Wsng'], TILE['Ldrt'])), tex)
@@ -472,13 +472,12 @@ def build(seed=1):
     T.cliff_type = cliff_type
     T.tex = tex
 
-    # Blight lies in patches on the low ground (thinner on the Icecrown glacier) and stops short of
-    # cliffs and mountains: beside a cliff the game always draws the cliff's own ground, which
-    # would stand out against the dark blight as a pale outline.
+    # Blight lies on the low ground and stops short of cliffs and mountains: beside a cliff the game
+    # always draws the cliff's own ground, which would stand out against the dark blight.
     blight_zone = np.array([B[b]['blight'] for b in biome_names])[zone_of]
     clear_of_cliffs = distance_field(shown, 6) > 3.0 + noises[1] * 1.5
     T.blight = (blight_zone & land & ~water & clear_of_cliffs & (T.relief < 260 + noises[2] * 60)
-                & (noises[0] > np.where(biome_arr == 'icecrown', 0.15, -0.55)))
+                & (noises[0] > -0.55))
 
     # ---- 8. flags, edges, variations ----------------------------------------------
     flags = np.zeros((n, n), dtype=np.int32)
