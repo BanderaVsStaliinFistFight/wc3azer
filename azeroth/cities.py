@@ -110,6 +110,12 @@ def plan(T, rng, tile_ok, occupied, starts):
         z = T.ground_z[ty.start:ty.stop + 1, tx.start:tx.stop + 1]
         return z.max() - z.min() < 90
 
+    def off_road(box):
+        """True if no part of the footprint lies on a road's surface."""
+        y0, y1, x0, x1 = box
+        sub = T.road_d[max(y0 // 4, 0):(y1 - 1) // 4 + 2, max(x0 // 4, 0):(x1 - 1) // 4 + 2]
+        return sub.size == 0 or sub.min() >= 0.9
+
     def claim(box, margin=0):
         taken[tiles(box, margin)] = True
 
@@ -129,7 +135,7 @@ def plan(T, rng, tile_ok, occupied, starts):
         fixed = did[:2] in ('YS', 'LS') or did in ('NSct',)
         facing = FACING_DEFAULT if fixed else float(rng.uniform(0, 2 * math.pi))
         box = cell_box(x, y, w, h)
-        if road_at(x, y) < road_clear + max(w, h) / 8.0 or not flat_free(box):
+        if road_at(x, y) < road_clear + max(w, h) / 8.0 or not off_road(box) or not flat_free(box):
             return None
         p = piece(did, x, y, facing, var=int(rng.integers(0, variations)), box=box)
         claim(box, margin)
@@ -140,9 +146,9 @@ def plan(T, rng, tile_ok, occupied, starts):
         if not spec:
             return
         did, size = spec
-        if size is None:                       # lights without pathing (torches) stand anywhere dry
+        if size is None:                       # lights without pathing (torches) stand anywhere dry, off the road
             tx, ty = int((x - LEFT) / 128.0), int((y - BOTTOM) / 128.0)
-            if 0 <= tx < MAP_W and 0 <= ty < MAP_H and tile_ok[ty, tx]:
+            if 0 <= tx < MAP_W and 0 <= ty < MAP_H and tile_ok[ty, tx] and road_at(x, y) >= 1.3:
                 parts.append(piece(did, x, y, float(rng.uniform(0, 2 * math.pi))))
             return
         place_thing((did, size, 1), x, y, margin=0, road_clear=1.0)
@@ -183,7 +189,7 @@ def plan(T, rng, tile_ok, occupied, starts):
                        for x, y in centres]
             if not any(gateway):
                 gateway[len(centres) // 2] = True
-            built = [not g and rng.random() >= ruined and flat_free(b) for g, b in zip(gateway, boxes)]
+            built = [not g and rng.random() >= ruined and flat_free(b) and off_road(b) for g, b in zip(gateway, boxes)]
             for (x, y), box, ok in zip(centres, boxes, built):
                 if ok:
                     walls.append(piece(did, x, y, FACING_DEFAULT, var=int(rng.integers(0, 5)), box=box, life=100,
@@ -196,7 +202,7 @@ def plan(T, rng, tile_ok, occupied, starts):
         for k, (x, y) in enumerate(posts):
             if post:
                 box = cell_box(x, y, *post[1])
-                if flat_free(box, overlap=True):
+                if flat_free(box, overlap=True) and off_road(box):
                     parts.append(piece(post[0], x, y, FACING_DEFAULT, box=box))
                     claim(box)
             if k >= 4:                                 # lights at the gateways, not at the corners
@@ -218,7 +224,7 @@ def plan(T, rng, tile_ok, occupied, starts):
             if road_at(x, y) < 2.6 or rng.random() < 0.12:
                 continue
             box = cell_box(x, y, 4, 4)
-            if flat_free(box):
+            if flat_free(box) and off_road(box):
                 walls.append(piece('LTba', x, y, float(rng.uniform(0, 2 * math.pi)), var=int(rng.integers(0, 2)),
                                    box=box, life=100, kind='wall'))
                 claim(box)
@@ -230,7 +236,7 @@ def plan(T, rng, tile_ok, occupied, starts):
             if road_at(x, y) < 2.6 or rng.random() < 0.3:
                 continue
             box = cell_box(x, y, fw, fh) if along_x else cell_box(x, y, fh, fw)
-            if flat_free(box):
+            if flat_free(box) and off_road(box):
                 parts.append(piece(did, x, y, FACING_DEFAULT if along_x else 0.0, scale=1.2, box=box))
                 claim(box)
 

@@ -1,12 +1,13 @@
 """Places trees, doodads, landmarks, start locations, waygates and critters."""
+import collections
 import math
 
 import numpy as np
 
 from . import cities
 from . import geography as geo
-from .biomes import B
-from .decor import (BATS, BIRDS, CLUTTER, DOODADS, FLIES, HOUSE_KIND, ICE_FLOES, KIND_OF, LILIES, RUINS, RUSHES, SCATTER,
+from .biomes import B, TILE
+from .decor import (BATS, BIRDS, CLUTTER, DOODADS, FLIES, HOUSE_KIND, ICE_FLOES, KIND_OF, KINDS, LILIES, RUINS, RUSHES, SCATTER,
                     SEAWEED, SHELLS, SIGNPOST, WATER_VARIATIONS)
 from .raster import Field, dilate, label_regions
 from .terrain import BOTTOM, LEFT, MAP_W, MAP_H, SEA_Z, ground_z_at, world_xy
@@ -118,12 +119,26 @@ def place(T, seed=7):
         O.units.append(u)
         return u
 
-    # ---- landmark doodads first so nothing is built on top of them --------------
+    def off_the_road(tx, ty, clear):
+        """The nearest point to (tx, ty) on dry land at least `clear` tiles from any road."""
+        for rad in np.arange(0, 8.01, 0.5):
+            for k in range(max(1, int(rad * 6))):
+                a = 2 * math.pi * k / max(1, int(rad * 6))
+                x, y = tx + rad * math.cos(a), ty + rad * math.sin(a)
+                ix, iy = int(round(x)), int(round(y))
+                if 0 < ix < MAP_W and 0 < iy < MAP_H and T.land[iy, ix] and not T.water_flag[iy, ix] \
+                        and T.road_d[iy, ix] >= clear:
+                    return x, y
+        return tx, ty
+
+    # ---- landmark doodads first so nothing is built on top of them; none stands on a road ----
     for did, tx, ty, scale, ang in geo.LANDMARKS:
+        tx, ty = off_the_road(tx, ty, 3.0)
         x, y = world_xy(tx, ty)
         O.doodads.append(dict(id=did, var=0, x=x, y=y, z=ground_z_at(T, tx, ty), angle=ang, scale=scale, state=2, life=255))
         mark(reserved, tx, ty, 5); mark(occupied, tx, ty, 4)
     for did, tx, ty, scale in geo.DESTRUCTABLE_LANDMARKS:
+        tx, ty = off_the_road(tx, ty, 2.5 + 2.0 * scale)
         x, y = world_xy(tx, ty)
         O.doodads.append(dict(id=did, var=0, x=x, y=y, z=ground_z_at(T, tx, ty), angle=4.712389, scale=scale, state=2, life=100))
         mark(reserved, tx, ty, 6); mark(occupied, tx, ty, 5)
@@ -149,10 +164,17 @@ def place(T, seed=7):
     # ---- waygates (portal network) -----------------------------------------------
     region_index = 0
     portals = []
+    road_ends = [p for line in T.road_lines for p in (line[0], line[-1])]
+
+    def gate_spot(x, y):
+        """A waygate stands at the end of the road leading to it, or beside a road, never across one."""
+        return far_from_capitals(x, y, 17) and (T.road_d[int(y), int(x)] >= 2.2 or
+                                                 min(math.hypot(x - ex, y - ey) for ex, ey in road_ends) < 3)
+
     for a, b in geo.PORTALS:
         spots = []
         for name, tx, ty in (a, b):
-            spot = find_spot(tx, ty, 2.0, max_search=24, accept=lambda x, y: far_from_capitals(x, y, 17))
+            spot = find_spot(tx, ty, 2.0, max_search=24, accept=gate_spot)
             assert spot, 'no room for waygate %s' % name
             spots.append((name,) + spot)
             mark(occupied, spot[0], spot[1], 2.5); mark(reserved, spot[0], spot[1], 4)
@@ -322,10 +344,13 @@ def place(T, seed=7):
     all_plants = sorted({p for ps in list(PLANTS.values()) + list(FOREST_FLOOR.values()) for p in ps})
     plant_stand = {p: df.fbm(5, 2) for p in all_plants}      # each patch mostly of one kind
 
-    def small_ok(tx, ty):
-        """Room for a stone or a plant: dry, open ground off the road."""
+    snow_ground = T.tex == TILE['Wsnw']
+
+    def small_ok(tx, ty, plant=False):
+        """Room for a stone or a plant: dry, open ground off the road (and for a plant, not snow)."""
         ix, iy = int(tx), int(ty)
-        return 0 < ix < MAP_W and 0 < iy < MAP_H and tile_ok[iy, ix] and T.road_d[iy, ix] > 1.6
+        return (0 < ix < MAP_W and 0 < iy < MAP_H and tile_ok[iy, ix] and T.road_d[iy, ix] > 1.6
+                and not (plant and snow_ground[iy:iy + 2, ix:ix + 2].sum() >= 2))
 
     def around(did, tx, ty, count, r0, r1, scale, downhill=False, variations=None, fixed=None):
         """`count` pieces of `did` about (tx, ty); downhill ones spill down the slope like scree."""
@@ -336,7 +361,7 @@ def place(T, seed=7):
             a = rng.uniform(0, 2 * math.pi) if fall is None else fall + rng.normal(0, 0.6)
             r = rng.uniform(r0, r1)
             px, py = tx + r * math.cos(a), ty + r * math.sin(a)
-            if small_ok(px, py):
+            if small_ok(px, py, plant=did not in KIND_OF):
                 add_detail(did, px, py, scale=scale, variations=variations, fixed=fixed)
 
     def stones(tx, ty, count, r0=0.45, r1=0.95, downhill=True):
@@ -361,7 +386,7 @@ def place(T, seed=7):
         if p:
             for _ in range(count):
                 px, py = tx + rng.normal(0, spread), ty + rng.normal(0, spread)
-                if small_ok(px, py):
+                if small_ok(px, py, plant=True):
                     add_detail(p, px, py)
 
     def mushrooms_for(b):
@@ -529,9 +554,7 @@ def place(T, seed=7):
                 facing = 4.712389 if rock == 'ORrk' else None
                 d = add_detail(rock, tx + 0.5, ty + 0.5, scale=(0.45, 0.75), fixed=facing)
                 bake(d, tx + 0.5, ty + 0.5, 4)
-                for _ in range(int(rng.integers(0, 2))):
-                    add_detail(rock, tx + 0.5 + rng.uniform(-0.35, 0.35), ty + 0.5 + rng.uniform(-0.35, 0.35),
-                               scale=(0.22, 0.38), fixed=facing)
+                around(rock, tx + 0.5, ty + 0.5, int(rng.integers(0, 2)), 0.45, 0.75, (0.22, 0.38), fixed=facing)
                 placed = True
                 break
             s_at += (rng.uniform(2.2, 3.6) if rough else rng.uniform(3.0, 5.0)) if placed else 1.0
@@ -581,7 +604,9 @@ def place(T, seed=7):
         shroom, k0 = mushrooms_for(str(biome_of[ty, tx])), rng.uniform(0, 2 * math.pi)
         for k in range(7 if shroom else 0):
             a = k0 + 2 * math.pi * k / 7
-            add_detail(shroom, tx + 0.5 + 0.8 * math.cos(a), ty + 0.5 + 0.8 * math.sin(a), scale=(0.7, 0.9))
+            px, py = tx + 0.5 + 0.8 * math.cos(a), ty + 0.5 + 0.8 * math.sin(a)
+            if small_ok(px, py, plant=True):
+                add_detail(shroom, px, py, scale=(0.7, 0.9))
     # Rushes and cattails grow in beds along the gentle banks, lily pads float in rafts in the
     # sheltered water near the shore, each in the kinds of its land.
     bank = dilate(is_water, 1) & ~is_water & tile_ok & ~is_tree & ~lush & ~steep
@@ -590,12 +615,18 @@ def place(T, seed=7):
         reeds = RUSHES.get(str(biome_of[ty, tx]), ['APct', 'APct', 'LPrs'])
         did = reeds[int((beds[ty, tx] * 37) % len(reeds))]          # one kind to a bed
         around(did, tx + 0.5, ty + 0.5, int(rng.integers(1, 3)), 0.0, 0.5, (0.8, 1.2), variations=WATER_VARIATIONS[did])
+    def afloat(px, py):
+        """Open water all round the point, so nothing floating sits half on the shore."""
+        ix, iy = int(px), int(py)
+        return 0 < ix < MAP_W and 0 < iy < MAP_H and bool(T.water_flag[iy:iy + 2, ix:ix + 2].all())
+
     rafts = T.lake & dilate(T.land, 2) & (beds > 0.25)
     for ty, tx in np.argwhere(rafts & (roll < 0.08)):
         did = LILIES.get(str(biome_of[ty, tx]), 'LPfp')
         for _ in range(int(rng.integers(2, 5))):
-            add_detail(did, tx + 0.5 + rng.normal(0, 0.3), ty + 0.5 + rng.normal(0, 0.3), z=SEA_Z,
-                       variations=WATER_VARIATIONS[did])
+            px, py = tx + 0.5 + rng.normal(0, 0.3), ty + 0.5 + rng.normal(0, 0.3)
+            if afloat(px, py):
+                add_detail(did, px, py, z=SEA_Z, variations=WATER_VARIATIONS[did])
     # seaweed in beds in the shallows off the warmer coasts; ice floes drifting in bands in the
     # cold seas, thickest near the land
     cold_zone = np.array([B[z['biome']]['cold'] for z in geo.ZONES])[T.zone_of]
@@ -606,12 +637,56 @@ def place(T, seed=7):
     roll = rng.random((n, n))
     for ty, tx in np.argwhere(shallows & ~cold_zone & (beds > 0.2) & (roll < 0.05)):
         for _ in range(int(rng.integers(1, 4))):
-            add_detail(SEAWEED, tx + 0.5 + rng.normal(0, 0.4), ty + 0.5 + rng.normal(0, 0.4), scale=(1.5, 2.0), z=SEA_Z,
-                       variations=5)
+            px, py = tx + 0.5 + rng.normal(0, 0.4), ty + 0.5 + rng.normal(0, 0.4)
+            if afloat(px, py):
+                add_detail(SEAWEED, px, py, scale=(1.5, 2.0), z=SEA_Z, variations=5)
     for ty, tx in np.argwhere(drift & cold_zone & (meadow > 0.15) & (roll > 0.985)):
-        add_detail(str(rng.choice(ICE_FLOES)), tx + rng.uniform(0, 1), ty + rng.uniform(0, 1), z=SEA_Z, variations=1)
+        px, py = tx + rng.uniform(0, 1), ty + rng.uniform(0, 1)
+        if afloat(px, py):
+            add_detail(str(rng.choice(ICE_FLOES)), px, py, z=SEA_Z, variations=1)
+    # A last look over the small loose pieces (none of them has pathing): a pebble that ended up
+    # half inside a boulder, a plant or stone dropped on top of another of its kind, or a water
+    # plant over a ford is taken away.
+    rock_ids = KINDS['rock'] | {r for r, _ in ROCKS.values()}
+    AMBIENT = {BIRDS, BATS, FLIES}
+    boulders = collections.defaultdict(list)
+    for d in detail:
+        if d['id'] in rock_ids and d['scale'] >= 0.42:
+            boulders[(int((d['x'] - LEFT) / 128), int((d['y'] - BOTTOM) / 128))].append(d)
+    loose, keep = collections.defaultdict(list), []
+    for d in detail:
+        tx, ty = (d['x'] - LEFT) / 128.0, (d['y'] - BOTTOM) / 128.0
+        if d['id'] in rock_ids and d['scale'] < 0.42 and any(
+                math.hypot(tx - (b['x'] - LEFT) / 128.0, ty - (b['y'] - BOTTOM) / 128.0) < 0.45
+                for gx in (int(tx) - 1, int(tx), int(tx) + 1) for gy in (int(ty) - 1, int(ty), int(ty) + 1)
+                for b in boulders.get((gx, gy), [])):
+            continue
+        if d['id'] in WATER_VARIATIONS and d['z'] == SEA_Z and T.road_d[min(int(ty), n - 1), min(int(tx), n - 1)] < 1.5:
+            continue
+        if d['id'] not in AMBIENT and (d['id'] in rock_ids and d['scale'] < 0.42 or not DOODADS.get(d['id'], (0, 0))[1]):
+            cell = (int(tx), int(ty))
+            if any(o['id'] == d['id'] and math.hypot(tx - ox, ty - oy) < (0.2 if d['id'] in rock_ids else 0.12)
+                   for gx in (cell[0] - 1, cell[0], cell[0] + 1) for gy in (cell[1] - 1, cell[1], cell[1] + 1)
+                   for o, ox, oy in loose.get((gx, gy), [])):
+                continue
+            loose[cell].append((d, tx, ty))
+        keep.append(d)
+    detail = keep
     O.details = detail
     O.doodads = O.doodads + detail
+
+    # wildlife caught on ground a decoration has since taken moves to the nearest open ground
+    for u in [u for u in O.units if u['kind'] == 'critter']:
+        if not T.pathing[int(u['ty'] * 4), int(u['tx'] * 4)] & 0x02:
+            continue
+        free = [(u['tx'] + r * math.cos(a), u['ty'] + r * math.sin(a)) for r in (0.5, 1.0, 1.5, 2.0)
+                for a in np.linspace(0, 2 * math.pi, 8, endpoint=False)]
+        free = [(x, y) for x, y in free if 0 < x < MAP_W and 0 < y < MAP_H and tile_ok[int(y), int(x)]
+                and not T.pathing[int(y * 4), int(x * 4)] & 0x02]
+        if free:
+            u['tx'], u['ty'] = free[0]
+        else:
+            O.units.remove(u)
 
     # world coordinates and heights for every unit
     for u in O.units:

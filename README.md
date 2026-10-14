@@ -135,6 +135,7 @@ python3 -m unittest discover tests
 - The trigger files follow the World Editor's layout for a map with no triggers: the Initialization category, with nothing in it.
 - A test confirms there are no gold mines, neutral hostile units, item drops or melee calls.
 - Flood-fill checks confirm that every start location and waygate can be reached on foot or through waygates, and so can about 99% of all walkable land. Two camp names in Northrend sit just offshore; the coast next to them is reachable. Raised zones are entered by their ramps, and the massifs' cores are impassable. With every city wall and palisade in place, no start location is shut in.
+- A placement audit of every object finds nothing standing in water or on a cliff edge, no plant on snow, no lily pad, seaweed or ice floe half on the shore, no building, wall, fence, post or torch on a road, no landmark with a road through it, no waygate across a road (those on a road stand at its end), no pebble buried in a boulder or stacked on another, and no wildlife stuck on blocked ground. A last sweep over the small loose pieces takes away any that end up that way.
 
 **It has not been loaded in the actual game client yet.** If something looks off in game, please open an issue.
 
