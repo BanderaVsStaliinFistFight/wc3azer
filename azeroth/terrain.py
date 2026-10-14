@@ -1,8 +1,10 @@
 """Rasterises the geography into Warcraft III terrain data (480 x 480 tiles)."""
+import math
+
 import numpy as np
 
 from . import geography as geo
-from .biomes import B, CLIFF_SNOW, GROUND_TILES, TILE
+from .biomes import B, CLIFF_DIRT, CLIFF_SNOW, GROUND_TILES, TILE
 from .raster import (Field, blur, dilate, distance_field, erode, flow_accumulation, label_regions, meander, shift,
                      smoothstep, NEIGHBOURS8)
 
@@ -24,6 +26,122 @@ VARIATION_WEIGHTS = [605, 76, 27, 3, 663, 80, 33, 2, 613, 70, 28, 13, 599, 82, 2
 
 class Terrain:
     pass
+
+
+def nearest_on(line, p):
+    """Nearest point of a polyline to p, and its distance."""
+    a, b = np.asarray(line[:-1], float), np.asarray(line[1:], float)
+    d = b - a
+    t = np.clip(((p[0] - a[:, 0]) * d[:, 0] + (p[1] - a[:, 1]) * d[:, 1]) / np.maximum((d ** 2).sum(1), 1e-9), 0, 1)
+    q = a + d * t[:, None]
+    dist = np.hypot(q[:, 0] - p[0], q[:, 1] - p[1])
+    k = int(dist.argmin())
+    return (float(q[k, 0]), float(q[k, 1])), float(dist[k])
+
+
+def road_networks(lines, skip):
+    """Group the roads (by index) into networks of roads that meet, leaving out those skip(line) names."""
+    idx = [i for i, l in enumerate(lines) if len(l) > 1 and not skip(l)]
+    box = {i: (min(p[0] for p in lines[i]) - 1, min(p[1] for p in lines[i]) - 1,
+               max(p[0] for p in lines[i]) + 1, max(p[1] for p in lines[i]) + 1) for i in idx}
+    parent = {i: i for i in idx}
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    for k, a in enumerate(idx):
+        for b in idx[k + 1:]:
+            (ax0, ay0, ax1, ay1), (bx0, by0, bx1, by1) = box[a], box[b]
+            if ax0 > bx1 or bx0 > ax1 or ay0 > by1 or by0 > ay1 or find(a) == find(b):
+                continue
+            la, lb = lines[a], lines[b]
+            if min(nearest_on(lb, la[0])[1], nearest_on(lb, la[-1])[1], nearest_on(la, lb[0])[1], nearest_on(la, lb[-1])[1]) < 1.0:
+                parent[find(a)] = find(b)
+    nets = {}
+    for i in idx:
+        nets.setdefault(find(i), []).append(i)
+    return list(nets.values())
+
+
+def split_at_sea(lines, open_sea, max_run=3):
+    """Roads stop at the shore: wherever a road would run on over more than `max_run` points of open
+    sea it is cut there, and each side ends at its own shore. (Shorter clips across a cove are
+    forded.)"""
+    out = []
+    for line in lines:
+        wet = [bool(open_sea[min(max(int(round(y)), 0), open_sea.shape[0] - 1),
+                             min(max(int(round(x)), 0), open_sea.shape[1] - 1)]) for x, y in line]
+        piece, k = [], 0
+        while k < len(line):
+            run = 0
+            while k + run < len(line) and wet[k + run]:
+                run += 1
+            if run > max_run:
+                if len(piece) > 1:
+                    out.append(piece)
+                piece, k = [], k + run
+            else:
+                piece += line[k:k + max(run, 1)]
+                k += max(run, 1)
+        if len(piece) > 1:
+            out.append(piece)
+    return out
+
+
+def link_networks(lines, ground, skip, rng, reach=16.0):
+    """Join road networks left apart to their nearest neighbour by a short new road from a dead end,
+    wherever one can be laid over open ground clear of the great ranges (so not across the sea)."""
+    lines = list(lines)
+
+    while True:
+        nets = road_networks(lines, skip)
+        best = None
+        for a, net in enumerate(nets):
+            for p in [lines[i][k] for i in net for k in (0, -1)]:
+                for b, other in enumerate(nets):
+                    if b == a:
+                        continue
+                    for j in other:
+                        q, d = nearest_on(lines[j], p)
+                        if d <= reach and (best is None or d < best[0]) and overland(ground, p, q) \
+                                and not geo._near_massif(p, q):
+                            best = (d, p, q)
+        if best is None:
+            break
+        lines.append(meander([best[1], best[2]], 0.8, 17, rng))
+    # a stray stub of road a few tiles long, meeting no other (a track from an offshore camp down
+    # to its shore), is left out
+    nets = road_networks(lines, skip)
+    stubs = {net[0] for net in nets if len(net) == 1 and
+             sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(lines[net[0]], lines[net[0]][1:])) < 6}
+    return [l for i, l in enumerate(lines) if i not in stubs]
+
+
+def overland(ground, p, q):
+    """True if the straight way from p to q stays on `ground`."""
+    k = max(2, int(math.hypot(q[0] - p[0], q[1] - p[1]) * 2))
+    return all(ground[int(round(p[1] + (q[1] - p[1]) * t / k)), int(round(p[0] + (q[0] - p[0]) * t / k))]
+               for t in range(k + 1))
+
+
+def join_roads(lines, keep, ground, reach=3.5):
+    """Carry each road's end the last stretch onto the road it was laid to meet, over the ground:
+    once the roads wander, a road no longer passes exactly through the point where another was set
+    to join it. Lines for which keep(line) is true (closed rings, corridors inside the instances)
+    are left be."""
+    out = [list(l) for l in lines]
+    for i, line in enumerate(out):
+        if keep(line) or len(line) < 2:
+            continue
+        for at_start in (True, False):
+            end = line[0] if at_start else line[-1]
+            best = min((nearest_on(o, end) for j, o in enumerate(out) if j != i and len(o) > 1), key=lambda r: r[1])
+            if 0.3 < best[1] < reach and overland(ground, end, best[0]):
+                line.insert(0, best[0]) if at_start else line.append(best[0])
+    return [[tuple(p) for p in l] for l in out]
 
 
 def tidy_paint(tex, free, rounds=2):
@@ -146,6 +264,9 @@ def build(seed=1):
 
     T.road_lines = [line if line[0] == line[-1] or in_instance(line[0]) else meander(line, 1.1, 17, wander)
                     for line in geo.ROADS]
+    T.road_lines = split_at_sea(T.road_lines, ~(land | lake | river) & ~shallow_strait)
+    T.road_lines = join_roads(T.road_lines, lambda l: l[0] == l[-1] or in_instance(l[0]), land | lake | river | shallow_strait)
+    T.road_lines = link_networks(T.road_lines, land | lake | river, lambda l: in_instance(l[0]), wander)
     road_d = np.full((n, n), 1e9)
     for line in T.road_lines:
         road_d = np.minimum(road_d, f.segment_distance(line, reach=30))
@@ -296,6 +417,9 @@ def build(seed=1):
     z = np.where(river, -26.0, z)
     strait = shallow_strait & water
     z = np.where(strait, np.maximum(z, -32.0), z)
+    # fords: wherever a road crosses a river, a lake or a strait, the bed rises to wading depth
+    ford = water & (road_d < 1.8)
+    z = np.where(ford, np.maximum(z, -28.0), z)
     # The Maelstrom: spiral arms of shallows wheeling round a bottomless eye
     mx, my = geo.MAELSTROM
     R = geo.MAELSTROM_RADIUS
@@ -459,7 +583,7 @@ def build(seed=1):
     # earthen tracks elsewhere, with ruts of darker earth, and packed snow in the cold.
     paving = per_zone('road')
     cobbled = paving == TILE['Vcbp']
-    road = land & (road_d < np.where(cobbled, 1.3, 1.05) + noises[2] * 0.3)
+    road = (land | ford) & (road_d < np.where(cobbled, 1.3, 1.05) + noises[2] * 0.3)    # seen through the water at the fords
     desertish = np.isin(biome_arr, ['savanna', 'desert', 'reddesert', 'needles', 'volcanic', 'amber'])
     tex = np.where(road, np.where(cold & ~cobbled, TILE['Wsng'], paving), tex)
     tex = np.where(road & cobbled & (noises[1] > 0.4), TILE['Ldrt'], tex)
@@ -492,6 +616,9 @@ def build(seed=1):
     votes = np.stack([blur((bare & ~icy).astype(float), 2), blur((snowy | (bare & icy)).astype(float), 2),
                       blur(grassy.astype(float), 2)])
     votes += 0.03 * (np.arange(3)[:, None, None] == zone_cliff[None])
+    # where a road climbs through a ramp the ramp shows the cliff's own ground, so outside the snow
+    # those cliffs are dirt ones and the road runs on unbroken
+    votes[CLIFF_DIRT] += np.where((road_d < 2.2) & ~cold, 2.0, 0.0)
     cliff_type = votes.argmax(0).astype(np.int32)                 # CLIFF_DIRT, CLIFF_SNOW, CLIFF_GRASS
     cliff_ground = np.array([TILE['Ldrt'], TILE['Wsnw'], TILE['Lgrs']])[cliff_type]
     tex = np.where(shown, cliff_ground, tex)

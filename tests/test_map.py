@@ -175,6 +175,20 @@ class MapTest(unittest.TestCase):
                 self.assertGreaterEqual(b, 0)
                 self.assertGreater(after_sizes[b], 0.9 * before_sizes[a], 'a start location walled in')
 
+    def test_roads_connected(self):
+        """The roads form one network on each landmass (the instance corridors aside), and wherever a
+        road goes through water it is a ford shallow enough to wade."""
+        from azeroth import terrain, geography as geo
+        T = terrain.build(1)
+
+        def in_instance(line):
+            return any(x0 <= line[0][0] <= x1 and y0 <= line[0][1] <= y1 for _, (x0, y0, x1, y1), _, _, _ in geo.INSTANCES)
+
+        nets = terrain.road_networks(T.road_lines, in_instance)
+        self.assertLessEqual(len(nets), 4, 'Kalimdor, the Eastern Kingdoms, Northrend and Kul Tiras')
+        wet = (T.road_d < 0.8) & T.water_flag
+        self.assertEqual(int((wet & (terrain.SEA_Z - T.ground_z > terrain.DEEP_WATER)).sum()), 0)
+
     def test_no_melee_content(self):
         """Terrain only: no gold mines, creeps, shops or item drops, and no melee setup."""
         _, _, units = read_units(self.files['war3mapUnits.doo'])
