@@ -55,7 +55,7 @@ The terrain follows the style of the big hand-made WoW maps for Warcraft III, su
   - Birds circle over woods and shores, bats over the dark places, and flies over the swamps.
 
   Solid pieces are written into the pathing map, and none of them is allowed to cut off a path.
-- **Instances.** Each dungeon has a vestibule round its waygate, a pillared hall, and a raised dais at the far end, reached up a ramp. Floors are themed: lava cracks in Molten Core and Onyxia's Lair, sand and brick in the desert temples, brick and poison in the crypts, ice in the Northrend raids, and moss in the caverns.
+- **Instances.** Each dungeon has a vestibule round its waygate, a pillared hall, and a raised dais at the far end, reached up a ramp. Floors are themed: lava cracks in Molten Core and Onyxia's Lair, sand and brick in the desert temples, brick and rough dirt in the crypts, ice in the Northrend raids, and moss in the caverns.
 - **Paved capitals:** a brick square with streets leading out along the roads.
 
 There are 93 zones in all, counting the instances. Each zone has its own ground textures, mix of trees, relief and wildlife: jungle in Stranglethorn, blight in the Plaguelands, lava cracks in the Burning Steppes, cliff mesas in Thousand Needles and at Thunder Bluff, the crater rim around Un'Goro, and the Greymane Wall, a cliff rampart whose gate is the only way into Gilneas on foot. A few landmark doodads are placed too: the World Trees at Teldrassil and Hyjal, the Sunwell, the ruins of Dalaran, the Dark Portal, and volcanoes at Blackrock and Un'Goro.

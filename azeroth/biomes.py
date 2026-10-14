@@ -1,8 +1,8 @@
 """Terrain recipes per biome: ground tiles, trees, relief and wildlife."""
 
 # The 16 ground tiles the map uses (order = draw order, later tiles overlay earlier ones).
-GROUND_TILES = ['Ldrt', 'Bdrt', 'Bdsr', 'Ybtl', 'Dlvc', 'Lrok', 'Bgrr', 'Lgrs',
-                'Fgrs', 'Agrs', 'Zgrs', 'Lgrd', 'Cpos', 'Wsng', 'Wsnw', 'Wrok']
+GROUND_TILES = ['Ldrt', 'Ldro', 'Bdrt', 'Bdsr', 'Ybtl', 'Dlvc', 'Lrok', 'Bgrr',
+                'Lgrs', 'Fgrs', 'Agrs', 'Zgrs', 'Lgrd', 'Wsng', 'Wsnw', 'Wrok']
 TILE = {t: i for i, t in enumerate(GROUND_TILES)}
 
 # Cliff types (Lordaeron dirt, Lordaeron Winter snow, Lordaeron grass); their ground tiles
@@ -62,10 +62,10 @@ biome('highland', floor='Lgrd', cliff=CLIFF_GRASS, tiles=[('Lgrs', -2), ('Lrok',
 biome('nightelf', floor='Lgrd', cliff=CLIFF_GRASS, tiles=[('Agrs', -2), ('Lgrd', 0.3), ('Ldrt', 0.6)], trees=[('ATtr', 52), ('ATtc', 22), ('LTlt', 10), ('WTtw', 8), ('JTtw', 8)], density=0.62, clump=16,
       hills=70,
       critters=['nder', 'nrac', 'nsno'], mm=(54, 92, 98))
-biome('fel', tiles=[('Cpos', -2), ('Lgrd', 0.2), ('Ldrt', 0.5)], trees=[('CTtr', 50), ('CTtc', 24), ('JTtw', 18), ('GTsh', 8)], density=0.50,
+biome('fel', tiles=[('Lgrd', -2), ('Fgrs', 0.25), ('Ldro', 0.55)], trees=[('CTtr', 50), ('CTtc', 24), ('JTtw', 18), ('GTsh', 8)], density=0.50,
       hills=70,
       critters=['nfbr', 'nrat'], mm=(86, 98, 44))
-biome('plague', tiles=[('Ldrt', -2), ('Cpos', 0.0), ('Lgrd', 0.55)], trees=[('JTtw', 34), ('CTtr', 30), ('WTtw', 18), ('CTtc', 10), ('GTsh', 8)], density=0.20, clump=10,
+biome('plague', tiles=[('Ldrt', -2), ('Ldro', 0.0), ('Lgrd', 0.55)], trees=[('JTtw', 34), ('CTtr', 30), ('WTtw', 18), ('CTtc', 10), ('GTsh', 8)], density=0.20, clump=10,
       hills=60, blight=True,
       critters=['nrat'], mm=(92, 84, 70))
 biome('savanna', tiles=[('Bdrt', -2), ('Bgrr', 0.05), ('Ldrt', 0.55)], trees=[('BTtw', 68), ('BTtc', 32)], density=0.08, clump=6,
@@ -115,7 +115,7 @@ biome('grizzly', floor='Lgrd', cliff=CLIFF_GRASS, tiles=[('Lgrs', -2), ('Lgrd', 
 biome('crystal', tiles=[('Agrs', -2), ('Wsnw', 0.25), ('Lgrd', 0.55)], rock='Wrok', trees=[('ATtr', 42), ('ITtw', 30), ('ATtc', 16), ('ITtc', 12)], density=0.50, clump=14,
       hills=60, cold=True, beach='Wsnw', seabed='Ldrt',
       critters=['nsno'], mm=(110, 140, 170))
-biome('amber', tiles=[('Bdsr', -2), ('Cpos', 0.15), ('Bdrt', 0.5)], trees=[('CTtr', 48), ('BTtw', 32), ('ZTtw', 20)], density=0.07, clump=6,
+biome('amber', tiles=[('Bdsr', -2), ('Ldro', 0.15), ('Bdrt', 0.5)], trees=[('CTtr', 48), ('BTtw', 32), ('ZTtw', 20)], density=0.07, clump=6,
       hills=90,
       critters=['nskk'], mm=(170, 150, 70))
 biome('worldtree', floor='Lgrd', cliff=CLIFF_GRASS, tiles=[('Agrs', -2), ('Lgrd', 0.2), ('Lgrs', 0.55)], trees=[('ATtr', 50), ('ATtc', 30), ('LTlt', 10), ('WTtw', 10)], density=0.66, clump=18,
@@ -127,7 +127,7 @@ _HALL = dict(hills=10, base=40, beach='Ldrt', seabed='Ldrt')
 biome('lava', tiles=[('Dlvc', -2), ('Lrok', 0.25), ('Ybtl', 0.6)], **_HALL, mm=(120, 50, 30))
 biome('temple', tiles=[('Bdsr', -2), ('Ybtl', 0.15), ('Bdrt', 0.6)], **_HALL, mm=(196, 168, 110))
 biome('halls', tiles=[('Ybtl', -2), ('Lrok', 0.3), ('Ldrt', 0.62)], **_HALL, mm=(120, 110, 104))
-biome('crypt', tiles=[('Ybtl', -2), ('Cpos', 0.3), ('Ldrt', 0.6)], **_HALL, blight=True, mm=(96, 96, 80))
+biome('crypt', tiles=[('Ybtl', -2), ('Ldro', 0.3), ('Ldrt', 0.6)], **_HALL, blight=True, mm=(96, 96, 80))
 biome('frozen', tiles=[('Wsnw', -2), ('Ybtl', 0.2), ('Wrok', 0.6)], **_HALL, cold=True, cliff=CLIFF_SNOW, mm=(170, 190, 214))
-biome('grotto', tiles=[('Lgrd', -2), ('Cpos', 0.25), ('Lrok', 0.55)], **_HALL, trees=[('ZTtw', 40), ('GTsh', 30), ('DTsh', 20), ('KTtw', 10)], density=0.12, clump=6, cliff=CLIFF_GRASS, mm=(60, 92, 50))
+biome('grotto', tiles=[('Lgrd', -2), ('Ldro', 0.25), ('Lrok', 0.55)], **_HALL, trees=[('ZTtw', 40), ('GTsh', 30), ('DTsh', 20), ('KTtw', 10)], density=0.12, clump=6, cliff=CLIFF_GRASS, mm=(60, 92, 50))
 biome('troll', tiles=[('Zgrs', -2), ('Ybtl', 0.2), ('Ldrt', 0.6)], **_HALL, trees=[('ZTtw', 60), ('ZTtc', 30), ('DTsh', 10)], density=0.15, clump=6, cliff=CLIFF_GRASS, mm=(64, 116, 50))
