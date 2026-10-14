@@ -3,6 +3,7 @@ import math
 
 import numpy as np
 
+from . import cities
 from . import geography as geo
 from .biomes import B
 from .decor import BATS, BIRDS, DOODADS, FLIES, RUINS, SCATTER, SHELLS, SIGNPOST, VILLAGE, VILLAGE_COLD, VILLAGE_DRY
@@ -152,6 +153,19 @@ def place(T, seed=7):
     for name, tx, ty, building in geo.TOWNS:
         mark(reserved, tx, ty, 4)
 
+    # ---- cities: walls, gateways and buildings at the capitals and towns ----------------------
+    # Walls are destructables (the game gives them their pathing); buildings, posts and fences are
+    # doodads whose footprints go into the pathing map with the other decorations below.
+    walls, city_parts = cities.plan(T, rng, tile_ok, occupied, O.starts)
+    walls, city_parts = cities.keep_open(T, walls, city_parts)
+    for p in walls + city_parts:
+        if p['box'] is not None:
+            y0, y1, x0, x1 = p['box']
+            occupied[max(y0 // 4, 0):(y1 - 1) // 4 + 1, max(x0 // 4, 0):(x1 - 1) // 4 + 1] = True
+    O.walls = walls
+    O.city_parts = city_parts
+    O.doodads = O.doodads + [{k: v for k, v in w.items() if k not in ('box', 'kind')} for w in walls]
+
     # ---- critters: a few of each zone's wildlife ------------------------------------------
     zone_tiles = {}
     land_tiles = np.argwhere(tile_ok & ~occupied)
@@ -246,6 +260,19 @@ def place(T, seed=7):
         else:
             T.pathing[y0:y1, x0:x1] |= 0x08
         blocked[y0 // 4:(y1 - 1) // 4 + 1, x0 // 4:(x1 - 1) // 4 + 1] = True
+
+    def bake_box(d, box):
+        y0, y1, x0, x1 = box
+        blockers.append((d, box, T.pathing[y0:y1, x0:x1].copy()))
+        T.pathing[y0:y1, x0:x1] = 0xCA
+        blocked[y0 // 4:(y1 - 1) // 4 + 1, x0 // 4:(x1 - 1) // 4 + 1] = True
+
+    # the cities' buildings, posts, monuments and fences
+    for p in city_parts:
+        d = {k: v for k, v in p.items() if k not in ('box', 'kind')}
+        detail.append(d)
+        if p['box'] is not None:
+            bake_box(d, p['box'])
 
     def decorate(did, tx, ty, allow_reserved=False):
         variations, size, scale, fixed = DOODADS[did]

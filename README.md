@@ -77,14 +77,20 @@ There are 93 zones in all, counting the instances. Each zone has its own ground 
 Shallow straits that ground units can wade across link Teldrassil and Azuremyst to Darkshore, Bloodmyst to Azuremyst, Tol Barad to Gilneas, and Alcaz Island, Theramore and the Echo Isles to the mainland.
 
 **What's placed.**
-- About 19,000 trees of 23 species.
-- About 7,300 decorations, nearly all of them natural: flowers, shrubs and mushrooms (most of them along the roads), about 2,200 rocks and boulders, bushes, stumps and rock spires. Only about 650 are man-made props and ruins.
+- About 17,600 trees of 23 species.
+- The cities: about 340 stone wall segments and 200 spiked barricades (destructables), and about 385 buildings, 155 fence runs, and gate posts, monuments and lights.
+- About 6,400 decorations, nearly all of them natural: flowers, shrubs and mushrooms (most of them along the roads), about 2,200 rocks and boulders, bushes, stumps and rock spires. Only about 650 are man-made props and ruins.
 - The landmark doodads.
 - The waygates.
 - Wildlife critters in every zone.
 - The 12 start locations.
 
-There are no gold mines, creeps, shops or item drops. The ~60 towns and ~100 camp sites from the geography (Goldshire, Booty Bay, Crossroads, Gadgetzan, Dire Maul, Stratholme and the rest) are levelled clearings joined to the road network, left empty for you to fill. The towns are kept free of trees.
+There are no gold mines, creeps, shops or item drops. The ~60 towns and ~100 camp sites from the geography (Goldshire, Booty Bay, Crossroads, Gadgetzan, Dire Maul, Stratholme and the rest) are levelled clearings joined to the road network; the towns and capitals are built up (see **Cities**), and the camp sites keep a few ruins.
+
+**Cities.** Every capital and town is built up from the game's own walls and buildings (`azeroth/cities.py`):
+- **Capitals** stand inside a stone curtain wall about 27 tiles across, laid segment by segment the way the World Editor lays walls, with posts at the corners and at every gateway. A gateway opens wherever a road passes through the wall, and every side has at least one. Inside, houses line the streets and fill the ring round the open square, where the start location stays clear for building. Each capital has its people's look: Cityscape houses, fountains and statues for Stormwind, Ironforge, Dalaran, Boralus and Valgarde; elven halls for Silvermoon; ruined houses, a ruined cathedral and broken walls for Undercity; Icecrown walls, pillars and crypts for Icecrown Citadel; rough stone walls, totems, fire pits and skull pikes for Orgrimmar and Warsong Hold; a spiked palisade for Thunder Bluff; and elven halls with Sentinel statues, but no wall, for Darnassus.
+- **Towns**: the ports, markets and goblin towns (Booty Bay, Gadgetzan, Southshore, Menethil Harbor and the like) get a smaller stone wall; the rest a wooden fence or, in dry country, a spiked palisade, broken by the roads. Inside are cottages, an inn or a barn, a well or fire pit and lanterns; granaries and windmills on the farms, elven halls in Ashenvale and Teldrassil, and totems and fire pits in the Barrens. A town right beside a capital or another walled town (Brill, the Booty Bay and Gadgetzan markets) shares its neighbour's wall.
+- Walls and palisades are destructables, so the game gives them their pathing; buildings, posts and fences are written into the pathing map. A check takes away any wall or building that would shut in a start location, a town or any other stretch of land.
 
 ## Using it
 
@@ -109,6 +115,7 @@ python3 -m unittest discover tests
 | `azeroth/biomes.py` | Per-biome ground tiles, trees, relief and critters |
 | `azeroth/terrain.py` | Rasterises everything into heights, water, cliffs, textures, blight and the pathing map |
 | `azeroth/objects.py` | Places start locations, waygates, critters, trees and doodads |
+| `azeroth/cities.py` | Builds the capitals' and towns' walls, gateways, houses, monuments and fences |
 | `azeroth/jass.py` | Writes `war3map.j` in the same shape the World Editor generates for a map without triggers |
 | `azeroth/formats.py` | Writers for `w3e`, `wpm`, `shd`, `doo`, units `doo`, `w3i`, `mmp`, `blp`, `w3r`, `w3c`, `wtg` and `wct` |
 | `azeroth/mpq.py` | MPQ archive writer (zlib sectors, encrypted hash and block tables, HM3W header) |
@@ -122,7 +129,7 @@ python3 -m unittest discover tests
 - Every terrain file parses back exactly. Every cliff tile uses a corner combination that has a cliff model. Every ramp follows the World Editor's corner layout, and its slope is walkable in the pathing map. The ground painted beside each cliff is exactly what the game draws there, and grass cliffs stand in grassy ground.
 - The trigger files follow the World Editor's layout for a map with no triggers: the Initialization category, with nothing in it.
 - A test confirms there are no gold mines, neutral hostile units, item drops or melee calls.
-- Flood-fill checks confirm that every start location and waygate can be reached on foot or through waygates, and so can about 99% of all walkable land. Two camp names in Northrend sit just offshore; the coast next to them is reachable. Raised zones are entered by their ramps, and the massifs' cores are impassable.
+- Flood-fill checks confirm that every start location and waygate can be reached on foot or through waygates, and so can about 99% of all walkable land. Two camp names in Northrend sit just offshore; the coast next to them is reachable. Raised zones are entered by their ramps, and the massifs' cores are impassable. With every city wall and palisade in place, no start location is shut in.
 
 **It has not been loaded in the actual game client yet.** If something looks off in game, please open an issue.
 
@@ -130,4 +137,5 @@ python3 -m unittest discover tests
 
 - 12 players, not 24, so the map loads on every patch that supports 480 × 480 maps.
 - The geography is hand-drawn from the world map, not traced from game data. Kalimdor and the Eastern Kingdoms are drawn about 20% shorter than their true proportions so a correctly shaped Northrend fits above them on a square map.
+- The pathing footprints of the Cityscape houses, inns, barns and the ruined cathedral are estimates (3 x 3 or 4 x 4 tiles), as their pathing textures aren't in the game data this was built from. Re-saving the map in the World Editor recomputes them from the real textures.
 - Pandaria, the Broken Isles, Zandalar, Outland, the Dragon Isles and Khaz Algar are left out, which leaves room for a much larger Northrend.

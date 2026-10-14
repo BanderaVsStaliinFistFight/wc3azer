@@ -144,6 +144,35 @@ class MapTest(unittest.TestCase):
             self.assertIn(uid, UNIT_IDS)
         self.assertEqual(sum(u['id'] == 'sloc' for u in units), 12)
 
+    def test_cities_open(self):
+        """Capitals and towns have walls, and no wall or palisade shuts a start location in."""
+        from azeroth.raster import label_regions
+        _, _, doodads, _ = read_doodads(self.files['war3map.doo'])
+        _, _, units = read_units(self.files['war3mapUnits.doo'])
+        foot = {'LTw0': (10, 3), 'ZTw0': (10, 3), 'ITw0': (10, 3), 'LTw2': (3, 10), 'ZTw2': (3, 10), 'ITw2': (3, 10),
+                'LTba': (4, 4)}
+        walls = [d for d in doodads if d['id'] in foot]
+        self.assertGreater(sum(d['id'] != 'LTba' for d in walls), 150)
+        cells = np.frombuffer(self.files['war3map.wpm'][16:], dtype=np.uint8).reshape(1920, 1920).copy()
+
+        def regions(c):
+            walk = ((c.reshape(480, 4, 480, 4) & 0x02) == 0).mean(axis=(1, 3)) >= 0.5
+            return label_regions(walk)
+
+        before, before_sizes = regions(cells)
+        for d in walls:
+            w, h = foot[d['id']]
+            cx, cy = (d['x'] + 30720) / 32, (d['y'] + 30720) / 32
+            x0, y0 = int(round(cx - w / 2)), int(round(cy - h / 2))
+            cells[y0:y0 + h, x0:x0 + w] = 0xCA
+        after, after_sizes = regions(cells)
+        for u in units:
+            if u['id'] == 'sloc':
+                tx, ty = int((u['x'] + 30720) / 128), int((u['y'] + 30720) / 128)
+                a, b = before[ty, tx], after[ty, tx]
+                self.assertGreaterEqual(b, 0)
+                self.assertGreater(after_sizes[b], 0.9 * before_sizes[a], 'a start location walled in')
+
     def test_no_melee_content(self):
         """Terrain only: no gold mines, creeps, shops or item drops, and no melee setup."""
         _, _, units = read_units(self.files['war3mapUnits.doo'])
