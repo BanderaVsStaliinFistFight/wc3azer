@@ -46,8 +46,8 @@ CITY_STYLES = {
                            ('YSra', (12, 12), 1), ('YSrb', (12, 12), 1), ('YSrc', (16, 16), 1), ('YSre', (16, 16), 1)],
                    monuments=[('YScr', (20, 20), 1)], light=('LObr', (2, 2)), houses_n=18),
     'icecrown': dict(wall=ICE, post=('IOpr', (4, 4)),
-                     houses=[('NSct', (8, 8), 1), ('IOob', (4, 4), 3), ('IOpr', (4, 4), 3)],
-                     monuments=[('NSct', (8, 8), 1)], light=('IOst', (2, 2)), houses_n=14),
+                     houses=[('IOob', (4, 4), 3), ('IOpr', (4, 4), 3)],          # one crypt only, by the square
+                     monuments=[('NSct', (8, 8), 1)], light=('IOst', (2, 2)), houses_n=12),
     'nightelf': dict(houses=ELVEN_HOUSES, monuments=[('AOgs', (8, 8), 1), ('AOks', (8, 8), 1)], light=None, houses_n=20),
 }
 CAPITAL_STYLE = {'Stormwind': 'human', 'Orgrimmar': 'orc', 'Undercity': 'undead', 'Darnassus': 'nightelf',
