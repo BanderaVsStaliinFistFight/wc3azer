@@ -6,10 +6,10 @@ import numpy as np
 from . import cities
 from . import geography as geo
 from .biomes import B
-from .decor import (BATS, BIRDS, DOODADS, FLIES, ICE_FLOES, LILIES, RUINS, RUSHES, SCATTER, SEAWEED, SHELLS, SIGNPOST,
-                    VILLAGE, VILLAGE_COLD, VILLAGE_DRY, WATER_VARIATIONS)
+from .decor import (BATS, BIRDS, CLUTTER, DOODADS, FLIES, HOUSE_KIND, ICE_FLOES, KIND_OF, LILIES, RUINS, RUSHES, SCATTER,
+                    SEAWEED, SHELLS, SIGNPOST, WATER_VARIATIONS)
 from .raster import Field, dilate, label_regions
-from .terrain import MAP_W, MAP_H, SEA_Z, ground_z_at, world_xy
+from .terrain import BOTTOM, LEFT, MAP_W, MAP_H, SEA_Z, ground_z_at, world_xy
 
 NEUTRAL_PASSIVE = 15                          # classic (12 player) numbering used by war3mapUnits.doo
 # tree species: (model variations, smallest scale, largest scale) from the game's destructable data;
@@ -245,7 +245,6 @@ def place(T, seed=7):
     is_tree = candidates
     steep = np.zeros((n, n), bool)
     steep[:-1, :-1] = T.steep_tile & ~T.cliff_tile
-    near_water = dilate(T.lake | T.river, 2) & ~(T.lake | T.river)
     by_cliff = np.zeros((n, n), bool)
     by_cliff[:-1, :-1] = T.cliff_tile
     by_cliff = dilate(by_cliff, 1)
@@ -307,17 +306,86 @@ def place(T, seed=7):
             bake(d, tx, ty, size)
         return True
 
+    # Every piece goes where it would be found and keeps the company it would keep. The land is
+    # read for shade and shelter by the woods, damp ground by the water, rough ground on and
+    # below the slopes, and open sunny ground everywhere else.
+    is_water = T.lake | T.river
+    near_wood = dilate(is_tree, 2) & ~is_tree
+    damp = dilate(is_water, 3) | (biome_of == 'swamp')
+    rugged = dilate(steep, 2) | (T.relief > 300)
+    sunny = ~near_wood & ~is_tree & ~rugged
+    wood_edge = dilate(is_tree, 1)
+    down_y, down_x = np.gradient(T.ground_z)
+    df = Field(n, n, seed + 303)
+    meadow = df.fbm(7, 3)                 # where wild plants gather
+    beds = df.fbm(4, 2)                   # finer patches: reed beds, lily rafts, seaweed, mushroom beds
+    all_plants = sorted({p for ps in list(PLANTS.values()) + list(FOREST_FLOOR.values()) for p in ps})
+    plant_stand = {p: df.fbm(5, 2) for p in all_plants}      # each patch mostly of one kind
+
+    def small_ok(tx, ty):
+        """Room for a stone or a plant: dry, open ground off the road."""
+        ix, iy = int(tx), int(ty)
+        return 0 < ix < MAP_W and 0 < iy < MAP_H and tile_ok[iy, ix] and T.road_d[iy, ix] > 1.6
+
+    def around(did, tx, ty, count, r0, r1, scale, downhill=False, variations=None, fixed=None):
+        """`count` pieces of `did` about (tx, ty); downhill ones spill down the slope like scree."""
+        ix, iy = min(max(int(tx), 0), n - 1), min(max(int(ty), 0), n - 1)
+        steep_here = math.hypot(down_x[iy, ix], down_y[iy, ix]) > 4
+        fall = math.atan2(-down_y[iy, ix], -down_x[iy, ix]) if downhill and steep_here else None
+        for _ in range(count):
+            a = rng.uniform(0, 2 * math.pi) if fall is None else fall + rng.normal(0, 0.6)
+            r = rng.uniform(r0, r1)
+            px, py = tx + r * math.cos(a), ty + r * math.sin(a)
+            if small_ok(px, py):
+                add_detail(did, px, py, scale=scale, variations=variations, fixed=fixed)
+
+    def stones(tx, ty, count, r0=0.45, r1=0.95, downhill=True):
+        rock = ROCKS.get(str(biome_of[int(ty), int(tx)]), ('LRrk', None))[0]
+        around(rock, tx, ty, count, r0, r1, (0.22, 0.4), downhill, fixed=4.712389 if rock == 'ORrk' else None)
+
+    def plant_for(b, ty, tx, pool=None):
+        """The plant that suits this spot: flowers and wild grass in the sun, shrubs by the woods and
+        among the rocks, mushrooms in the shade and the damp; each patch mostly of one kind."""
+        pool = pool or PLANTS.get(b)
+        if not pool:
+            return None
+        shade, wet = bool(near_wood[ty, tx] or is_tree[ty, tx]), bool(damp[ty, tx])
+        home = {'ZPfw': bool(sunny[ty, tx]), 'LPwh': bool(sunny[ty, tx]), 'ZPsh': bool(wood_edge[ty, tx] or rugged[ty, tx]),
+                'APms': shade or wet, 'CPms': shade or wet, 'LPcw': True}
+        w = np.array([(3.0 if home.get(p, True) else 0.25) * math.exp(2.5 * plant_stand[p][ty, tx]) for p in pool])
+        return pool[int(np.searchsorted(np.cumsum(w), rng.random() * w.sum()))]
+
+    def clump(b, tx, ty, count, spread=0.35, pool=None):
+        """A clump of one kind of plant round (tx, ty)."""
+        p = plant_for(b, int(ty), int(tx), pool)
+        if p:
+            for _ in range(count):
+                px, py = tx + rng.normal(0, spread), ty + rng.normal(0, spread)
+                if small_ok(px, py):
+                    add_detail(p, px, py)
+
+    def mushrooms_for(b):
+        return 'CPms' if b in ('fel', 'plague') else 'APms' if b in PLANTS and not B[b]['cold'] else None
+
+    # Rocks lie where they would fall: outcrops on the steep slopes, scree at their foot and rubble
+    # below the mountain cliffs, each boulder with smaller stones spilled down the slope from it.
     roll = rng.random((n, n))
-    # rocks on steep slopes, and rubble at the foot and brow of mountain cliffs
+    foot = dilate(steep, 1) & ~steep & ground & ~clear & ~is_tree
     rubble = by_cliff & tile_ok & (T.relief > 120) & (T.road_d > 5) & ~T.ramp_near & ~is_tree & ~clear & (roll < 0.05)
-    for ty, tx in np.argwhere((steep & ground & ~clear & (roll < 0.09)) | rubble):
+    outcrop = steep & ground & ~clear & (roll < 0.045)
+    for ty, tx in np.argwhere(outcrop | rubble):
         rock, spire = ROCKS.get(str(biome_of[ty, tx]), ('LRrk', None))
-        if spire and rng.random() < 0.25:
-            d = add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.28, 0.42))
-        else:
-            d = add_detail(rock, tx + 0.5, ty + 0.5, scale=(0.8, 1.4), fixed=4.712389 if rock == 'ORrk' else None)
+        if spire and outcrop[ty, tx] and rng.random() < 0.3:
+            add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.28, 0.42))
+            continue
+        d = add_detail(rock, tx + 0.5, ty + 0.5, scale=(0.8, 1.4), fixed=4.712389 if rock == 'ORrk' else None)
         if rubble[ty, tx] and not blocked[ty, tx]:
             bake(d, tx + 0.5, ty + 0.5, 4)
+        stones(tx + 0.5, ty + 0.5, int(rng.integers(1, 4)))
+    for ty, tx in np.argwhere(foot & (roll > 0.95)):
+        rock = ROCKS.get(str(biome_of[ty, tx]), ('LRrk', None))[0]
+        if rock in DOODADS and decorate(rock, tx + 0.5, ty + 0.5):
+            stones(tx + 0.5, ty + 0.5, int(rng.integers(1, 3)))
     # great rock spires and glaciers crown the massifs
     crown = np.zeros((n, n), bool)
     crown[:-1, :-1] = T.massif_core[:-1, :-1]
@@ -325,42 +393,99 @@ def place(T, seed=7):
         spire = SPIRES.get(str(biome_of[ty, tx]), 'ZRrs')
         add_detail(spire, tx + 0.5, ty + 0.5, scale=(0.8, 1.2), fixed=4.712389 if spire in ('ORrs', 'IRgc') else None)
 
-    # ruins at the named sites
-    def scatter_round(cx, cy, pool, count, r0, r1, allow_reserved=False):
-        made = 0
-        for _ in range(count * 4):
-            if made >= count:
-                break
-            a, r = rng.uniform(0, 2 * math.pi), rng.uniform(r0, r1)
+    def place_near(pool, cx, cy, r0, r1, tries=12, allow_reserved=False):
+        """Put one of `pool` down as near (cx, cy) as there is room, between r0 and r1 tiles away."""
+        for k in range(tries):
+            a, r = rng.uniform(0, 2 * math.pi), r0 + (r1 - r0) * k / max(tries - 1, 1)
             tx, ty = round((cx + r * math.cos(a)) * 2) / 2, round((cy + r * math.sin(a)) * 2) / 2
             if 0 < tx < MAP_W and 0 < ty < MAP_H and decorate(str(rng.choice(pool)), tx, ty, allow_reserved):
-                made += 1
+                return tx, ty
+        return None
 
+    # About half the camp sites are marked by a single ruin near their middle, with fallen
+    # stones about it and a plant or two grown up against it.
     for name, cx, cy, _ in geo.CAMPS:
         pool = RUINS.get(str(biome_of[int(cy), int(cx)]))
-        if pool:
-            scatter_round(cx, cy, pool, int(rng.integers(0, 2)), 1.0, 7.0)
-    # clutter round the towns
+        if pool and rng.random() < 0.5:
+            spot = place_near(pool, cx, cy, 0.0, 4.0)
+            if spot:
+                stones(spot[0], spot[1], int(rng.integers(1, 4)), 0.8, 1.4, downhill=False)
+                clump(str(biome_of[int(cy), int(cx)]), spot[0] + rng.uniform(-0.8, 0.8), spot[1] + rng.uniform(-0.8, 0.8), 2)
+    # Clutter by the buildings it belongs to: hay and carts by the barns, hitching posts by the
+    # inn, a barrow by a cottage, racks and a brazier by the square; fire pits in the cold towns
+    # and totems in the camps. Elven towns are kept clear.
+    homes = [p for p in city_parts if p['id'] in HOUSE_KIND and p['box'] is not None]
     for name, cx, cy, _ in geo.TOWNS:
         b = str(biome_of[int(cy), int(cx)])
-        cold = B[b]['cold'] if b in B else False
-        pool = VILLAGE_COLD if cold else VILLAGE_DRY if b in ('savanna', 'reddesert', 'needles', 'barren', 'desert', 'amber') else VILLAGE
-        scatter_round(cx, cy, pool, int(rng.integers(0, 3)), 2.5, 7.0, allow_reserved=True)
-    # boulders, bushes, thorns, stumps, logs and fissures over open country
+        if b in ('nightelf', 'worldtree', 'crystal'):
+            continue
+        group = 'cold' if B[b]['cold'] else 'camp' if b in ('savanna', 'reddesert', 'needles', 'barren', 'desert', 'amber') \
+            else None
+        here = [p for p in homes if math.hypot((p['x'] - LEFT) / 128 - cx, (p['y'] - BOTTOM) / 128 - cy) < 9]
+        for _ in range(int(rng.integers(0, 3))):
+            if here and rng.random() < 0.75:
+                p = here[int(rng.integers(0, len(here)))]
+                y0, y1, x0, x1 = p['box']
+                pool = CLUTTER[group or HOUSE_KIND[p['id']]]
+                sides = [((x1 / 4 + 0.75), rng.uniform(y0 / 4 + 0.5, y1 / 4 - 0.5)), ((x0 / 4 - 0.75), rng.uniform(y0 / 4 + 0.5, y1 / 4 - 0.5)),
+                         (rng.uniform(x0 / 4 + 0.5, x1 / 4 - 0.5), (y1 / 4 + 0.75)), (rng.uniform(x0 / 4 + 0.5, x1 / 4 - 0.5), (y0 / 4 - 0.75))]
+                for k in rng.permutation(4):
+                    tx, ty = sides[k]
+                    if 0 < tx < MAP_W and 0 < ty < MAP_H and decorate(str(rng.choice(pool)), tx, ty, allow_reserved=True):
+                        break
+            else:
+                place_near(CLUTTER[group or 'square'], cx, cy, 1.8, 3.5, allow_reserved=True)
+
+    # Open country: each piece in the kind of place it belongs, with the company it keeps.
     open_country = tile_ok & ~is_tree & ~reserved & ~dilate(occupied, 1) & (T.road_d > 2.5) & ~steep & ~by_cliff
+    home_of = {'rock': rugged, 'wood': near_wood, 'bush': near_wood | damp, 'cactus': ~damp & ~rugged,
+               'bones': ~near_wood, 'thorns': rugged | near_wood, 'fissure': rugged & ~damp, 'growth': damp | near_wood,
+               'crop': sunny}
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_country & (roll < 0.035)):
-        pool = SCATTER.get(str(biome_of[ty, tx]))
-        if pool:
-            ids, weights = zip(*pool)
-            decorate(str(rng.choice(ids, p=np.array(weights) / sum(weights))), tx + 0.5, ty + 0.5)
-    # fallen logs at the edges of the woods
+    for ty, tx in np.argwhere(open_country & (roll < 0.022)):
+        b = str(biome_of[ty, tx])
+        pool = SCATTER.get(b)
+        if not pool:
+            continue
+        ids = [did for did, _ in pool]
+        w = np.array([wt * (3.0 if KIND_OF.get(did) not in home_of or home_of[KIND_OF[did]][ty, tx] else 0.35)
+                      for did, wt in pool])
+        did = ids[int(np.searchsorted(np.cumsum(w), rng.random() * w.sum()))]
+        x, y = tx + 0.5, ty + 0.5
+        if not decorate(did, x, y):
+            continue
+        kind = KIND_OF.get(did)
+        if kind == 'rock':
+            stones(x, y, int(rng.integers(1, 4)))
+            if rng.random() < 0.5:
+                clump(b, x + rng.uniform(-0.7, 0.7), y + rng.uniform(-0.7, 0.7), int(rng.integers(1, 3)), 0.2)
+        elif kind == 'wood':
+            shroom = mushrooms_for(b)
+            if shroom:
+                around(shroom, x, y, int(rng.integers(2, 5)), 0.4, 0.9, (0.6, 1.0))
+        elif kind in ('bush', 'thorns', 'cactus'):
+            for _ in range(int(rng.integers(1, 3)) if kind != 'cactus' else int(rng.integers(0, 3))):
+                place_near([did], x, y, 1.0 if kind != 'cactus' else 1.8, 1.6 if kind != 'cactus' else 2.6, tries=4)
+            if kind == 'bush':
+                clump(b, x, y, int(rng.integers(1, 3)), 0.6)
+        elif kind == 'fissure':
+            stones(x, y, int(rng.integers(2, 4)), 1.0, 1.4, downhill=False)
+        elif kind == 'growth':
+            clump(b, x, y, int(rng.integers(1, 3)), 0.5)
+        elif kind == 'crop':
+            a = rng.uniform(0, math.pi)
+            for k in range(1, int(rng.integers(2, 5))):
+                px, py = x + 0.55 * k * math.cos(a), y + 0.55 * k * math.sin(a)
+                if small_ok(px, py):
+                    add_detail(did, px, py, variations=DOODADS[did][0])
+    # fallen logs at the edges of the woods, mushrooms growing on them where it is damp enough
     roll = rng.random((n, n))
     for ty, tx in np.argwhere(open_country & dilate(is_tree, 2) & ~dilate(is_tree, 1) & (roll < 0.08)):
-        log = LOGS.get(str(biome_of[ty, tx]))
-        if log:
-            decorate(log, tx + 0.5, ty + 0.5)
-    # signposts where roads fork
+        b = str(biome_of[ty, tx])
+        log = LOGS.get(b)
+        if log and decorate(log, tx + 0.5, ty + 0.5) and mushrooms_for(b):
+            around(mushrooms_for(b), tx + 0.5, ty + 0.5, int(rng.integers(1, 4)), 0.5, 1.2, (0.6, 1.0))
+    # signposts where roads fork, turned to face the junction
     forks = []
     for line in T.road_lines:
         for ex, ey in (line[0], line[-1]):
@@ -371,7 +496,7 @@ def place(T, seed=7):
             tx, ty = ex + ox, ey + oy
             if 0 < tx < MAP_W and 0 < ty < MAP_H and tile_ok[int(ty), int(tx)] and not occupied[int(ty), int(tx)] \
                     and T.road_d[int(ty), int(tx)] > 1.2:
-                add_detail(SIGNPOST, tx, ty, scale=(0.9, 1.1), variations=1)
+                add_detail(SIGNPOST, tx, ty, scale=(0.9, 1.1), variations=1, fixed=math.atan2(-oy, -ox) % (2 * math.pi))
                 break
     # Stones line the roads: every few tiles along each road, on one side or the other, a rock
     # with a pebble or two at the edge of the verge (closer together where the land is rough or
@@ -410,65 +535,80 @@ def place(T, seed=7):
                 placed = True
                 break
             s_at += (rng.uniform(2.2, 3.6) if rough else rng.uniform(3.0, 5.0)) if placed else 1.0
-    # shells on the beaches, birds over woods and shores, bats in the dark places, flies over the swamps
+    # shells washed up in drifts along the tide line; birds over the woods and shores, bats in the
+    # dark woods and under the cliffs, flies over the swamp water
     coast = T.land & dilate(T.sea, 1)
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(coast & T.beach & tile_ok & (roll < 0.04)):
-        add_detail(SHELLS, tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8), variations=10)
+    for ty, tx in np.argwhere(coast & T.beach & tile_ok & (beds > 0.2) & (roll < 0.3)):
+        around(SHELLS, tx + 0.5, ty + 0.5, int(rng.integers(1, 4)), 0.0, 0.5, (0.8, 1.2), variations=10)
     edge_of_wood = dilate(is_tree, 1) & ~is_tree
     dark = np.isin(biome_of, ['plague', 'darkforest', 'crypt', 'fel', 'icecrown'])
-    for mask, did, p in ((edge_of_wood | coast, BIRDS, 0.003), (dark & T.land, BATS, 0.002),
-                         (np.isin(biome_of, ['swamp']) & T.land, FLIES, 0.004)):
+    for mask, did, p in ((edge_of_wood | coast, BIRDS, 0.003), (dark & T.land & (is_tree | by_cliff), BATS, 0.004),
+                         ((biome_of == 'swamp') & T.land & dilate(is_water, 2), FLIES, 0.02)):
         roll = rng.random((n, n))
         for ty, tx in np.argwhere(mask & (roll < p)):
             add_detail(did, tx + 0.5, ty + 0.5, variations=1)
 
     unblock(T, label, sizes, blockers, detail)
 
-    # flowers, shrubs and mushrooms; reeds by the water; lily pads on the lakes
+    # Wild plants grow in patches, each patch mostly of one kind: flowers and wild grass in the
+    # sunny meadows, shrubs at the edges of the woods and among the rocks, mushrooms in the shade
+    # and on damp ground.
     lush = dilate(occupied | blocked, 1) | (T.road_d < 1.6)
     open_ground = tile_ok & ~is_tree & ~lush & ~steep
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_ground & (roll < 0.05)):
-        plants = PLANTS.get(str(biome_of[ty, tx]))
-        if plants:
-            add_detail(str(rng.choice(plants)), tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8))
-    # Wild flowers, shrubs and mushrooms grow thick along the roadsides, in patches that come
-    # and go along the way.
+    for ty, tx in np.argwhere(open_ground & (roll < np.clip((meadow - 0.1) * 0.3, 0.0, 0.12))):
+        clump(str(biome_of[ty, tx]), tx + 0.5, ty + 0.5, int(rng.integers(2, 4)))
+    # Along the roadsides they grow thick, in patches that come and go along the way.
     patches = Field(n, n, seed + 202).fbm(5, 2)
     verge = tile_ok & (road_tile > 1.5) & (road_tile < 4.0) & ~is_tree & ~reserved & ~occupied
     for ty, tx in np.argwhere(verge & (rng.random((n, n)) < np.clip(0.2 + patches * 0.6, 0.0, 0.55))):
-        plants = PLANTS.get(str(biome_of[ty, tx]))
-        if not plants:
-            continue
-        for _ in range(int(rng.integers(1, 3))):
-            plant = 'ZPfw' if 'ZPfw' in plants and rng.random() < 0.5 else str(rng.choice(plants))
-            add_detail(plant, tx + rng.uniform(0.1, 0.9), ty + rng.uniform(0.1, 0.9))
-    # under the trees: shrubs and mushrooms between the trunks
-    for ty, tx in np.argwhere(is_tree & (rng.random((n, n)) < 0.05)):
-        plants = FOREST_FLOOR.get(str(biome_of[ty, tx]))
-        if plants:
-            a, r = rng.uniform(0, 2 * math.pi), rng.uniform(0.3, 0.5)
-            add_detail(str(rng.choice(plants)), tx + 0.5 + r * math.cos(a), ty + 0.5 + r * math.sin(a))
-    # rushes and cattails on the banks, lily pads on the lakes, each in the kinds of its land
-    for ty, tx in np.argwhere(near_water & tile_ok & ~is_tree & ~lush & (roll > 0.88)):
+        b = str(biome_of[ty, tx])
+        wild = ['ZPfw'] if 'ZPfw' in PLANTS.get(b, []) and rng.random() < 0.5 else None     # wild flowers line the roads
+        clump(b, tx + 0.5, ty + 0.5, int(rng.integers(1, 3)), 0.3, pool=wild)
+    # Under the trees, shrubs and mushrooms gather in the damper hollows between the trunks; here
+    # and there in a forest glade a ring of mushrooms.
+    for ty, tx in np.argwhere(is_tree & (beds > 0.2) & (rng.random((n, n)) < 0.05)):
+        b = str(biome_of[ty, tx])
+        if b in FOREST_FLOOR:
+            a = rng.uniform(0, 2 * math.pi)
+            clump(b, tx + 0.5 + 0.45 * math.cos(a), ty + 0.5 + 0.45 * math.sin(a), int(rng.integers(2, 4)), 0.2,
+                  pool=FOREST_FLOOR[b])
+    trees_round = sum(np.roll(np.roll(is_tree, dy, 0), dx, 1) for dy in (-1, 0, 1) for dx in (-1, 0, 1))
+    glade = ~is_tree & open_ground & (trees_round >= 5) & np.isin(biome_of, ['nightelf', 'worldtree', 'darkforest',
+                                                                             'temperate', 'autumn', 'grizzly'])
+    for ty, tx in np.argwhere(glade & (rng.random((n, n)) < 0.03)):
+        shroom, k0 = mushrooms_for(str(biome_of[ty, tx])), rng.uniform(0, 2 * math.pi)
+        for k in range(7 if shroom else 0):
+            a = k0 + 2 * math.pi * k / 7
+            add_detail(shroom, tx + 0.5 + 0.8 * math.cos(a), ty + 0.5 + 0.8 * math.sin(a), scale=(0.7, 0.9))
+    # Rushes and cattails grow in beds along the gentle banks, lily pads float in rafts in the
+    # sheltered water near the shore, each in the kinds of its land.
+    bank = dilate(is_water, 1) & ~is_water & tile_ok & ~is_tree & ~lush & ~steep
+    roll = rng.random((n, n))
+    for ty, tx in np.argwhere(bank & (beds > 0.15) & (roll < 0.5)):
         reeds = RUSHES.get(str(biome_of[ty, tx]), ['APct', 'APct', 'LPrs'])
-        did = str(rng.choice(reeds))
-        add_detail(did, tx + rng.uniform(0.2, 0.8), ty + rng.uniform(0.2, 0.8), variations=WATER_VARIATIONS[did])
-    lake_pts = T.lake & ~dilate(~T.lake, 1)
-    for ty, tx in np.argwhere(lake_pts & (roll < 0.05)):
+        did = reeds[int((beds[ty, tx] * 37) % len(reeds))]          # one kind to a bed
+        around(did, tx + 0.5, ty + 0.5, int(rng.integers(1, 3)), 0.0, 0.5, (0.8, 1.2), variations=WATER_VARIATIONS[did])
+    rafts = T.lake & dilate(T.land, 2) & (beds > 0.25)
+    for ty, tx in np.argwhere(rafts & (roll < 0.08)):
         did = LILIES.get(str(biome_of[ty, tx]), 'LPfp')
-        add_detail(did, tx + rng.uniform(-0.3, 0.3), ty + rng.uniform(-0.3, 0.3), z=SEA_Z, variations=WATER_VARIATIONS[did])
-    # seaweed in the shallows off the warmer coasts, ice floes drifting in the cold seas
+        for _ in range(int(rng.integers(2, 5))):
+            add_detail(did, tx + 0.5 + rng.normal(0, 0.3), ty + 0.5 + rng.normal(0, 0.3), z=SEA_Z,
+                       variations=WATER_VARIATIONS[did])
+    # seaweed in beds in the shallows off the warmer coasts; ice floes drifting in bands in the
+    # cold seas, thickest near the land
     cold_zone = np.array([B[z['biome']]['cold'] for z in geo.ZONES])[T.zone_of]
     in_map = ~dilate(T.edge, 2)
     in_map[MAP_H:, :] = in_map[:, MAP_W:] = False
     shallows = T.sea & dilate(T.land, 3) & ~dilate(T.land, 1) & in_map
-    open_sea = T.sea & ~dilate(T.land, 3) & in_map
+    drift = T.sea & dilate(T.land, 8) & ~dilate(T.land, 2) & in_map
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(shallows & ~cold_zone & (roll < 0.03)):
-        add_detail(SEAWEED, tx + rng.uniform(0, 1), ty + rng.uniform(0, 1), scale=(1.5, 2.0), z=SEA_Z, variations=5)
-    for ty, tx in np.argwhere(open_sea & cold_zone & (roll > 0.994)):
+    for ty, tx in np.argwhere(shallows & ~cold_zone & (beds > 0.2) & (roll < 0.05)):
+        for _ in range(int(rng.integers(1, 4))):
+            add_detail(SEAWEED, tx + 0.5 + rng.normal(0, 0.4), ty + 0.5 + rng.normal(0, 0.4), scale=(1.5, 2.0), z=SEA_Z,
+                       variations=5)
+    for ty, tx in np.argwhere(drift & cold_zone & (meadow > 0.15) & (roll > 0.985)):
         add_detail(str(rng.choice(ICE_FLOES)), tx + rng.uniform(0, 1), ty + rng.uniform(0, 1), z=SEA_Z, variations=1)
     O.details = detail
     O.doodads = O.doodads + detail

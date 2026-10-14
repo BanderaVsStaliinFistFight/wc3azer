@@ -147,6 +147,22 @@ def plan(T, rng, tile_ok, occupied, starts):
             return
         place_thing((did, size, 1), x, y, margin=0, road_clear=1.0)
 
+    def entrances(mx, my, rad):
+        """Where the roads cross a circle `rad` tiles round (mx, my), one point per road:
+        [(x, y, side_x, side_y)] in tiles, with the direction across the road."""
+        found = []
+        for line in T.road_lines:
+            for (ax, ay), (bx, by) in zip(line[:-1], line[1:]):
+                da, db = math.hypot(ax - mx, ay - my) - rad, math.hypot(bx - mx, by - my) - rad
+                if da * db > 0 or da == db:
+                    continue
+                t = da / (da - db)
+                px, py = ax + (bx - ax) * t, ay + (by - ay) * t
+                seg, ang = max(math.hypot(bx - ax, by - ay), 1e-6), math.atan2(py - my, px - mx)
+                if all(abs((ang - a2 + math.pi) % (2 * math.pi) - math.pi) > 0.8 for *_, a2 in found):
+                    found.append((px, py, -(by - ay) / seg, (bx - ax) / seg, ang))
+        return [f[:4] for f in found]
+
     def wall_ring(mx, my, side, segments, post, lamp, ruined=0.0):
         """A rectangle of wall segments round tile point (mx, my), laid the way the World Editor lays
         them: east-west segments on the 64-unit grid, north-south ones 32 off it, meeting at the corners."""
@@ -286,9 +302,12 @@ def plan(T, rng, tile_ok, occupied, starts):
             fence(cx, cy, 7.5, style['fence'])
         outer = TOWN_WALL_SIDE * SEGMENT / 256.0 - 1.2 if walled else 7.5
         houses(cx, cy, 2.0, outer, style['houses'], int(rng.integers(2, 5)))
-        for k in range(2):
-            a = 2 * math.pi * (k + 0.25) / 2
-            light(style['light'], LEFT + (cx + 2.6 * math.cos(a)) * 128, BOTTOM + (cy + 2.6 * math.sin(a)) * 128)
+        # a lantern beside each road where it comes into the middle of the town
+        ways_in = entrances(cx, cy, 3.4)[:3] or [(cx + 2.6 * math.cos(a), cy + 2.6 * math.sin(a), 0.0, 0.0)
+                                                for a in (math.pi / 4, 5 * math.pi / 4)]
+        for px, py, sx, sy in ways_in:
+            side = 1.5 * rng.choice([-1.0, 1.0])
+            light(style['light'], LEFT + (px + side * sx) * 128, BOTTOM + (py + side * sy) * 128)
     return walls, parts
 
 

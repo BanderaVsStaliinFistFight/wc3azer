@@ -106,10 +106,36 @@ RUINS.update({b: ['IOob', 'IOpr', 'ISrb'] for b in ('icecrown', 'frozen')})
 RUINS.update({b: ['OOob', 'OOst', 'LOsk', 'OOsk'] for b in ('volcanic', 'lava')})
 RUINS.update({b: ['DOjp', 'ZOrp', 'DRst'] for b in ('halls', 'crypt', 'temple')})
 
-# Clutter round the town sites
-VILLAGE = ['LOhb', 'LOhc', 'LOlp', 'LOcb', 'LOwr', 'LOam', 'LOwp', 'LOhp', 'LObr', 'LOt1']
-VILLAGE_COLD = ['NOfp', 'LOhc', 'LOlp', 'LOam', 'LOwp', 'LObr', 'NObo']
-VILLAGE_DRY = ['BOtt', 'BOct', 'LOhc', 'LObr', 'LOam', 'LOwp', 'BObo']
+# What each open-country piece is, for the place it belongs and the company it keeps (objects.py):
+# rocks lie on rough ground with stones spilled downhill and a plant sheltering at their foot,
+# stumps and logs lie by the woods with mushrooms on them, bushes grow in thickets, cacti stand
+# apart on the flats, fissures crack rough ground with stones on their rims, thorns grow in
+# tangles, and wild grass and crops grow in little stands.
+KINDS = {
+    'rock': {'LRrk', 'ARrk', 'BRrk', 'CRrk', 'ZRrk', 'NRrk', 'IRrs', 'ORrk', 'ORrr', 'ZRbs', 'IRrk', 'GRrk', 'DRrk'},
+    'wood': {'AOhs', 'COhs', 'AOlg', 'COlg'},
+    'bush': {'YPbs', 'APbs', 'CPbs'},
+    'cactus': {'BPca'},
+    'bones': {'BObo', 'NObo', 'LOrb'},
+    'thorns': {'NPth', 'APtv'},
+    'fissure': {'BRfs', 'CRfs', 'NRfs'},
+    'growth': {'BPtw', 'ZPtw', 'ZPvp', 'ZPms', 'GPsh', 'CPct'},
+    'crop': {'LPwh', 'LPcr', 'LOhc'},
+}
+KIND_OF = {did: kind for kind, ids in KINDS.items() for did in ids}
+
+# Clutter kept beside the buildings it belongs to: hay and carts by the barns, granaries and
+# windmills, hitching posts and a lantern by the inns, a barrow or rubbish by the cottages,
+# weapon and armour racks and a brazier by the square; fire pits in the cold, totems in the camps.
+CLUTTER = {
+    'farm': ['LOhb', 'LOhc', 'LOcb', 'LOwr'],
+    'inn': ['LOhp', 'LOlp', 'LOt1'],
+    'house': ['LOwr', 'LOhc', 'LOt1'],
+    'square': ['LOwp', 'LOam', 'LObr'],
+    'cold': ['NOfp', 'LOhc', 'LOwp'],
+    'camp': ['BOtt', 'LObr', 'LOwp', 'LOam'],
+}
+HOUSE_KIND = {'LSba': 'farm', 'LSgr': 'farm', 'LSwm': 'farm', 'LSin': 'inn', 'VSvb': 'house'}
 
 # Water plants without pathing, by biome: rushes on the banks, lily pads on still water
 RUSHES = {'jungle': ['ZPru', 'LPrs'], 'swamp': ['ZPru', 'APct'], 'troll': ['ZPru'], 'grotto': ['ZPru', 'APct'],
