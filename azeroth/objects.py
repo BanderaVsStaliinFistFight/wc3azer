@@ -55,6 +55,15 @@ FOREST_FLOOR = {'temperate': ['ZPsh', 'APms'], 'autumn': ['ZPsh', 'APms'], 'high
                 'worldtree': ['APms', 'ZPsh'], 'crystal': ['APms'], 'jungle': ['ZPsh', 'APms', 'ZPfw'], 'swamp': ['APms', 'ZPsh'],
                 'troll': ['ZPsh'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'], 'farmland': ['ZPsh'], 'plains': ['ZPsh']}
 FACING = 270.0
+# Weather over each kind of land (light kinds, so it sets the mood without hiding the ground):
+# rain over the dark woods, the swamps and the wet north, showers over the jungles, snow over the
+# snowfields and a blizzard over Icecrown, green fog over the blighted lands, red haze over the
+# burning ones, dust on the desert wind, moonlight in the night elf woods and sunlight through
+# the world trees' canopies; fogs in the dungeons.
+WEATHER = {'darkforest': 'RLlr', 'swamp': 'RLlr', 'fjord': 'RLlr', 'grizzly': 'RLlr', 'jungle': 'RAlr',
+           'snow': 'SNls', 'tundra': 'SNls', 'icecrown': 'SNbs', 'plague': 'FDgl', 'fel': 'FDgl', 'volcanic': 'FDrl',
+           'desert': 'WOlw', 'nightelf': 'LRma', 'crystal': 'LRma', 'worldtree': 'LRaa',
+           'crypt': 'FDwl', 'grotto': 'FDgl', 'lava': 'FDrl', 'halls': 'FDbl', 'frozen': 'FDbl'}
 
 
 class Objects:
@@ -189,6 +198,20 @@ def place(T, seed=7):
             region_index += 1
         portals.append(((spots[0][1], spots[0][2]), (spots[1][1], spots[1][2])))
     O.portals = portals
+
+    # ---- weather over each zone, as a region the size of the zone's land ----------------------
+    names = sorted({z['name'] for z in geo.ZONES if z['biome'] in WEATHER})
+    for zname in names:
+        ids = [i for i, z in enumerate(geo.ZONES) if z['name'] == zname]
+        ys, xs = np.nonzero(np.isin(T.zone_of, ids) & T.land)
+        if len(xs) < 40:
+            continue
+        x0, x1 = np.percentile(xs, [5, 95])
+        y0, y1 = np.percentile(ys, [5, 95])
+        (left, bottom), (right, top) = world_xy(x0, y0), world_xy(x1 + 1, y1 + 1)
+        O.regions.append(dict(left=left, bottom=bottom, right=right, top=top, name='Weather %s' % zname.replace("'", ''),
+                              index=region_index, color=(120, 160, 255), weather=WEATHER[geo.ZONES[ids[0]]['biome']]))
+        region_index += 1
 
     # ---- town sites stay open ground, free of trees, for whatever is built there ---------
     for name, tx, ty, building in geo.TOWNS:

@@ -94,6 +94,9 @@ def generate(info, objects):
     w('')
     for reg in regions:
         w('    set %s=Rect(%s, %s, %s, %s)' % (rect_var(reg), r(reg['left']), r(reg['bottom']), r(reg['right']), r(reg['top'])))
+        if reg.get('weather'):
+            w("    set we=AddWeatherEffect(%s, '%s')" % (rect_var(reg), reg['weather']))
+            w('    call EnableWeatherEffect(we, true)')
     w('endfunction')
     w('')
     w('//===========================================================================')

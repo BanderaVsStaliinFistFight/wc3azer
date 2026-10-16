@@ -28,6 +28,29 @@ class Terrain:
     pass
 
 
+# Harsh neighbours and the ground that bridges them, as a careful hand blends a palette: grass
+# gives way to snow through snowy grass, to sand through grassy earth and to lava through rough
+# earth; sand meets snow across bare earth.
+GRASSES = ('Lgrs', 'Lgrd', 'Vgrt', 'Fgrs')
+BRIDGES = [(GRASSES, ('Wsnw',), 'Wsng'), (GRASSES, ('Bdsr',), 'Ldrg'), (GRASSES, ('Dlvc',), 'Ldro'),
+           (('Bdsr',), ('Wsnw',), 'Ldrt')]
+
+
+def soften_contrasts(tex, free, noise, both_sides=False):
+    """Where two harsh grounds meet, the softer one turns to the bridging ground for a ragged
+    point or two along the border, so no bright grass lies straight against snow, sand or lava.
+    With both_sides, a harsh point still touching the softer ground (one that could not change,
+    such as a corner the game draws with its cliff's own ground) turns to the bridge instead."""
+    for soft, hard, bridge in BRIDGES:
+        a = np.isin(tex, [TILE[t] for t in soft])
+        b = np.isin(tex, [TILE[t] for t in hard])
+        tex = np.where(a & free & (dilate(b, 1) | (dilate(b, 2) & (noise > 0.1))), TILE[bridge], tex)
+        if both_sides:
+            a = np.isin(tex, [TILE[t] for t in soft])
+            tex = np.where(b & free & dilate(a, 1), TILE[bridge], tex)
+    return tex
+
+
 def nearest_on(line, p):
     """Nearest point of a polyline to p, and its distance."""
     a, b = np.asarray(line[:-1], float), np.asarray(line[1:], float)
@@ -347,7 +370,8 @@ def build(seed=1):
     z = np.maximum(z - blur(carve, 1), 12)
     upland = blur(z, 4)                                              # how high the land behind each shore stands
 
-    # Coasts: beaches where low land meets the sea, cliffs where it is high, and beaches
+    # Coasts: shores that slope down into shallow water wherever low or rolling land meets the sea,
+    # sea cliffs only where high ground does (headlands, mountains), and beaches
     # wherever units must reach the water (see geography.BEACHES).
     instance_land = np.isin(land_id, [land_index[nm] for nm in geo.INSTANCE_NAMES]) & land
     beach_src = np.zeros((n, n), bool)
@@ -364,7 +388,7 @@ def build(seed=1):
         beach_src |= (land_id == land_index[name]) & (land_sd > -6)
     coast_pts = land & (dc <= 1)
     beach_noise = f.fbm(22, 3)
-    beach_src |= coast_pts & (upland < 90 + beach_noise * 45)
+    beach_src |= coast_pts & (upland < 160 + beach_noise * 60)       # lowland and hill coasts slope into the sea
     beach_src &= ~dilate(instance_land, 8)
     for line, gates in getattr(geo, 'WALLS', []):      # no wading round the end of a wall
         beach_src &= f.segment_distance(line) > 10
@@ -572,6 +596,7 @@ def build(seed=1):
     beach_tile = per_zone('beach')
     beach = land & T.beach & (dc < 1.6 + noises[2]) & (height < 45) & ~lake_adjacent(lake | river)
     tex = np.where(beach, beach_tile, tex)
+    tex = soften_contrasts(tex, land & ~instance_zone, noises[1])
     tex = np.where(water, per_zone('seabed'), tex)
     tex = np.where(lake | river, TILE['Ldrt'], tex)
     # mud banks: bare earth along some stretches of the shores of the lakes and rivers, where
@@ -629,6 +654,7 @@ def build(seed=1):
     apron |= dilate(apron, 1) & ~shown & spill & (noises[2] > 0.3)
     tex = np.where(apron, cliff_ground, tex)
     tex = tidy_paint(tex, land & ~shown & ~instance_zone)
+    tex = soften_contrasts(tex, land & ~shown & ~instance_zone, noises[1], both_sides=True)
     T.cliff_type = cliff_type
     T.tex = tex
 

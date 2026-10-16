@@ -173,12 +173,14 @@ def write_blp_paletted(rgb):
 # Editor-side files: regions, cameras, triggers, custom text
 # --------------------------------------------------------------------------
 def write_w3r(regions):
-    """regions: list of dicts with left, bottom, right, top, name, index, color (r, g, b)."""
+    """regions: list of dicts with left, bottom, right, top, name, index, color (r, g, b) and
+    optionally weather (a weather effect id such as 'RLlr')."""
     out = [struct.pack('<ii', 5, len(regions))]
     for r in regions:
         out.append(struct.pack('<4f', r['left'], r['bottom'], r['right'], r['top']) + cstr(r['name']))
         red, green, blue = r.get('color', (255, 128, 128))
-        out.append(struct.pack('<i', r['index']) + bytes(4) + cstr('') + bytes([blue, green, red, 255]))
+        weather = r['weather'].encode('ascii') if r.get('weather') else bytes(4)
+        out.append(struct.pack('<i', r['index']) + weather + cstr('') + bytes([blue, green, red, 255]))
     return b''.join(out)
 
 
