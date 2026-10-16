@@ -138,5 +138,5 @@ python3 -m unittest discover tests
 ## Limits
 
 - 12 players, not 24, so the map loads on every patch that supports 480 × 480 maps.
-- The geography is hand-drawn from the world map, not traced from game data. Kalimdor and the Eastern Kingdoms are drawn about 20% shorter than their true proportions so a correctly shaped Northrend fits above them on a square map.
-- Pandaria, the Broken Isles, Zandalar, Outland, the Dragon Isles and Khaz Algar are left out, which leaves room for a much larger Northrend.
+- The geography is hand-drawn from the world map, not traced from game data. Kalimdor and the Eastern Kingdoms are drawn about 10% shorter than their true proportions, and Northrend smaller than its true size (about a third of Kalimdor's area), so all three fit on a square map with the two southern continents given the most room.
+- Pandaria, the Broken Isles, Zandalar, Outland, the Dragon Isles and Khaz Algar are left out.

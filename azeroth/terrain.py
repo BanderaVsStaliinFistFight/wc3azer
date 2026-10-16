@@ -139,7 +139,7 @@ def link_networks(lines, ground, skip, rng, reach=16.0):
     # to its shore), is left out
     nets = road_networks(lines, skip)
     stubs = {net[0] for net in nets if len(net) == 1 and
-             sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(lines[net[0]], lines[net[0]][1:])) < 6}
+             sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(lines[net[0]], lines[net[0]][1:])) < 10}
     return [l for i, l in enumerate(lines) if i not in stubs]
 
 
@@ -782,8 +782,14 @@ def stamp_ramps(layer, ramp, z, dry, roads, avoid=None):
     for cx, cy, dx, dy in crossings:
         if any(np.hypot(cx - px, cy - py) < 6 for px, py in done):
             continue
-        if stamp_ramp(layer, ramp, z, dry, cx, cy, abs(dx) >= abs(dy), avoid):
-            done.append((cx, cy))
+        # where the edge is ragged right at the crossing (a terrace beside the road, a bend in the
+        # cliff), try a little way up and down the road, and the ramp turned the other way
+        norm, along = max(np.hypot(dx, dy), 1e-9), abs(dx) >= abs(dy)
+        for k in (0, -1, 1, -2, 2, -3, 3):
+            x, y = cx + dx / norm * k, cy + dy / norm * k
+            if stamp_ramp(layer, ramp, z, dry, x, y, along, avoid) or stamp_ramp(layer, ramp, z, dry, x, y, not along, avoid):
+                done.append((x, y))
+                break
     return done
 
 

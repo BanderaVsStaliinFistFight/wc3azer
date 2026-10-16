@@ -366,9 +366,18 @@ DESTRUCTABLE_LANDMARKS = [
 
 # ---------------------------------------------------------------------------
 # Squash Kalimdor and the Eastern Kingdoms towards the south edge so the top
-# of the map is free for a correctly proportioned Northrend.
+# of the map is free for Northrend.
 # ---------------------------------------------------------------------------
-SQUASH_BASE, SQUASH = 14.0, 0.8
+SQUASH_BASE, SQUASH = 14.0, 0.9
+# Gilneas and the wading straits are placed by hand after the squash, in the tile coordinates of
+# the layout they were drawn on (squashed by LAYOUT_SQUASH); _fit carries them onto the current one.
+LAYOUT_SQUASH = 0.8
+_FIT = SQUASH / LAYOUT_SQUASH
+
+
+def _fit(x, y):
+    return x, round(SQUASH_BASE + (y - SQUASH_BASE) * _FIT, 2)
+
 _SQUASHED_LANDS = {'Kalimdor', 'Eastern Kingdoms', 'Teldrassil', 'Azuremyst Isle', 'Bloodmyst Isle',
                    "Isle of Quel'Danas", 'Echo Isles', 'Theramore Isle', 'Alcaz Island', 'Tol Barad'}
 
@@ -441,12 +450,17 @@ _squash_everything()
 # Northrend, after the Wrath of the Lich King continent map.
 # Authored in normalised coordinates: u = 0 west .. 1 east, v = 0 south .. 1 north.
 # ---------------------------------------------------------------------------
-NORTHREND_BOX = (144, 330, 386, 468)      # x0, y0, x1, y1 in tiles
+NORTHREND_BOX = (178, 376, 352, 468)      # x0, y0, x1, y1 in tiles
 
 
 def nr(u, v):
     x0, y0, x1, y1 = NORTHREND_BOX
     return round(x0 + u * (x1 - x0), 1), round(y0 + v * (y1 - y0), 1)
+
+
+# Northrend's fjords, ranges, lakes and mesas were sized in tiles for a box 242 tiles wide; they
+# scale with the box so the continent keeps its shape at any size.
+NR_SCALE = (NORTHREND_BOX[2] - NORTHREND_BOX[0]) / 242.0
 
 
 def nr_size(ru, rv):
@@ -474,7 +488,7 @@ LANDMASSES['Northrend'] = [nr(u, v) for u, v in NORTHREND_UV]
 
 # Narrow sea inlets cut after the coastline noise so they stay crisp: (polyline in u/v, half-width in tiles)
 SEA_INLETS = [
-    ([nr(u, v) for u, v in line], w) for line, w in [
+    ([nr(u, v) for u, v in line], max(1.0, w * NR_SCALE)) for line, w in [
         ([(-0.07, 0.30), (0.02, 0.34), (0.04, 0.40), (0.03, 0.48)], 1.3),      # strait around Coldarra
         ([(0.28, 0.04), (0.28, 0.12), (0.30, 0.19)], 2.2),                     # bay between Borean Tundra and Dragonblight
         ([(0.46, 0.08), (0.47, 0.15), (0.49, 0.20)], 1.8),                     # Moa'ki Harbor
@@ -503,20 +517,22 @@ _nr_zone("Zul'Drak", 0.73, 0.53, 0.14, 0.10, 'tundra', base=50, hills=90, densit
 _nr_zone('Grizzly Hills', 0.70, 0.30, 0.10, 0.11, 'grizzly', base=60, level=1)
 _nr_zone('Howling Fjord', 0.87, 0.17, 0.12, 0.15, 'fjord', base=80)
 
-MASSIFS += [
+MASSIFS += [(line, w * NR_SCALE, h) for line, w, h in [
     ([nr(0.55, 0.70), nr(0.65, 0.82), nr(0.78, 0.86), nr(0.90, 0.78)], 8, 1450),      # the Storm Peaks
     ([nr(0.28, 0.88), nr(0.38, 0.90), nr(0.48, 0.86)], 6, 1400),                      # the Icecrown glacier
     ([nr(0.05, 0.50), nr(0.12, 0.47), nr(0.21, 0.50), nr(0.25, 0.60), nr(0.22, 0.74)], 4, 1100),  # the walls of Sholazar
-]
-RIDGES += [
+]]
+RIDGES += [(line, w * NR_SCALE, h) for line, w, h in [
     ([nr(0.60, 0.42), nr(0.70, 0.40), nr(0.82, 0.42)], 3, 280),                       # Zul'Drak escarpment
     ([nr(0.72, 0.22), nr(0.80, 0.26), nr(0.90, 0.28)], 3, 260),                       # Howling Fjord highlands
     ([nr(0.25, 0.40), nr(0.30, 0.36), nr(0.38, 0.38)], 3, 240),                       # Wintergrasp foothills
-]
-LAKES += [nr(0.36, 0.24) + (3, 2), nr(0.52, 0.36) + (2.5, 2), nr(0.66, 0.26) + (3, 2)]   # Indu'le, Wyrmrest, Grizzly
+]]
+LAKES += [nr(u, v) + (rx * NR_SCALE, ry * NR_SCALE) for u, v, rx, ry in
+          [(0.36, 0.24, 3, 2), (0.52, 0.36, 2.5, 2), (0.66, 0.26, 3, 2)]]                  # Indu'le, Wyrmrest, Grizzly
 RIVERS += [[nr(0.13, 0.64), nr(0.07, 0.57), nr(0.02, 0.51)]]                               # Sholazar's river
-MESAS += [nr(0.68, 0.52) + (3.0, 1), nr(0.78, 0.50) + (2.6, 1), nr(0.92, 0.20) + (2.2, 1)]  # Zul'Drak, Howling Fjord
-BASINS += [nr(0.13, 0.64) + (12, 70)]                                                     # Sholazar Basin
+MESAS += [nr(u, v) + (r * NR_SCALE, lv) for u, v, r, lv in
+          [(0.68, 0.52, 3.0, 1), (0.78, 0.50, 2.6, 1), (0.92, 0.20, 2.2, 1)]]              # Zul'Drak, Howling Fjord
+BASINS += [nr(0.13, 0.64) + (12 * NR_SCALE, 70)]                                          # Sholazar Basin
 
 CAPITALS += [
     (6, 'Icecrown Citadel') + nr(0.34, 0.72) + ('undead',),
@@ -574,36 +590,36 @@ ROADS += [[nr(u, v) for u, v in line] for line in [
 # the squash.
 # ---------------------------------------------------------------------------
 LANDMASSES['Gilneas'] = [
-    (325.5, 271), (343, 269), (339.5, 263.5), (337, 260), (337.8, 257.5), (339.5, 255.6), (343.5, 252), (344.5, 248.5),
-    (343.5, 244.5), (340, 241.5), (335.5, 240), (331, 238.5), (327, 236.5), (323, 237.5), (320, 240.5),
-    (318.5, 244.5), (318, 249), (319, 253.5), (320.5, 257.5), (322.5, 261), (324.5, 264), (325.5, 266.5),
+    _fit(325.5, 271), _fit(343, 269), _fit(339.5, 263.5), _fit(337, 260), _fit(337.8, 257.5), _fit(339.5, 255.6), _fit(343.5, 252), _fit(344.5, 248.5),
+    _fit(343.5, 244.5), _fit(340, 241.5), _fit(335.5, 240), _fit(331, 238.5), _fit(327, 236.5), _fit(323, 237.5), _fit(320, 240.5),
+    _fit(318.5, 244.5), _fit(318, 249), _fit(319, 253.5), _fit(320.5, 257.5), _fit(322.5, 261), _fit(324.5, 264), _fit(325.5, 266.5),
 ]
-LANDMASSES['Gilneas Isle North'] = ('ellipse', 308.5, 248, 2.8, 2.3)
-LANDMASSES['Gilneas Isle South'] = ('ellipse', 310, 241.5, 2.8, 2.3)
+LANDMASSES['Gilneas Isle North'] = ('ellipse',) + _fit(308.5, 248) + (2.8, 2.3 * _FIT)
+LANDMASSES['Gilneas Isle South'] = ('ellipse',) + _fit(310, 241.5) + (2.8, 2.3 * _FIT)
 COAST_NOISE['Gilneas'] = 0.6
-zone('Gilneas', 'Gilneas', 331, 251, 15, 16, 'darkforest', base=60)
-zone('Gilneas', 'Gilneas Isle North', 308.5, 248, 2.8, 2.3, 'darkforest')
-zone('Gilneas', 'Gilneas Isle South', 310, 241.5, 2.8, 2.3, 'darkforest')
+zone('Gilneas', 'Gilneas', *_fit(331, 251), 15, 16 * _FIT, 'darkforest', base=60)
+zone('Gilneas', 'Gilneas Isle North', *_fit(308.5, 248), 2.8, 2.3 * _FIT, 'darkforest')
+zone('Gilneas', 'Gilneas Isle South', *_fit(310, 241.5), 2.8, 2.3 * _FIT, 'darkforest')
 
-SEA_INLETS += [([(347, 254.5), (341, 254.3), (338.5, 254)], 1.1)]                 # Gilneas City's harbour
-RIDGES += [([(321, 243), (326, 239.5)], 1.6, 260)]                                 # hills above Tempest's Reach
+SEA_INLETS += [([_fit(347, 254.5), _fit(341, 254.3), _fit(338.5, 254)], 1.1)]                 # Gilneas City's harbour
+RIDGES += [([_fit(321, 243), _fit(326, 239.5)], 1.6, 260)]                                 # hills above Tempest's Reach
 
 # Gilneas City: a ring road around Greymane's statue, at the head of the harbour
-_CITY, _CITY_R = (333.3, 253.6), 3.2
+_CITY, _CITY_R = _fit(333.3, 253.6), 3.2
 _ring = [(round(_CITY[0] + _CITY_R * math.cos(a), 1), round(_CITY[1] + _CITY_R * math.sin(a), 1))
          for a in [2 * math.pi * k / 16 for k in range(17)]]
-_NECK = (333.5, 265.5)                  # where the road crosses the neck of the peninsula
+_NECK = _fit(333.5, 265.5)                  # where the road crosses the neck of the peninsula
 ROADS += [
     _ring,
-    [(_CITY[0], _CITY[1] + _CITY_R), _NECK, (334, 272), (346, 282.8)],   # north over the neck to Silverpine
-    [(_CITY[0] - _CITY_R, _CITY[1]), (321.5, 250)],                        # west to Duskhaven
-    [(_CITY[0], _CITY[1] - _CITY_R), (329, 241.5)],                        # south to Stormglen
+    [(_CITY[0], _CITY[1] + _CITY_R), _NECK, _fit(334, 272), _fit(346, 282.8)],   # north over the neck to Silverpine
+    [(_CITY[0] - _CITY_R, _CITY[1]), _fit(321.5, 250)],                        # west to Duskhaven
+    [(_CITY[0], _CITY[1] - _CITY_R), _fit(329, 241.5)],                        # south to Stormglen
 ]
 LANDMARKS += [('YOst',) + _CITY + (0.9, 4.71)]                              # Greymane's statue
 
 
-TOWNS += [('Duskhaven', 321.5, 250, 'ntav'), ('Keel Harbor', 323.5, 259.5, 'nshp')]
-CAMPS += [('The Blackwald', 339, 245, 2), ('Stormglen Village', 327, 241, 0)]
+TOWNS += [('Duskhaven',) + _fit(321.5, 250) + ('ntav',), ('Keel Harbor',) + _fit(323.5, 259.5) + ('nshp',)]
+CAMPS += [('The Blackwald',) + _fit(339, 245) + (2,), ('Stormglen Village',) + _fit(327, 241) + (0,)]
 
 # ---------------------------------------------------------------------------
 # Kul Tiras, traced from the Battle for Azeroth zone map (without Mechagon and
@@ -680,7 +696,7 @@ BEACHES = []
 # (name, (x0, y0, x1, y1), biome, entrance camp/town, side of the waygate)
 # ---------------------------------------------------------------------------
 INSTANCES = [
-    # north-west of Kalimdor: Kalimdor's dungeons and raids, and Azjol-Nerub
+    # north-west of Kalimdor and beside Northrend: Kalimdor's dungeons and raids, and Azjol-Nerub
     ("Onyxia's Lair", (12, 444, 34, 466), 'lava', "Onyxia's Lair", 'S'),
     ("Temple of Ahn'Qiraj", (42, 440, 72, 466), 'temple', "Ahn'Qiraj", 'S'),
     ('Caverns of Time', (80, 444, 104, 466), 'temple', 'Tanaris Caverns of Time', 'W'),
@@ -688,15 +704,15 @@ INSTANCES = [
     ('Maraudon', (42, 406, 66, 430), 'grotto', 'Maraudon', 'S'),
     ('Dire Maul', (74, 404, 96, 430), 'halls', 'Dire Maul', 'N'),
     ('Azjol-Nerub', (104, 404, 126, 428), 'frozen', 'Azjol-Nerub', 'E'),
-    ("Zul'Farrak", (12, 362, 36, 386), 'temple', "Zul'Farrak", 'N'),
-    ('Blackfathom Deeps', (44, 362, 68, 386), 'grotto', 'Blackfathom Deeps', 'W'),
-    ('Razorfen Downs', (76, 364, 98, 386), 'grotto', 'Razorfen Kraul', 'E'),
-    # north-east, beyond Quel'Danas: Lordaeron's and Northrend's
+    ("Zul'Farrak", (134, 442, 158, 466), 'temple', "Zul'Farrak", 'S'),
+    ('Blackfathom Deeps', (134, 414, 158, 436), 'grotto', 'Blackfathom Deeps', 'W'),
+    ('Razorfen Downs', (134, 386, 158, 408), 'grotto', 'Razorfen Kraul', 'W'),
+    # north-east, beyond Quel'Danas and beside Northrend: Lordaeron's and Northrend's
     ('Naxxramas', (388, 440, 414, 466), 'crypt', 'Naxxramas', 'S'),
     ('Ulduar', (422, 440, 450, 466), 'halls', 'Ulduar', 'W'),
-    ('Icecrown Citadel', (388, 402, 412, 430), 'frozen', "Aldur'thar", 'W'),
-    ('Stratholme', (420, 402, 444, 430), 'crypt', 'Stratholme', 'S'),
-    ("Zul'Aman", (452, 400, 468, 432), 'troll', "Zul'Aman", 'S'),
+    ('Icecrown Citadel', (360, 442, 382, 466), 'frozen', "Aldur'thar", 'S'),
+    ('Stratholme', (360, 414, 382, 436), 'crypt', 'Stratholme', 'E'),
+    ("Zul'Aman", (360, 386, 382, 408), 'troll', "Zul'Aman", 'E'),
     # south, between the continents: the southern Eastern Kingdoms and Uldum
     ('Molten Core', (208, 110, 236, 136), 'lava', 'Blackrock Spire', 'N'),
     ('Karazhan', (246, 112, 270, 138), 'halls', 'Karazhan', 'N'),
@@ -774,10 +790,10 @@ for _name, _box, _biome, _ref, _side in INSTANCES:
 # from every camp and town to the nearest road (never over a massif).
 # ---------------------------------------------------------------------------
 SHALLOWS += [
-    [(29, 297), (36, 296.5), (43, 295.5)],          # Azuremyst Isle to Darkshore
-    [(17, 306), (20, 302)],                         # Bloodmyst Isle to Azuremyst
-    [(342, 243), (346, 240.5), (349.5, 238)],       # Tol Barad to Gilneas
-    [(165, 116), (171, 118.5), (177, 121.5), (181, 124)],   # Alcaz Island to Dustwallow
+    [_fit(29, 297), _fit(36, 296.5), _fit(43, 295.5)],          # Azuremyst Isle to Darkshore
+    [_fit(17, 306), _fit(20, 302)],                             # Bloodmyst Isle to Azuremyst
+    [_fit(342, 243), _fit(346, 240.5), _fit(349.5, 238)],       # Tol Barad to Gilneas
+    [_fit(165, 116), _fit(171, 118.5), _fit(177, 121.5), _fit(181, 124)],   # Alcaz Island to Dustwallow
 ]
 
 
