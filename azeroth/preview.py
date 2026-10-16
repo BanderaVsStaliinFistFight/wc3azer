@@ -56,11 +56,6 @@ def render(T, path, scale=3, objects=None, labels=True):
         for d in objects.get('trees', []):
             x, y = px(d['tx'], d['ty'])
             draw.point((x, y), fill=TREE_COLOURS.get(d['id'], (0, 60, 0)))
-        for u in objects.get('waygates', []):
-            x, y = px(*u)
-            draw.ellipse((x - 3, y - 3, x + 3, y + 3), fill=(200, 140, 255), outline=(0, 0, 0))
-        for a, b in objects.get('portals', []):
-            draw.line((*px(*a), *px(*b)), fill=(200, 120, 255), width=1)
     try:
         font = ImageFont.truetype('DejaVuSans.ttf', 4 * scale)
         big = ImageFont.truetype('DejaVuSans-Bold.ttf', 5 * scale)

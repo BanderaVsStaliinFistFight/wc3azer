@@ -62,9 +62,9 @@ def nearest_on(line, p):
     return (float(q[k, 0]), float(q[k, 1])), float(dist[k])
 
 
-def road_networks(lines, skip):
-    """Group the roads (by index) into networks of roads that meet, leaving out those skip(line) names."""
-    idx = [i for i, l in enumerate(lines) if len(l) > 1 and not skip(l)]
+def road_networks(lines):
+    """Group the roads (by index) into networks of roads that meet."""
+    idx = [i for i, l in enumerate(lines) if len(l) > 1]
     box = {i: (min(p[0] for p in lines[i]) - 1, min(p[1] for p in lines[i]) - 1,
                max(p[0] for p in lines[i]) + 1, max(p[1] for p in lines[i]) + 1) for i in idx}
     parent = {i: i for i in idx}
@@ -114,13 +114,13 @@ def split_at_sea(lines, open_sea, max_run=3):
     return out
 
 
-def link_networks(lines, ground, skip, rng, reach=16.0):
+def link_networks(lines, ground, rng, reach=16.0):
     """Join road networks left apart to their nearest neighbour by a short new road from a dead end,
     wherever one can be laid over open ground clear of the great ranges (so not across the sea)."""
     lines = list(lines)
 
     while True:
-        nets = road_networks(lines, skip)
+        nets = road_networks(lines)
         best = None
         for a, net in enumerate(nets):
             for p in [lines[i][k] for i in net for k in (0, -1)]:
@@ -137,7 +137,7 @@ def link_networks(lines, ground, skip, rng, reach=16.0):
         lines.append(meander([best[1], best[2]], 0.8, 17, rng))
     # a stray stub of road a few tiles long, meeting no other (a track from an offshore camp down
     # to its shore), is left out
-    nets = road_networks(lines, skip)
+    nets = road_networks(lines)
     stubs = {net[0] for net in nets if len(net) == 1 and
              sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(lines[net[0]], lines[net[0]][1:])) < 10}
     return [l for i, l in enumerate(lines) if i not in stubs]
@@ -153,8 +153,7 @@ def overland(ground, p, q):
 def join_roads(lines, keep, ground, reach=3.5):
     """Carry each road's end the last stretch onto the road it was laid to meet, over the ground:
     once the roads wander, a road no longer passes exactly through the point where another was set
-    to join it. Lines for which keep(line) is true (closed rings, corridors inside the instances)
-    are left be."""
+    to join it. Lines for which keep(line) is true (closed rings) are left be."""
     out = [list(l) for l in lines]
     for i, line in enumerate(out):
         if keep(line) or len(line) < 2:
@@ -279,25 +278,20 @@ def build(seed=1):
     hills = blur(zone_prop('hills'), 3)
     mountains = blur(zone_prop('mountains'), 3)
 
-    # Roads wander a little, except closed rings and the corridors inside instances.
+    # Roads wander a little, except closed rings.
     wander = np.random.default_rng(seed * 11 + 5)
-
-    def in_instance(p):
-        return any(x0 <= p[0] <= x1 and y0 <= p[1] <= y1 for _, (x0, y0, x1, y1), _, _, _ in geo.INSTANCES)
-
-    T.road_lines = [line if line[0] == line[-1] or in_instance(line[0]) else meander(line, 1.1, 17, wander)
-                    for line in geo.ROADS]
+    T.road_lines = [line if line[0] == line[-1] else meander(line, 1.1, 17, wander) for line in geo.ROADS]
     T.road_lines = split_at_sea(T.road_lines, ~(land | lake | river) & ~shallow_strait)
-    T.road_lines = join_roads(T.road_lines, lambda l: l[0] == l[-1] or in_instance(l[0]), land | lake | river | shallow_strait)
-    T.road_lines = link_networks(T.road_lines, land | lake | river, lambda l: in_instance(l[0]), wander)
+    T.road_lines = join_roads(T.road_lines, lambda l: l[0] == l[-1], land | lake | river | shallow_strait)
+    T.road_lines = link_networks(T.road_lines, land | lake | river, wander)
     road_d = np.full((n, n), 1e9)
     for line in T.road_lines:
         road_d = np.minimum(road_d, f.segment_distance(line, reach=30))
     T.road_d = road_d
     pass_factor = smoothstep(2.5, 6.0, road_d)       # roads cut passes through ridges
-    # settlements, camps and portals keep the mountains at arm's length and stand in a levelled clearing
+    # settlements, camps and landmarks keep the mountains at arm's length and stand in a levelled clearing
     flat_spots = [(c[2], c[3], 14) for c in geo.CAPITALS] + [(t[1], t[2], 5) for t in geo.TOWNS + geo.CAMPS]
-    flat_spots += [(x, y, 6) for pair in geo.PORTALS for _, x, y in pair] + [(l[1], l[2], 6) for l in geo.LANDMARKS]
+    flat_spots += [(l[1], l[2], 6) for l in geo.LANDMARKS]
     clearing = np.zeros((n, n))
     for tx, ty, r in flat_spots:
         d = f.distance(tx, ty)
@@ -320,12 +314,11 @@ def build(seed=1):
     dw = distance_field(land, 40)                  # distance from land, out at sea
     hill_n = f.fbm(18, 5) * 0.5 + 0.5
     knolls = f.fbm(7, 3) * 0.5 + 0.5                                # smaller hills riding on the big ones
-    instance_zone_pt = np.array([bool(zd.get('instance')) for zd in geo.ZONES])[zone_of]
-    hills = hills * np.where(instance_zone_pt, 1.0, HILL_SCALE)
+    hills = hills * HILL_SCALE
     ridge_n = f.ridged(34, 5)
     detail = f.fbm(5, 2)
     z = (base + hills * (hill_n + 0.6 * knolls) * (0.4 + 0.6 * pass_factor) + mountains * ridge_n ** 2 * pass_factor
-         + detail * 8 + INLAND_RISE * smoothstep(3, 40, dc) * ~instance_zone_pt)
+         + detail * 8 + INLAND_RISE * smoothstep(3, 40, dc))
     # Mountain ranges: a broad massif along each ridge line, broken into peaks,
     # saddles and spurs by ridged noise, rising out of a skirt of foothills.
     ridge_h = np.zeros((n, n))
@@ -373,7 +366,6 @@ def build(seed=1):
     # Coasts: shores that slope down into shallow water wherever low or rolling land meets the sea,
     # sea cliffs only where high ground does (headlands, mountains), and beaches
     # wherever units must reach the water (see geography.BEACHES).
-    instance_land = np.isin(land_id, [land_index[nm] for nm in geo.INSTANCE_NAMES]) & land
     beach_src = np.zeros((n, n), bool)
     for line in geo.SHALLOWS:
         beach_src |= f.segment_distance(line) < 7
@@ -389,7 +381,6 @@ def build(seed=1):
     coast_pts = land & (dc <= 1)
     beach_noise = f.fbm(22, 3)
     beach_src |= coast_pts & (upland < 160 + beach_noise * 60)       # lowland and hill coasts slope into the sea
-    beach_src &= ~dilate(instance_land, 8)
     for line, gates in getattr(geo, 'WALLS', []):      # no wading round the end of a wall
         beach_src &= f.segment_distance(line) > 10
     cliffy = smoothstep(2.0, 6.0, distance_field(beach_src, 12))      # 0 on beaches, 1 on cliff coasts
@@ -404,7 +395,7 @@ def build(seed=1):
     T.relief = relief
     ledge = relief * pass_factor + f.fbm(13, 3) * 90           # ragged ledges rather than contour rings
     terrace = np.clip(np.floor((ledge - 200) / 230) + 1, 0, 3).astype(np.int32)
-    keep_flat = (dc <= 4) | (road_d < 6) | (distance_field(lake | river, 4) < 4) | instance_land
+    keep_flat = (dc <= 4) | (road_d < 6) | (distance_field(lake | river, 4) < 4)
     for tx, ty, r in flat_spots:
         keep_flat |= f.distance(tx, ty) < r
     terrace[keep_flat] = 0
@@ -463,13 +454,10 @@ def build(seed=1):
     for cx, cy, r, lv in geo.MESAS:
         d = f.distance(cx, cy) + f.fbm(3, 2) * 0.6
         layer = np.where((d <= r) & (dc > 3) & (road_d > 4), np.maximum(layer, 2 + level + lv), layer)
-    layer = np.where(instance_land & (dc <= 1.5), 3, layer)              # instance ramparts
-    for x0, y0, x1, y1, lv in geo.BLOCKS:
-        layer = np.where((xs >= x0) & (xs <= x1) & (ys >= y0) & (ys <= y1) & land, 2 + lv, layer)
     # Clean ledges: no ledge, notch, pit or spike a single corner wide, and no two levels meeting
-    # only at a diagonal; the game draws those as stray shards and slivers of cliff. Mesas, the
-    # instances and the coasts keep their exact shapes.
-    tidy_ok = land & ~instance_land & (dc > 2)
+    # only at a diagonal; the game draws those as stray shards and slivers of cliff. Mesas and the
+    # coasts keep their exact shapes.
+    tidy_ok = land & (dc > 2)
     for cx, cy, r, lv in geo.MESAS:
         tidy_ok &= f.distance(cx, cy) > r + 2
     layer = clean_ledges(layer, tidy_ok)
@@ -482,12 +470,12 @@ def build(seed=1):
     dry = land & ~lake & ~river
     core = land & (massif_d < 1.15) & (pass_factor > 0.7)          # the impassable heart of each massif
     T.massif_core = core
-    no_ramp = in_massif | instance_land
+    no_ramp = in_massif.copy()
     for line, gates in getattr(geo, 'WALLS', []):
         no_ramp |= f.segment_distance(line) < 8
     T.ramps = stamp_ramps(layer, ramp, z, dry, T.road_lines, avoid=dilate(core, 1))
     T.ramps += edge_ramps(layer, ramp, z, dry & ~no_ramp, T.ramps, f.rng)
-    near_core = (massif_d < 1.4) | instance_land                    # pockets may link up anywhere but a massif's heart
+    near_core = massif_d < 1.4                                     # pockets may link up anywhere but a massif's heart
     for line, gates in getattr(geo, 'WALLS', []):
         near_core |= f.segment_distance(line) < 8
     T.ramps += link_pockets(layer, ramp, z, dry, water, core, near_core, np.where(land, land_id, -1))
@@ -577,31 +565,30 @@ def build(seed=1):
     cold = np.array([B[b]['cold'] for b in biome_names])[zone_of]
     rock = per_zone('rock')
     steep = slope_pt > 70
-    instance_zone = np.array([bool(zd.get('instance')) for zd in geo.ZONES])[zone_of]
     forest_floor = per_zone('floor')
     # the forest floor lies under the denser stands; the lighter woods keep the open ground's cover
     tex = np.where(T.forest & (T.forest_score > 0.1 + noises[1] * 0.1) & (forest_floor >= 0) & (noises[2] > -0.45),
                    forest_floor, tex)
-    alpine = land & (T.relief > 210 + noises[0] * 70) & ~instance_zone      # bare rock and scree up high
+    alpine = land & (T.relief > 210 + noises[0] * 70)                     # bare rock and scree up high
     tex = np.where(alpine & (noises[1] > -0.15), rock, np.where(alpine & (noises[2] > 0.2), TILE['Ldrt'], tex))
-    tex = np.where(steep & land & ~instance_zone, rock, tex)
+    tex = np.where(steep & land, rock, tex)
     # Bare rock shows where the ground is too steep to hold soil; level ground up high is gravel
     # and rough earth (snow in the cold) rather than a pavement of rock.
     level = slope_pt < 22 + noises[1] * 10
-    rocky = np.isin(tex, [TILE['Lrok'], TILE['Wrok']]) & level & land & ~instance_zone
+    rocky = np.isin(tex, [TILE['Lrok'], TILE['Wrok']]) & level & land
     tex = np.where(rocky, np.where(cold, TILE['Wsnw'], TILE['Ldro']), tex)
     height = T.h_rel
-    snowcap = land & (height > np.where(cold, 420, 700) + noises[0] * 60) & (noises[1] > -0.4) & ~instance_zone
+    snowcap = land & (height > np.where(cold, 420, 700) + noises[0] * 60) & (noises[1] > -0.4)
     tex = np.where(snowcap, TILE['Wsnw'], tex)
     beach_tile = per_zone('beach')
     beach = land & T.beach & (dc < 1.6 + noises[2]) & (height < 45) & ~lake_adjacent(lake | river)
     tex = np.where(beach, beach_tile, tex)
-    tex = soften_contrasts(tex, land & ~instance_zone, noises[1])
+    tex = soften_contrasts(tex, land, noises[1])
     tex = np.where(water, per_zone('seabed'), tex)
     tex = np.where(lake | river, TILE['Ldrt'], tex)
     # mud banks: bare earth along some stretches of the shores of the lakes and rivers, where
     # the water laps at the land, and grass running down to the water along the others
-    bank = (land & ~steep & ~cold & ~beach & ~instance_zone & (noises[1] > 0.0)
+    bank = (land & ~steep & ~cold & ~beach & (noises[1] > 0.0)
             & (distance_field(lake | river, 3) < 1.3 + noises[2] * 0.8))
     tex = np.where(bank, TILE['Ldrt'], tex)
     # Roads: wide cobbled roads through the old human lands, worn to bare earth in stretches;
@@ -618,7 +605,7 @@ def build(seed=1):
         dist = f.distance(cx, cy) + noises[0] * 2.0
         paved = land & ~(lake | river) & ((dist < 3.5) | ((dist < 10) & (road_d < 1.4 + noises[2] * 0.4)))
         tex = np.where(paved, TILE['Ybtl'], tex)
-    tex = tidy_paint(tex, land & ~instance_zone, rounds=3)
+    tex = tidy_paint(tex, land, rounds=3)
     # Cliff types. The game draws every corner beside a cliff or on a ramp with the cliff type's
     # own ground (dirt, snow or grass) whatever is painted there, and the cliff face takes that
     # type's look too. So each cliff takes the type that suits the ground around it: snow cliffs
@@ -653,8 +640,8 @@ def build(seed=1):
     apron = dilate(shown, 1) & ~shown & spill & (noises[1] > -0.25)
     apron |= dilate(apron, 1) & ~shown & spill & (noises[2] > 0.3)
     tex = np.where(apron, cliff_ground, tex)
-    tex = tidy_paint(tex, land & ~shown & ~instance_zone)
-    tex = soften_contrasts(tex, land & ~shown & ~instance_zone, noises[1], both_sides=True)
+    tex = tidy_paint(tex, land & ~shown)
+    tex = soften_contrasts(tex, land & ~shown, noises[1], both_sides=True)
     T.cliff_type = cliff_type
     T.tex = tex
 
@@ -738,11 +725,10 @@ def scatter_lakes(f, land, zone_of, road_d, flat_spots, existing, seed, count=50
     for line, width, height in geo.RIDGES:
         ok &= f.segment_distance(line, reach=width * RANGE_WIDTH * 2.5 + 4) > width * RANGE_WIDTH * 2.2
     biome = np.array([z['biome'] for z in geo.ZONES])[zone_of]
-    instance = np.array([bool(z.get('instance')) for z in geo.ZONES])[zone_of]
     plateau = np.array([z.get('level', 0) != 0 for z in geo.ZONES])[zone_of]   # water cannot sit up on a cliff level
     ok &= ~dilate(plateau, 5)
     dry_country = np.isin(biome, ['desert', 'savanna', 'reddesert', 'needles', 'barren', 'amber'])
-    ok &= ~instance & ~np.isin(biome, ['volcanic'])
+    ok &= ~np.isin(biome, ['volcanic'])
     ok &= ~dry_country | (rng.random(land.shape) < 0.04)          # only the odd oasis in dry country
     centres = [(cx, cy) for cx, cy, rx, ry in existing]
     sites = []
@@ -823,9 +809,16 @@ def walkable_tiles(layer, ramp, z, dry, water, core):
     corners = lambda a: [a[:-1, :-1], a[:-1, 1:], a[1:, :-1], a[1:, 1:]]
     h = np.where(water, z, z + 128 * (layer - 2))
     foot = dry | (water & (z > -DEEP_WATER))
-    rl, hr = corners(layer), corners(h)
+    rl = corners(layer)
     flat = np.maximum.reduce(rl) == np.minimum.reduce(rl)
     entrance = np.logical_and.reduce(corners(ramp)) & ~flat
+    # a ramp's middle row of corners sits half a level up, as in the final ground heights, which
+    # can leave the ground at the foot of the ramp too steep to walk
+    lift = np.zeros(layer.shape, bool)
+    n = layer.shape[0]
+    for k, (oy, ox) in enumerate(((0, 0), (0, 1), (1, 0), (1, 1))):
+        lift[oy:n - 1 + oy, ox:n - 1 + ox] |= entrance & (rl[k] == np.minimum.reduce(rl))
+    hr = corners(h + np.where(lift, 64.0, 0.0))
     gentle = np.maximum.reduce(hr) - np.minimum.reduce(hr) <= 95
     walk = np.logical_and.reduce(corners(foot)) & ((flat & gentle) | entrance) & ~core[:-1, :-1]
     out = np.zeros(layer.shape, bool)

@@ -123,13 +123,3 @@ biome('amber', tiles=[('Bdsr', -2), ('Ldro', 0.15), ('Bdrt', 0.5)], trees=[('CTt
 biome('worldtree', floor='Lgrd', cliff=CLIFF_GRASS, tiles=[('Lgrd', -2), ('Vgrt', 0.1), ('Lgrs', 0.55)], trees=[('ATtr', 40), ('ATtc', 26), ('LTlt', 10), ('VTlt', 10), ('WTtw', 8), ('CTtc', 6)], density=0.66, clump=18,
       hills=90,
       critters=['nder', 'nsno'], mm=(70, 110, 96))
-
-# Instances: flat, treeless floors of worked stone (Ybtl is the Cityscape brick).
-_HALL = dict(hills=10, base=40, beach='Ldrt', seabed='Ldrt')
-biome('lava', tiles=[('Dlvc', -2), ('Lrok', 0.25), ('Ybtl', 0.6)], **_HALL, mm=(120, 50, 30))
-biome('temple', tiles=[('Bdsr', -2), ('Ybtl', 0.15), ('Bdrt', 0.6)], **_HALL, mm=(196, 168, 110))
-biome('halls', tiles=[('Ybtl', -2), ('Lrok', 0.3), ('Ldrt', 0.62)], **_HALL, mm=(120, 110, 104))
-biome('crypt', tiles=[('Ybtl', -2), ('Ldro', 0.3), ('Ldrt', 0.6)], **_HALL, blight=True, mm=(96, 96, 80))
-biome('frozen', tiles=[('Wsnw', -2), ('Ybtl', 0.2), ('Wrok', 0.6)], **_HALL, cold=True, cliff=CLIFF_SNOW, mm=(170, 190, 214))
-biome('grotto', tiles=[('Lgrd', -2), ('Ldro', 0.25), ('Lrok', 0.55)], **_HALL, trees=[('ZTtw', 32), ('GTsh', 26), ('DTsh', 18), ('KTtw', 12), ('OTtw', 12)], density=0.12, clump=6, cliff=CLIFF_GRASS, mm=(60, 92, 50))
-biome('troll', tiles=[('Vgrt', -2), ('Ybtl', 0.2), ('Ldrt', 0.6)], **_HALL, trees=[('ZTtw', 50), ('ZTtc', 26), ('DTsh', 8), ('KTtw', 8), ('ATtc', 8)], density=0.15, clump=6, cliff=CLIFF_GRASS, mm=(64, 116, 50))

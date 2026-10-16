@@ -164,31 +164,29 @@ class MapTest(unittest.TestCase):
         self.assertGreaterEqual(len(trees), 25)
 
     def test_roads_connected(self):
-        """The roads form one network on each landmass (the instance corridors aside), and wherever a
-        road goes through water it is a ford shallow enough to wade."""
-        from azeroth import terrain, geography as geo
+        """The roads form one network on each landmass, and wherever a road goes through water it is
+        a ford shallow enough to wade."""
+        from azeroth import terrain
         T = terrain.build(1)
-
-        def in_instance(line):
-            return any(x0 <= line[0][0] <= x1 and y0 <= line[0][1] <= y1 for _, (x0, y0, x1, y1), _, _, _ in geo.INSTANCES)
-
-        nets = terrain.road_networks(T.road_lines, in_instance)
+        nets = terrain.road_networks(T.road_lines)
         self.assertLessEqual(len(nets), 4, 'Kalimdor, the Eastern Kingdoms, Northrend and Kul Tiras')
         wet = (T.road_d < 0.8) & T.water_flag
         self.assertEqual(int((wet & (terrain.SEA_Z - T.ground_z > terrain.DEEP_WATER)).sum()), 0)
 
     def test_no_melee_content(self):
-        """Terrain only: no gold mines, creeps, shops or item drops, and no melee setup."""
+        """Terrain only: no gold mines, creeps, shops, waygates or item drops, and no melee setup."""
         _, _, units = read_units(self.files['war3mapUnits.doo'])
         ids = {u['id'] for u in units}
         self.assertNotIn('ngol', ids)
-        self.assertEqual(ids - {'sloc', 'nwgt'}, {u['id'] for u in units if u['owner'] == 15 and u['id'] != 'nwgt'})
+        self.assertNotIn('nwgt', ids)
+        self.assertEqual(ids - {'sloc'}, {u['id'] for u in units if u['owner'] == 15})
         self.assertFalse([u for u in units if u['owner'] == 12], 'no neutral hostile units')
         script = self.files['war3map.j'].decode('utf-8')
         self.assertNotIn('Melee', script)
         self.assertNotIn('ngol', script)
         self.assertNotIn('PLAYER_NEUTRAL_AGGRESSIVE', script)
         self.assertNotIn('DropItem', script)
+        self.assertNotIn('Waygate', script)
         wtg = self.files['war3map.wtg']
         self.assertEqual(struct.unpack_from('<i', wtg, len(wtg) - 4)[0], 0, 'no triggers')
 

@@ -67,25 +67,14 @@ def generate(info, objects):
             w('')
         return names
 
-    region_by_index = {reg['index']: reg for reg in regions}
-
-    def passive_building(u):
-        w("    set u=CreateUnit(p, '%s', %s, %s, %.3f)" % (u['id'], r(u['x']), r(u['y']), u['angle']))
-        if u.get('waygate', -1) >= 0:
-            rv = rect_var(region_by_index[u['waygate']])
-            w('    call WaygateSetDestination(u, GetRectCenterX(%s), GetRectCenterY(%s))' % (rv, rv))
-            w('    call WaygateActivate(u, true)')
-
     def passive(u):
         w("    set u=CreateUnit(p, '%s', %s, %s, %.3f)" % (u['id'], r(u['x']), r(u['y']), u['angle']))
 
-    buildings = [u for u in units if u['kind'] == 'waygate']
     critters = [u for u in units if u['kind'] == 'critter']
-    f_build = creation_functions('CreateNeutralPassiveBuildings', 'PLAYER_NEUTRAL_PASSIVE', buildings, passive_building)
     f_pass = creation_functions('CreateNeutralPassive', 'PLAYER_NEUTRAL_PASSIVE', critters, passive)
 
     w('function CreateAllUnits takes nothing returns nothing')
-    for name in f_build + f_pass:
+    for name in f_pass:
         w('    call %s()' % name)
     w('endfunction')
     w('')

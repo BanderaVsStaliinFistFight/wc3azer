@@ -61,18 +61,11 @@ SCATTER = {
     'amber': [('BRrk', 2), ('BRrp', 1), ('BPca', 1), ('BObo', 0.8)],
     'jungle': [('ZPvp', 3), ('ZPms', 2), ('ZPtw', 2), ('ZRrk', 2), ('ZRbs', 1), ('AOlg', 0.6)],
     'swamp': [('ZPms', 3), ('ZPvp', 2), ('ZPtw', 1), ('ZRrk', 1), ('GPsh', 1), ('COlg', 0.8), ('CPct', 0.6)],
-    'troll': [('ZPvp', 2), ('ZRrk', 1), ('ZPms', 1), ('ZRbs', 1)],
-    'grotto': [('ZPms', 2), ('GPsh', 2), ('ZPvp', 1), ('GRst', 1), ('GRrk', 1)],
     'volcanic': [('ORrk', 3), ('DOlc', 2), ('ORmk', 1), ('ORrr', 1.5), ('OOsk', 0.2)],
-    'lava': [('DOlc', 3), ('ORrk', 1), ('ORmk', 0.5), ('ORrr', 1)],
     'snow': [('NRrk', 3), ('IRrs', 2), ('NPth', 1.5), ('NRic', 1), ('NObo', 0.3), ('NRfs', 0.3)],
     'tundra': [('NRrk', 3), ('NPth', 2), ('NRic', 1), ('NObo', 0.5), ('NRfs', 0.4)],
     'icecrown': [('IRrs', 2), ('IRic', 2), ('IRrk', 1.5), ('IRcy', 0.5), ('NObo', 0.3)],
-    'frozen': [('IRic', 1), ('IRrk', 1), ('IRrs', 1)],
     'rocky': [('LRrk', 3), ('ORrr', 2), ('BRrp', 1), ('BRfs', 0.3)],
-    'halls': [('DRst', 2), ('DRrk', 2), ('GRst', 1)],
-    'crypt': [('DRrk', 2), ('GRrk', 1), ('LOrb', 1)],
-    'temple': [('BRrk', 2), ('BRrp', 1), ('BObo', 1)],
 }
 
 # What each open-country piece is, for the place it belongs and the company it keeps (objects.py):
@@ -94,10 +87,9 @@ KINDS = {
 KIND_OF = {did: kind for kind, ids in KINDS.items() for did in ids}
 
 # Water plants without pathing, by biome: rushes on the banks, lily pads on still water
-RUSHES = {'jungle': ['ZPru', 'LPrs'], 'swamp': ['ZPru', 'APct'], 'troll': ['ZPru'], 'grotto': ['ZPru', 'APct'],
-          'fel': ['APct'], 'plague': ['LPrs']}
-LILIES = {'nightelf': 'AWfl', 'worldtree': 'AWfl', 'crystal': 'AWfl', 'jungle': 'ZPlp', 'swamp': 'ZPlp', 'troll': 'ZPlp',
-          'grotto': 'ZPlp', 'fel': 'CPlp', 'plague': 'CPlp'}
+RUSHES = {'jungle': ['ZPru', 'LPrs'], 'swamp': ['ZPru', 'APct'], 'fel': ['APct'], 'plague': ['LPrs']}
+LILIES = {'nightelf': 'AWfl', 'worldtree': 'AWfl', 'crystal': 'AWfl', 'jungle': 'ZPlp', 'swamp': 'ZPlp',
+          'fel': 'CPlp', 'plague': 'CPlp'}
 WATER_VARIATIONS = {'ZPru': 2, 'LPrs': 4, 'APct': 1, 'AWfl': 3, 'ZPlp': 3, 'CPlp': 1, 'LPfp': 3, 'ZWsw': 5}
 SEAWEED = 'ZWsw'                                      # in the shallows off warm and temperate coasts
 ICE_FLOES = ['NWf1', 'NWf2', 'NWf3', 'NWf4', 'NWi3', 'NWi4']     # drifting in the cold seas

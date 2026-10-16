@@ -1,4 +1,4 @@
-"""Places trees, doodads, landmarks, start locations, waygates and critters."""
+"""Places trees, doodads, landmarks, start locations and critters."""
 import collections
 import math
 
@@ -31,8 +31,7 @@ DETAIL_VARIATIONS = {'LRrk': 10, 'ARrk': 10, 'CRrk': 10, 'BRrk': 10, 'BRsp': 8, 
 ROCKS = {'nightelf': ('ARrk', None), 'worldtree': ('ARrk', None), 'crystal': ('ARrk', None), 'fel': ('CRrk', None),
          'savanna': ('BRrk', None), 'reddesert': ('BRrk', 'BRsp'), 'needles': ('BRrk', 'BRsp'), 'barren': ('BRrk', None),
          'desert': ('BRrk', 'BRsp'), 'amber': ('BRrk', 'BRsp'), 'jungle': ('ZRrk', 'ZRsp'), 'swamp': ('ZRrk', None),
-         'snow': ('NRrk', None), 'tundra': ('NRrk', None), 'icecrown': ('IRrs', None), 'frozen': ('IRrs', None),
-         'volcanic': ('ORrk', None), 'lava': ('ORrk', None), 'halls': ('DRrk', None), 'crypt': ('DRrk', None)}
+         'snow': ('NRrk', None), 'tundra': ('NRrk', None), 'icecrown': ('IRrs', None), 'volcanic': ('ORrk', None)}
 # per biome: the great spire raised on the heights of a massif
 SPIRES = {'snow': 'IRgc', 'tundra': 'IRgc', 'icecrown': 'IRgc', 'crystal': 'IRgc', 'savanna': 'BRrs', 'reddesert': 'BRrs',
           'needles': 'BRrs', 'barren': 'BRrs', 'desert': 'BRrs', 'amber': 'BRrs', 'volcanic': 'ORrs', 'fel': 'CRrs'}
@@ -42,7 +41,7 @@ PLANTS = {'temperate': ['ZPfw', 'ZPsh', 'LPwh', 'APms'], 'farmland': ['ZPfw', 'Z
           'plains': ['ZPfw', 'ZPsh', 'LPwh'], 'autumn': ['ZPsh', 'ZPfw', 'APms', 'LPwh'],
           'highland': ['ZPsh', 'ZPfw', 'LPwh'], 'darkforest': ['ZPsh', 'APms', 'CPms'], 'nightelf': ['APms', 'ZPfw', 'ZPsh'],
           'worldtree': ['APms', 'ZPfw', 'ZPsh'], 'jungle': ['ZPsh', 'ZPfw', 'APms'], 'swamp': ['ZPsh', 'APms', 'CPms'],
-          'grotto': ['APms', 'ZPsh', 'CPms'], 'troll': ['ZPsh', 'ZPfw'], 'fel': ['CPms', 'ZPsh', 'LPcw'],
+          'fel': ['CPms', 'ZPsh', 'LPcw'],
           'plague': ['CPms', 'LPcw'], 'grizzly': ['ZPsh', 'ZPfw', 'APms', 'LPwh'], 'fjord': ['ZPsh', 'ZPfw', 'LPwh'],
           'savanna': ['ZPsh', 'LPwh'], 'barren': ['ZPsh'], 'tundra': ['ZPsh'],
           'reddesert': ['ZPsh'], 'needles': ['ZPsh'], 'crystal': ['APms', 'ZPfw'],
@@ -55,12 +54,12 @@ LOGS = {'temperate': 'AOlg', 'autumn': 'AOlg', 'highland': 'AOlg', 'grizzly': 'A
 FOREST_FLOOR = {'temperate': ['ZPsh', 'APms'], 'autumn': ['ZPsh', 'APms'], 'highland': ['ZPsh', 'APms'], 'grizzly': ['ZPsh', 'APms'],
                 'fjord': ['ZPsh', 'APms'], 'darkforest': ['APms', 'CPms', 'ZPsh', 'GPsh'], 'nightelf': ['APms', 'ZPsh'],
                 'worldtree': ['APms', 'ZPsh'], 'crystal': ['APms'], 'jungle': ['ZPsh', 'APms', 'ZPfw', 'ZPvp'],
-                'swamp': ['APms', 'ZPsh', 'ZPvp'], 'troll': ['ZPsh', 'ZPvp'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'],
+                'swamp': ['APms', 'ZPsh', 'ZPvp'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'],
                 'farmland': ['ZPsh'], 'plains': ['ZPsh'], 'tundra': ['ZPsh'], 'snow': ['ZPsh']}
 # How lush each land is: it scales the wild plants of the meadows, the undergrowth of the woods
 # and the bushes, thickets and the like over open country (the jungles and swamps run thickest,
 # the deserts and the frozen lands thinnest).
-LUSH = {'jungle': 2.2, 'swamp': 1.9, 'troll': 1.6, 'grotto': 1.5, 'nightelf': 1.6, 'worldtree': 1.7, 'darkforest': 1.6,
+LUSH = {'jungle': 2.2, 'swamp': 1.9, 'nightelf': 1.6, 'worldtree': 1.7, 'darkforest': 1.6,
         'temperate': 1.5, 'grizzly': 1.5, 'fjord': 1.5, 'autumn': 1.4, 'farmland': 1.3, 'highland': 1.4, 'plains': 1.3,
         'crystal': 1.2, 'fel': 1.1, 'plague': 0.9, 'savanna': 1.0, 'barren': 0.6, 'reddesert': 0.6, 'needles': 0.6,
         'tundra': 0.7, 'snow': 0.6, 'rocky': 0.7, 'desert': 0.45, 'amber': 0.45, 'volcanic': 0.3}
@@ -69,18 +68,17 @@ FACING = 270.0
 # rain over the dark woods, the swamps and the wet north, showers over the jungles, snow over the
 # snowfields and a blizzard over Icecrown, green fog over the blighted lands, red haze over the
 # burning ones, dust on the desert wind, moonlight in the night elf woods and sunlight through
-# the world trees' canopies; fogs in the dungeons.
+# the world trees' canopies.
 WEATHER = {'darkforest': 'RLlr', 'swamp': 'RLlr', 'fjord': 'RLlr', 'grizzly': 'RLlr', 'jungle': 'RAlr',
            'snow': 'SNls', 'tundra': 'SNls', 'icecrown': 'SNbs', 'plague': 'FDgl', 'fel': 'FDgl', 'volcanic': 'FDrl',
-           'desert': 'WOlw', 'nightelf': 'LRma', 'crystal': 'LRma', 'worldtree': 'LRaa',
-           'crypt': 'FDwl', 'grotto': 'FDgl', 'lava': 'FDrl', 'halls': 'FDbl', 'frozen': 'FDbl'}
+           'desert': 'WOlw', 'nightelf': 'LRma', 'crystal': 'LRma', 'worldtree': 'LRaa'}
 
 
 class Objects:
     def __init__(self):
         self.doodads = []      # war3map.doo entries
         self.units = []        # dicts: id, tx, ty, owner, kind, ...
-        self.regions = []      # waygate destinations
+        self.regions = []      # weather regions
         self.starts = []       # (index, name, tx, ty, race)
         self.tree_count = 0
 
@@ -180,35 +178,6 @@ def place(T, seed=7):
     def far_from_capitals(tx, ty, d):
         return all(math.hypot(tx - cx, ty - cy) > d for cx, cy in capital_xy)
 
-    # ---- waygates (portal network) -----------------------------------------------
-    region_index = 0
-    portals = []
-    road_ends = [p for line in T.road_lines for p in (line[0], line[-1])]
-
-    def gate_spot(x, y):
-        """A waygate stands at the end of the road leading to it, or beside a road, never across one."""
-        return far_from_capitals(x, y, 17) and (T.road_d[int(y), int(x)] >= 2.2 or
-                                                 min(math.hypot(x - ex, y - ey) for ex, ey in road_ends) < 3)
-
-    for a, b in geo.PORTALS:
-        spots = []
-        for name, tx, ty in (a, b):
-            spot = find_spot(tx, ty, 2.0, max_search=24, accept=gate_spot)
-            assert spot, 'no room for waygate %s' % name
-            spots.append((name,) + spot)
-            mark(occupied, spot[0], spot[1], 2.5); mark(reserved, spot[0], spot[1], 4)
-        for (name, gx, gy), (dname, dx, dy) in ((spots[0], spots[1]), (spots[1], spots[0])):
-            # arrive next to the partner gate, on open ground
-            ex, ey = next(((dx + ox, dy + oy) for ox, oy in ((0, -3.5), (3.5, 0), (-3.5, 0), (0, 3.5), (2.5, -2.5), (-2.5, -2.5))
-                           if area_ok(dx + ox, dy + oy, 1, allow_occupied=True)), (dx, dy - 3.5))
-            rx, ry = world_xy(ex, ey)
-            O.regions.append(dict(left=rx - 128, bottom=ry - 128, right=rx + 128, top=ry + 128,
-                                  name='%s Exit' % dname.replace("'", ''), index=region_index, color=(160, 80, 255)))
-            add_unit('nwgt', gx, gy, NEUTRAL_PASSIVE, 'waygate', waygate=region_index, label=name)
-            region_index += 1
-        portals.append(((spots[0][1], spots[0][2]), (spots[1][1], spots[1][2])))
-    O.portals = portals
-
     # ---- weather over each zone, as a region the size of the zone's land ----------------------
     names = sorted({z['name'] for z in geo.ZONES if z['biome'] in WEATHER})
     for zname in names:
@@ -220,8 +189,7 @@ def place(T, seed=7):
         y0, y1 = np.percentile(ys, [5, 95])
         (left, bottom), (right, top) = world_xy(x0, y0), world_xy(x1 + 1, y1 + 1)
         O.regions.append(dict(left=left, bottom=bottom, right=right, top=top, name='Weather %s' % zname.replace("'", ''),
-                              index=region_index, color=(120, 160, 255), weather=WEATHER[geo.ZONES[ids[0]]['biome']]))
-        region_index += 1
+                              index=len(O.regions), color=(120, 160, 255), weather=WEATHER[geo.ZONES[ids[0]]['biome']]))
 
     # ---- town sites stay open clearings, free of trees ---------------------------------
     for name, tx, ty, building in geo.TOWNS:
@@ -529,7 +497,6 @@ def place(T, seed=7):
     # without a beach; each blocks its patch of the shallows as it would on land.
     inner = ~dilate(T.edge, 2)
     inner[MAP_H:, :] = inner[:, MAP_W:] = False
-    instance_zone = np.array([bool(z.get('instance')) for z in geo.ZONES])[T.zone_of]
     cliff_here = np.zeros((n, n), bool)
     cliff_here[:-1, :-1] = T.cliff_tile
 
@@ -539,7 +506,7 @@ def place(T, seed=7):
         return (0 < ix < MAP_W - 1 and 0 < iy < MAP_H - 1 and not cliff_here[iy, ix] and T.road_d[iy, ix] > 2.0
                 and bool(T.water_flag[iy:iy + 2, ix:ix + 2].all()) and ground_z_at(T, px, py) > SEA_Z - 90)
 
-    rocky_shallows = (T.sea & dilate(T.land & ~T.beach, 3) & inner & ~dilate(instance_zone & T.land, 3))
+    rocky_shallows = T.sea & dilate(T.land & ~T.beach, 3) & inner
     roll = rng.random((n, n))
     for ty, tx in np.argwhere(rocky_shallows & (beds > 0.15) & (roll < 0.1)):
         rock = ROCKS.get(str(biome_of[ty, tx]), ('LRrk', None))[0]
@@ -562,7 +529,7 @@ def place(T, seed=7):
     for ty, tx in np.argwhere(coast & T.beach & tile_ok & (beds > 0.2) & (roll < 0.3)):
         around(SHELLS, tx + 0.5, ty + 0.5, int(rng.integers(1, 4)), 0.0, 0.5, (0.8, 1.2), variations=10)
     edge_of_wood = dilate(is_tree, 1) & ~is_tree
-    dark = np.isin(biome_of, ['plague', 'darkforest', 'crypt', 'fel', 'icecrown'])
+    dark = np.isin(biome_of, ['plague', 'darkforest', 'fel', 'icecrown'])
     for mask, did, p in ((edge_of_wood | coast, BIRDS, 0.003), (dark & T.land & (is_tree | by_cliff), BATS, 0.004),
                          ((biome_of == 'swamp') & T.land & dilate(is_water, 2), FLIES, 0.02)):
         roll = rng.random((n, n))
@@ -643,8 +610,8 @@ def place(T, seed=7):
         if afloat(px, py):
             add_detail(str(rng.choice(ICE_FLOES)), px, py, z=SEA_Z, variations=1)
     # A last look over the small loose pieces (none of them has pathing): a pebble that ended up
-    # half inside a boulder, a plant or stone dropped on top of another of its kind, or a water
-    # plant over a ford is taken away.
+    # half inside a boulder, a plant or stone dropped on top of another of its kind, a rock, bush
+    # or cactus standing inside another solid piece, or a water plant over a ford is taken away.
     rock_ids = KINDS['rock'] | {r for r, _ in ROCKS.values()}
     AMBIENT = {BIRDS, BATS, FLIES}
     boulders = collections.defaultdict(list)
@@ -652,6 +619,19 @@ def place(T, seed=7):
         if d['id'] in rock_ids and d['scale'] >= 0.42:
             boulders[(int((d['x'] - LEFT) / 128), int((d['y'] - BOTTOM) / 128))].append(d)
     baked = {id(b[0]) for b in blockers}                    # pieces whose footprint is in the pathing map stay
+
+    def footprint(d):
+        size = DOODADS.get(d['id'], (None, 0))[1]
+        if not size:
+            return 0.0
+        w, h = size if isinstance(size, tuple) else (abs(size), abs(size))
+        return min(w, h) / 8.0 * d['scale']
+
+    solid = collections.defaultdict(list)                  # pieces with a footprint: (x, y, radius) by tile
+    for d in detail:
+        if id(d) in baked and footprint(d):
+            tx, ty = (d['x'] - LEFT) / 128.0, (d['y'] - BOTTOM) / 128.0
+            solid[(int(tx), int(ty))].append((tx, ty, footprint(d)))
     loose, keep = collections.defaultdict(list), []
     for d in detail:
         tx, ty = (d['x'] - LEFT) / 128.0, (d['y'] - BOTTOM) / 128.0
@@ -669,7 +649,14 @@ def place(T, seed=7):
                    for gx in (cell[0] - 1, cell[0], cell[0] + 1) for gy in (cell[1] - 1, cell[1], cell[1] + 1)
                    for o, ox, oy in loose.get((gx, gy), [])):
                 continue
+            r = footprint(d)
+            if r and any(math.hypot(tx - ox, ty - oy) < 0.5 * (r + orr)
+                         for gx in (cell[0] - 1, cell[0], cell[0] + 1) for gy in (cell[1] - 1, cell[1], cell[1] + 1)
+                         for ox, oy, orr in solid.get((gx, gy), [])):
+                continue
             loose[cell].append((d, tx, ty))
+            if r:
+                solid[cell].append((tx, ty, r))
         keep.append(d)
     detail = keep
     O.details = detail

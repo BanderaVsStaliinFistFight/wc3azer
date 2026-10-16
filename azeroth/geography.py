@@ -304,15 +304,6 @@ CAMPS = [
     ('Kezan', 252, 200, 0), ('Tol Barad', 352, 292.1, 1),
 ]
 
-# Waygates (mage portals): pairs of (name, x, y) linking far-apart lands.
-PORTALS = [
-    (('Stormwind Portal', 362, 180), ('Darnassus Portal', 38, 412)),
-    (('Orgrimmar Portal', 152, 262), ('Undercity Portal', 356, 382)),
-    (('Thunder Bluff Portal', 78, 202), ('Silvermoon Portal', 432, 420)),
-    (('Stormwind Harbor Portal', 350, 190), ('Boralus Portal', 298, 192)),
-    (('Ratchet Portal', 152, 206), ('Kezan Portal', 250, 202)),
-]
-
 # Roads (polylines of tiles). Painted as dirt paths and kept free of trees.
 ROADS = [
     # Eastern Kingdoms
@@ -413,7 +404,7 @@ def _squash_points(points):
 
 
 def _squash_everything():
-    global RIDGES, MASSIFS, LAKES, RIVERS, SHALLOWS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, PORTALS, ROADS
+    global RIDGES, MASSIFS, LAKES, RIVERS, SHALLOWS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, ROADS
     global LANDMARKS, DESTRUCTABLE_LANDMARKS, WALLS
     near = _near_squashed
     for z in ZONES:
@@ -430,7 +421,6 @@ def _squash_everything():
     CAPITALS = [(i, n, x, _sy(y), race) if near(x, y) else (i, n, x, y, race) for i, n, x, y, race in CAPITALS]
     TOWNS = [(n, x, _sy(y), b) if near(x, y) else (n, x, y, b) for n, x, y, b in TOWNS]
     CAMPS = [(n, x, _sy(y), st) if near(x, y) else (n, x, y, st) for n, x, y, st in CAMPS]
-    PORTALS = [tuple((n, x, _sy(y)) if near(x, y) else (n, x, y) for n, x, y in pair) for pair in PORTALS]
     ROADS = [_squash_points(l) if near(*l[0]) else l for l in ROADS]
     LANDMARKS = [(d, x, _sy(y), sc, a) if near(x, y) else (d, x, y, sc, a) for d, x, y, sc, a in LANDMARKS]
     DESTRUCTABLE_LANDMARKS = [(d, x, _sy(y), sc) if near(x, y) else (d, x, y, sc) for d, x, y, sc in DESTRUCTABLE_LANDMARKS]
@@ -557,15 +547,8 @@ CAMPS += [(name,) + nr(u, v) + (strength,) for name, u, v, strength in [
     ('New Hearthglen', 0.56, 0.22, 1), ('Icemist Village', 0.40, 0.42, 1), ("Drak'Tharon Keep", 0.66, 0.42, 1), ('Grizzlemaw', 0.73, 0.27, 1),
     ('Camp Oneqwah', 0.78, 0.34, 0), ('Gundrak', 0.88, 0.48, 2), ("Drak'Sotra", 0.63, 0.53, 1), ('Ulduar', 0.72, 0.88, 2),
     ('Dun Niffelem', 0.84, 0.74, 1), ('Brunnhildar Village', 0.60, 0.80, 1), ('Utgarde Keep', 0.85, 0.20, 1),
-    ('Utgarde Pinnacle', 0.93, 0.31, 2), ('Kamagua', 0.70, 0.08, 0), ('Westguard Keep', 0.74, 0.18, 0),
+    ('Utgarde Pinnacle', 0.93, 0.31, 2), ('Kamagua', 0.70, 0.14, 0), ('Westguard Keep', 0.74, 0.18, 0),
 ]]
-
-PORTALS += [
-    (('Ironforge Portal', 378, _sy(244)), ('Dalaran Portal',) + nr(0.57, 0.44)),
-    (('Undercity Gate', 368, _sy(370)), ('Icecrown Portal',) + nr(0.40, 0.64)),
-    (('Orgrimmar Gate', 166, _sy(262)), ('Warsong Hold Portal',) + nr(0.20, 0.22)),
-    (('Menethil Harbor Portal', 378, _sy(280)), ('Valgarde Portal',) + nr(0.70, 0.16)),
-]
 
 ROADS += [[nr(u, v) for u, v in line] for line in [
     [(0.10, 0.28), (0.18, 0.30), (0.26, 0.36), (0.32, 0.46), (0.42, 0.50), (0.50, 0.52)],
@@ -689,103 +672,6 @@ BEACH_ISLANDS = {'Kezan', 'Tol Barad', 'Azuremyst Isle', 'Bloodmyst Isle', 'Giln
 BEACHES = []
 
 # ---------------------------------------------------------------------------
-# Instances: dungeons and raids as walled, cliff-edged islands in the corners
-# of the Great Sea, each reached through a waygate from its entrance on the
-# continents (the camp or town named here). Inside: a pillared hall and a
-# raised dais at the far end. Tile coordinates.
-# (name, (x0, y0, x1, y1), biome, entrance camp/town, side of the waygate)
-# ---------------------------------------------------------------------------
-INSTANCES = [
-    # north-west of Kalimdor and beside Northrend: Kalimdor's dungeons and raids, and Azjol-Nerub
-    ("Onyxia's Lair", (12, 444, 34, 466), 'lava', "Onyxia's Lair", 'S'),
-    ("Temple of Ahn'Qiraj", (42, 440, 72, 466), 'temple', "Ahn'Qiraj", 'S'),
-    ('Caverns of Time', (80, 444, 104, 466), 'temple', 'Tanaris Caverns of Time', 'W'),
-    ('Wailing Caverns', (12, 404, 34, 430), 'grotto', 'The Crossroads Oasis', 'E'),
-    ('Maraudon', (42, 406, 66, 430), 'grotto', 'Maraudon', 'S'),
-    ('Dire Maul', (74, 404, 96, 430), 'halls', 'Dire Maul', 'N'),
-    ('Azjol-Nerub', (104, 404, 126, 428), 'frozen', 'Azjol-Nerub', 'E'),
-    ("Zul'Farrak", (134, 442, 158, 466), 'temple', "Zul'Farrak", 'S'),
-    ('Blackfathom Deeps', (134, 414, 158, 436), 'grotto', 'Blackfathom Deeps', 'W'),
-    ('Razorfen Downs', (134, 386, 158, 408), 'grotto', 'Razorfen Kraul', 'W'),
-    # north-east, beyond Quel'Danas and beside Northrend: Lordaeron's and Northrend's
-    ('Naxxramas', (388, 440, 414, 466), 'crypt', 'Naxxramas', 'S'),
-    ('Ulduar', (422, 440, 450, 466), 'halls', 'Ulduar', 'W'),
-    ('Icecrown Citadel', (360, 442, 382, 466), 'frozen', "Aldur'thar", 'S'),
-    ('Stratholme', (360, 414, 382, 436), 'crypt', 'Stratholme', 'E'),
-    ("Zul'Aman", (360, 386, 382, 408), 'troll', "Zul'Aman", 'E'),
-    # south, between the continents: the southern Eastern Kingdoms and Uldum
-    ('Molten Core', (208, 110, 236, 136), 'lava', 'Blackrock Spire', 'N'),
-    ('Karazhan', (246, 112, 270, 138), 'halls', 'Karazhan', 'N'),
-    ("Zul'Gurub", (282, 108, 308, 134), 'troll', "Zul'Gurub", 'E'),
-    ('The Deadmines', (210, 66, 234, 90), 'halls', 'Moonbrook', 'E'),
-    ('Sunken Temple', (246, 62, 272, 90), 'grotto', 'Stonard', 'N'),
-    ('Uldaman', (284, 64, 308, 88), 'halls', 'Uldaman', 'E'),
-    ('Halls of Origination', (212, 16, 238, 42), 'temple', "Lost City of the Tol'vir", 'W'),
-    ('Gnomeregan', (250, 16, 272, 40), 'halls', 'Gnomeregan', 'N'),
-    ('Scholomance', (284, 16, 308, 40), 'crypt', 'Andorhal', 'E'),
-]
-
-# Raised rectangles (x0, y0, x1, y1, extra cliff levels): the instances' pillars.
-BLOCKS = []
-INSTANCE_NAMES = set()
-
-
-def _instance_layout(name, box, side):
-    """Outline, waygate position, raised blocks and corridor of an instance.
-
-    Laid out along the hall: `a` runs from the waygate end (0) to the far end (L),
-    `c` across it. The two corners beside the waygate are cut away into a
-    vestibule, pillars line the hall and a raised dais stands at the far end,
-    reached by a ramp where the corridor climbs onto it.
-    """
-    x0, y0, x1, y1 = box
-    cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
-    along_x = side in 'WE'
-    L = (x1 - x0) if along_x else (y1 - y0)
-    W = (y1 - y0) if along_x else (x1 - x0)
-
-    def world(a, c):
-        return {'W': (x0 + a, cy + c), 'E': (x1 - a, cy + c), 'S': (cx + c, y0 + a), 'N': (cx + c, y1 - a)}[side]
-
-    def rect(a0, a1, c0, c1, lv):
-        (ax, ay), (bx, by) = world(a0, c0), world(a1, c1)
-        return (min(ax, bx), min(ay, by), max(ax, bx), max(ay, by), lv)
-
-    h = sum(map(ord, name))
-    na, nl = 4 + h % 3, 5 + (h // 3) % 3                         # vestibule notch: across, along
-    outline = [world(a, c) for a, c in [(0, -W / 2 + na), (0, W / 2 - na), (nl, W / 2 - na), (nl, W / 2), (L, W / 2),
-                                        (L, -W / 2), (nl, -W / 2), (nl, -W / 2 + na)]]
-    gate, boss = world(4.5, 0), world(L - 5, 0)
-    blocks = [rect(L - 9, L - 1, -W / 2 + 3, W / 2 - 3, 1)]       # the dais
-    a = nl + 5
-    while a <= L - 15:
-        for c in (-(W / 2 - 4), W / 2 - 4):
-            blocks.append(rect(a - 1, a + 1, c - 1, c + 1, 1))
-        a += 5
-    return outline, gate, blocks, [gate, boss]
-
-
-def _find_site(ref):
-    for n, x, y, _ in CAMPS + TOWNS:
-        if n == ref:
-            return x, y
-    raise KeyError(ref)
-
-
-_WORLD_ROADS = list(ROADS)          # the roads of the world, before the instance corridors join them
-for _name, _box, _biome, _ref, _side in INSTANCES:
-    _x0, _y0, _x1, _y1 = _box
-    _outline, _gate, _blocks, _corridor = _instance_layout(_name, _box, _side)
-    LANDMASSES[_name] = _outline
-    COAST_NOISE[_name] = 0.0
-    INSTANCE_NAMES.add(_name)
-    zone(_name, _name, (_x0 + _x1) / 2.0, (_y0 + _y1) / 2.0, (_x1 - _x0) / 2.0, (_y1 - _y0) / 2.0, _biome, instance=True)
-    BLOCKS += _blocks
-    ROADS.append(_corridor)
-    PORTALS.append(((_name + ' Entrance',) + _find_site(_ref), (_name + ' Portal',) + _gate))
-
-
-# ---------------------------------------------------------------------------
 # Getting about on foot: wading straits out to the small islands, and a track
 # from every camp and town to the nearest road (never over a massif).
 # ---------------------------------------------------------------------------
@@ -816,7 +702,7 @@ def _near_massif(a, b, steps=12):
 
 
 def _spur_roads():
-    roads = list(_WORLD_ROADS)
+    roads = list(ROADS)
     spurs = []
     for name, x, y, _ in CAMPS + TOWNS:
         best = None
