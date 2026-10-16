@@ -26,7 +26,7 @@ TREES = {'LTlt': (10, 0.8, 1.2), 'FTtw': (10, 0.8, 1.2), 'WTtw': (10, 0.8, 1.2),
 TREE_SIZE = (0.6, 1.6)
 DETAIL_VARIATIONS = {'LRrk': 10, 'ARrk': 10, 'CRrk': 10, 'BRrk': 10, 'BRsp': 8, 'ZRrk': 10, 'ZRsp': 8, 'NRrk': 10, 'IRrs': 10,
                      'ORrk': 10, 'DRrk': 10, 'BRrs': 8, 'CRrs': 8, 'ORrs': 10, 'ZRrs': 8, 'IRgc': 10, 'ZPfw': 5, 'ZPsh': 3, 'APms': 4,
-                     'CPms': 4, 'APct': 1, 'LPrs': 4, 'LPfp': 3, 'LPwh': 1, 'LPcw': 2, 'ZPru': 2}
+                     'CPms': 4, 'APct': 1, 'LPrs': 4, 'LPfp': 3, 'LPwh': 1, 'LPcw': 2, 'ZPru': 2, 'ZPvp': 4, 'GPsh': 1}
 # per biome: (rock, rock spire or None) scattered over steep slopes
 ROCKS = {'nightelf': ('ARrk', None), 'worldtree': ('ARrk', None), 'crystal': ('ARrk', None), 'fel': ('CRrk', None),
          'savanna': ('BRrk', None), 'reddesert': ('BRrk', 'BRsp'), 'needles': ('BRrk', 'BRsp'), 'barren': ('BRrk', None),
@@ -45,15 +45,25 @@ PLANTS = {'temperate': ['ZPfw', 'ZPsh', 'LPwh', 'APms'], 'farmland': ['ZPfw', 'Z
           'grotto': ['APms', 'ZPsh', 'CPms'], 'troll': ['ZPsh', 'ZPfw'], 'fel': ['CPms', 'ZPsh', 'LPcw'],
           'plague': ['CPms', 'LPcw'], 'grizzly': ['ZPsh', 'ZPfw', 'APms', 'LPwh'], 'fjord': ['ZPsh', 'ZPfw', 'LPwh'],
           'savanna': ['ZPsh', 'LPwh'], 'barren': ['ZPsh'], 'tundra': ['ZPsh'],
-          'reddesert': ['ZPsh'], 'needles': ['ZPsh'], 'crystal': ['APms', 'ZPfw']}
+          'reddesert': ['ZPsh'], 'needles': ['ZPsh'], 'crystal': ['APms', 'ZPfw'],
+          'snow': ['ZPsh'], 'rocky': ['ZPsh', 'LPwh'], 'desert': ['ZPsh'], 'amber': ['ZPsh']}   # hardy shrubs, never on bare snow
 # per biome: the fallen log lying at the edges of its woods
 LOGS = {'temperate': 'AOlg', 'autumn': 'AOlg', 'highland': 'AOlg', 'grizzly': 'AOlg', 'fjord': 'AOlg', 'nightelf': 'AOlg',
         'worldtree': 'AOlg', 'jungle': 'AOlg', 'darkforest': 'COlg', 'fel': 'COlg', 'plague': 'COlg', 'swamp': 'COlg'}
 # per biome: what grows on the floor of the woods, between the trunks
-FOREST_FLOOR = {'temperate': ['ZPsh', 'APms'], 'autumn': ['ZPsh', 'APms'], 'highland': ['ZPsh'], 'grizzly': ['ZPsh', 'APms'],
-                'fjord': ['ZPsh'], 'darkforest': ['APms', 'CPms', 'ZPsh'], 'nightelf': ['APms', 'ZPsh'],
-                'worldtree': ['APms', 'ZPsh'], 'crystal': ['APms'], 'jungle': ['ZPsh', 'APms', 'ZPfw'], 'swamp': ['APms', 'ZPsh'],
-                'troll': ['ZPsh'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'], 'farmland': ['ZPsh'], 'plains': ['ZPsh']}
+# (vines tangle the jungle and swamp floors, blue toadstools glow in the dark woods)
+FOREST_FLOOR = {'temperate': ['ZPsh', 'APms'], 'autumn': ['ZPsh', 'APms'], 'highland': ['ZPsh', 'APms'], 'grizzly': ['ZPsh', 'APms'],
+                'fjord': ['ZPsh', 'APms'], 'darkforest': ['APms', 'CPms', 'ZPsh', 'GPsh'], 'nightelf': ['APms', 'ZPsh'],
+                'worldtree': ['APms', 'ZPsh'], 'crystal': ['APms'], 'jungle': ['ZPsh', 'APms', 'ZPfw', 'ZPvp'],
+                'swamp': ['APms', 'ZPsh', 'ZPvp'], 'troll': ['ZPsh', 'ZPvp'], 'fel': ['CPms', 'ZPsh'], 'plague': ['CPms'],
+                'farmland': ['ZPsh'], 'plains': ['ZPsh'], 'tundra': ['ZPsh'], 'snow': ['ZPsh']}
+# How lush each land is: it scales the wild plants of the meadows, the undergrowth of the woods
+# and the bushes, thickets and the like over open country (the jungles and swamps run thickest,
+# the deserts and the frozen lands thinnest).
+LUSH = {'jungle': 2.2, 'swamp': 1.9, 'troll': 1.6, 'grotto': 1.5, 'nightelf': 1.6, 'worldtree': 1.7, 'darkforest': 1.6,
+        'temperate': 1.5, 'grizzly': 1.5, 'fjord': 1.5, 'autumn': 1.4, 'farmland': 1.3, 'highland': 1.4, 'plains': 1.3,
+        'crystal': 1.2, 'fel': 1.1, 'plague': 0.9, 'savanna': 1.0, 'barren': 0.6, 'reddesert': 0.6, 'needles': 0.6,
+        'tundra': 0.7, 'snow': 0.6, 'rocky': 0.7, 'desert': 0.45, 'amber': 0.45, 'volcanic': 0.3}
 FACING = 270.0
 # Weather over each kind of land (light kinds, so it sets the mood without hiding the ground):
 # rain over the dark woods, the swamps and the wet north, showers over the jungles, snow over the
@@ -407,7 +417,7 @@ def place(T, seed=7):
         """A clump of one kind of plant round (tx, ty)."""
         p = plant_for(b, int(ty), int(tx), pool)
         if p:
-            for _ in range(count):
+            for _ in range(1 if DOODADS.get(p, (0, 0))[1] else count):     # a big plant (vines, toadstools) stands alone
                 px, py = tx + rng.normal(0, spread), ty + rng.normal(0, spread)
                 if small_ok(px, py, plant=True):
                     add_detail(p, px, py)
@@ -490,7 +500,8 @@ def place(T, seed=7):
                'bones': ~near_wood, 'thorns': rugged | near_wood, 'fissure': rugged & ~damp, 'growth': damp | near_wood,
                'crop': sunny}
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_country & (roll < 0.022)):
+    lushness = np.vectorize(lambda b: LUSH.get(b, 1.0))(biome_of)
+    for ty, tx in np.argwhere(open_country & (roll < 0.022 * np.maximum(lushness, 1.0))):    # the dry lands keep their cacti and rocks
         b = str(biome_of[ty, tx])
         pool = SCATTER.get(b)
         if not pool:
@@ -633,8 +644,8 @@ def place(T, seed=7):
     lush = dilate(occupied | blocked, 1) | (T.road_d < 1.6)
     open_ground = tile_ok & ~is_tree & ~lush & ~steep
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_ground & (roll < np.clip((meadow - 0.1) * 0.3, 0.0, 0.12))):
-        clump(str(biome_of[ty, tx]), tx + 0.5, ty + 0.5, int(rng.integers(2, 4)))
+    for ty, tx in np.argwhere(open_ground & (roll < np.clip((meadow + 0.05) * 0.3 * lushness, 0.0, 0.3))):
+        clump(str(biome_of[ty, tx]), tx + 0.5, ty + 0.5, int(rng.integers(2, 5)))
     # Along the roadsides they grow thick, in patches that come and go along the way.
     patches = Field(n, n, seed + 202).fbm(5, 2)
     verge = tile_ok & (road_tile > 1.75) & (road_tile < 4.0) & ~is_tree & ~reserved & ~occupied
@@ -644,7 +655,7 @@ def place(T, seed=7):
         clump(b, tx + 0.5, ty + 0.5, int(rng.integers(1, 3)), 0.3, pool=wild)
     # Under the trees, shrubs and mushrooms gather in the damper hollows between the trunks; here
     # and there in a forest glade a ring of mushrooms.
-    for ty, tx in np.argwhere(is_tree & (beds > 0.2) & (rng.random((n, n)) < 0.05)):
+    for ty, tx in np.argwhere(is_tree & (beds > 0.1) & (rng.random((n, n)) < 0.06 * lushness)):
         b = str(biome_of[ty, tx])
         if b in FOREST_FLOOR:
             a = rng.uniform(0, 2 * math.pi)
@@ -664,7 +675,7 @@ def place(T, seed=7):
     # sheltered water near the shore, each in the kinds of its land.
     bank = dilate(is_water, 1) & ~is_water & tile_ok & ~is_tree & ~lush & ~steep
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(bank & (beds > 0.15) & (roll < 0.5)):
+    for ty, tx in np.argwhere(bank & (beds > 0.05) & (roll < 0.6)):
         reeds = RUSHES.get(str(biome_of[ty, tx]), ['APct', 'APct', 'LPrs'])
         did = reeds[int((beds[ty, tx] * 37) % len(reeds))]          # one kind to a bed
         around(did, tx + 0.5, ty + 0.5, int(rng.integers(1, 3)), 0.0, 0.5, (0.8, 1.2), variations=WATER_VARIATIONS[did])
@@ -674,7 +685,7 @@ def place(T, seed=7):
         return 0 < ix < MAP_W and 0 < iy < MAP_H and bool(T.water_flag[iy:iy + 2, ix:ix + 2].all())
 
     rafts = T.lake & dilate(T.land, 2) & (beds > 0.25)
-    for ty, tx in np.argwhere(rafts & (roll < 0.08)):
+    for ty, tx in np.argwhere(rafts & (roll < 0.13)):
         did = LILIES.get(str(biome_of[ty, tx]), 'LPfp')
         for _ in range(int(rng.integers(2, 5))):
             px, py = tx + 0.5 + rng.normal(0, 0.3), ty + 0.5 + rng.normal(0, 0.3)
