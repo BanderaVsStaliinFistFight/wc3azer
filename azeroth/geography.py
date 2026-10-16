@@ -592,17 +592,15 @@ RIDGES += [([(321, 243), (326, 239.5)], 1.6, 260)]                              
 _CITY, _CITY_R = (333.3, 253.6), 3.2
 _ring = [(round(_CITY[0] + _CITY_R * math.cos(a), 1), round(_CITY[1] + _CITY_R * math.sin(a), 1))
          for a in [2 * math.pi * k / 16 for k in range(17)]]
-_GATE = (333.5, 265.5)
+_NECK = (333.5, 265.5)                  # where the road crosses the neck of the peninsula
 ROADS += [
     _ring,
-    [(_CITY[0], _CITY[1] + _CITY_R), _GATE, (334, 272), (346, 282.8)],   # north to the Greymane Gate and Silverpine
+    [(_CITY[0], _CITY[1] + _CITY_R), _NECK, (334, 272), (346, 282.8)],   # north over the neck to Silverpine
     [(_CITY[0] - _CITY_R, _CITY[1]), (321.5, 250)],                        # west to Duskhaven
     [(_CITY[0], _CITY[1] - _CITY_R), (329, 241.5)],                        # south to Stormglen
 ]
 LANDMARKS += [('YOst',) + _CITY + (0.9, 4.71)]                              # Greymane's statue
 
-# The Greymane Wall: a cliff rampart across the neck, reaching a couple of tiles past each shore.
-WALLS += [([(322.5, 265.5), (345.5, 265.5)], [_GATE])]
 
 TOWNS += [('Duskhaven', 321.5, 250, 'ntav'), ('Keel Harbor', 323.5, 259.5, 'nshp')]
 CAMPS += [('The Blackwald', 339, 245, 2), ('Stormglen Village', 327, 241, 0)]
