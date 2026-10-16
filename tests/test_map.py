@@ -146,34 +146,22 @@ class MapTest(unittest.TestCase):
             self.assertIn(uid, UNIT_IDS)
         self.assertEqual(sum(u['id'] == 'sloc' for u in units), 12)
 
-    def test_cities_open(self):
-        """Capitals and towns have walls, and no wall or palisade shuts a start location in."""
-        from azeroth.raster import label_regions
+    def test_natural_decorations(self):
+        """The decorations are the land's own: no houses, walls, palisades, fences, posts, lamps,
+        boats or other man-made props (the handful of landmarks aside), plenty of plants, and woods
+        of many kinds of tree."""
+        from azeroth import geography as geo
         _, _, doodads, _ = read_doodads(self.files['war3map.doo'])
-        _, _, units = read_units(self.files['war3mapUnits.doo'])
-        foot = {'LTw0': (10, 3), 'ZTw0': (10, 3), 'ITw0': (10, 3), 'LTw2': (3, 10), 'ZTw2': (3, 10), 'ITw2': (3, 10),
-                'LTba': (4, 4)}
-        walls = [d for d in doodads if d['id'] in foot]
-        self.assertGreater(sum(d['id'] != 'LTba' for d in walls), 150)
-        cells = np.frombuffer(self.files['war3map.wpm'][16:], dtype=np.uint8).reshape(1920, 1920).copy()
-
-        def regions(c):
-            walk = ((c.reshape(480, 4, 480, 4) & 0x02) == 0).mean(axis=(1, 3)) >= 0.5
-            return label_regions(walk)
-
-        before, before_sizes = regions(cells)
-        for d in walls:
-            w, h = foot[d['id']]
-            cx, cy = (d['x'] + 30720) / 32, (d['y'] + 30720) / 32
-            x0, y0 = int(round(cx - w / 2)), int(round(cy - h / 2))
-            cells[y0:y0 + h, x0:x0 + w] = 0xCA
-        after, after_sizes = regions(cells)
-        for u in units:
-            if u['id'] == 'sloc':
-                tx, ty = int((u['x'] + 30720) / 128), int((u['y'] + 30720) / 128)
-                a, b = before[ty, tx], after[ty, tx]
-                self.assertGreaterEqual(b, 0)
-                self.assertGreater(after_sizes[b], 0.9 * before_sizes[a], 'a start location walled in')
+        landmarks = {l[0] for l in geo.LANDMARKS} | {l[0] for l in geo.DESTRUCTABLE_LANDMARKS}
+        made = {'LTw0', 'LTw2', 'ZTw0', 'ZTw2', 'ITw0', 'ITw2', 'LTba', 'VOfl', 'NOfl', 'YSco', 'LOss', 'LOtz', 'YOlp',
+                'NWrw', 'LOsp', 'NOfp', 'LObr', 'LOhb', 'LOcb', 'BOtt'}
+        ids = [d['id'] for d in doodads]
+        self.assertFalse(set(ids) & made)
+        self.assertFalse({i for i in ids if i[1] == 'S' and i not in landmarks}, 'buildings left on the map')
+        plants = sum(1 for i in ids if i[1] == 'P')
+        self.assertGreater(plants, 20000)
+        trees = {i for i in ids if i[1] == 'T' and i not in landmarks}
+        self.assertGreaterEqual(len(trees), 25)
 
     def test_roads_connected(self):
         """The roads form one network on each landmass (the instance corridors aside), and wherever a

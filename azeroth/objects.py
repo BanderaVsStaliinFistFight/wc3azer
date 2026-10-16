@@ -4,11 +4,10 @@ import math
 
 import numpy as np
 
-from . import cities
 from . import geography as geo
 from .biomes import B, TILE
-from .decor import (BATS, BIRDS, CLUTTER, DOODADS, FLIES, HOUSE_KIND, ICE_FLOES, KIND_OF, KINDS, LILIES, RUINS, RUSHES, SCATTER,
-                    SEAWEED, SHELLS, SIGNPOST, WATER_VARIATIONS)
+from .decor import (BATS, BIRDS, DOODADS, FLIES, ICE_FLOES, KIND_OF, KINDS, LILIES, RUSHES, SCATTER, SEAWEED, SHELLS,
+                    WATER_VARIATIONS)
 from .raster import Field, dilate, label_regions
 from .terrain import BOTTOM, LEFT, MAP_W, MAP_H, SEA_Z, ground_z_at, world_xy
 
@@ -19,7 +18,8 @@ TREES = {'LTlt': (10, 0.8, 1.2), 'FTtw': (10, 0.8, 1.2), 'WTtw': (10, 0.8, 1.2),
          'ATtr': (5, 0.8, 1.2), 'CTtr': (5, 0.8, 1.2), 'ITtw': (10, 0.8, 1.0), 'BTtw': (10, 0.8, 1.2), 'NTtw': (10, 0.8, 1.2),
          'ZTtw': (10, 0.65, 1.05), 'ATtc': (3, 0.8, 1.2), 'BTtc': (3, 0.8, 1.2), 'CTtc': (3, 0.8, 1.2), 'ITtc': (3, 0.8, 1.2),
          'NTtc': (3, 0.8, 1.2), 'ZTtc': (3, 0.8, 1.2), 'YTct': (2, 0.8, 1.2), 'YTft': (2, 0.8, 1.2), 'YTst': (2, 0.8, 1.2),
-         'KTtw': (10, 0.65, 0.85), 'DTsh': (8, 0.8, 1.2), 'GTsh': (8, 0.8, 1.2)}
+         'KTtw': (10, 0.65, 0.85), 'DTsh': (8, 0.8, 1.2), 'GTsh': (8, 0.8, 1.2), 'VTlt': (10, 0.8, 1.2),
+         'OTtw': (10, 0.65, 0.85), 'JTct': (2, 0.8, 1.2), 'YTwt': (2, 0.8, 1.2)}
 # Tree sizes, as a share of the species' middle size: groves of old trees and of young growth
 # come and go across a wood, trees grow taller deep inside it than at its fraying edge, and
 # each tree differs from its neighbours. (smallest, largest)
@@ -223,22 +223,9 @@ def place(T, seed=7):
                               index=region_index, color=(120, 160, 255), weather=WEATHER[geo.ZONES[ids[0]]['biome']]))
         region_index += 1
 
-    # ---- town sites stay open ground, free of trees, for whatever is built there ---------
+    # ---- town sites stay open clearings, free of trees ---------------------------------
     for name, tx, ty, building in geo.TOWNS:
         mark(reserved, tx, ty, 4)
-
-    # ---- cities: walls, gateways and buildings at the capitals and towns ----------------------
-    # Walls are destructables (the game gives them their pathing); buildings, posts and fences are
-    # doodads whose footprints go into the pathing map with the other decorations below.
-    walls, city_parts = cities.plan(T, rng, tile_ok, occupied, O.starts)
-    walls, city_parts = cities.keep_open(T, walls, city_parts)
-    for p in walls + city_parts:
-        if p['box'] is not None:
-            y0, y1, x0, x1 = p['box']
-            occupied[max(y0 // 4, 0):(y1 - 1) // 4 + 1, max(x0 // 4, 0):(x1 - 1) // 4 + 1] = True
-    O.walls = walls
-    O.city_parts = city_parts
-    O.doodads = O.doodads + [{k: v for k, v in w.items() if k not in ('box', 'kind')} for w in walls]
 
     # ---- critters: a few of each zone's wildlife ------------------------------------------
     zone_tiles = {}
@@ -271,7 +258,7 @@ def place(T, seed=7):
     ground[:-1, :-1] &= ~T.water_flag[:-1, :-1] & ~T.water_flag[1:, 1:] & ~T.water_flag[:-1, 1:] & ~T.water_flag[1:, :-1]
     ground &= ~T.edge
     near_shore = ~T.land | dilate(~T.land, 1)
-    keep_prob = np.select([score > 0.12, score > 0, score > -0.04, score > -0.12], [0.80, 0.70, 0.24, 0.035], 0.0)
+    keep_prob = np.select([score > 0.12, score > 0, score > -0.04, score > -0.12], [0.50, 0.42, 0.14, 0.02], 0.0)
     candidates = (rng.random((n, n)) < keep_prob) & ground & ~clear & ~near_shore & has_trees
     trees = []
     for ty, tx in np.argwhere(candidates):
@@ -342,13 +329,6 @@ def place(T, seed=7):
         blockers.append((d, box, T.pathing[y0:y1, x0:x1].copy()))
         T.pathing[y0:y1, x0:x1] = 0xCA
         blocked[y0 // 4:(y1 - 1) // 4 + 1, x0 // 4:(x1 - 1) // 4 + 1] = True
-
-    # the cities' buildings, posts, monuments and fences
-    for p in city_parts:
-        d = {k: v for k, v in p.items() if k not in ('box', 'kind')}
-        detail.append(d)
-        if p['box'] is not None:
-            bake_box(d, p['box'])
 
     def decorate(did, tx, ty, allow_reserved=False):
         variations, size, scale, fixed = DOODADS[did]
@@ -460,40 +440,6 @@ def place(T, seed=7):
                 return tx, ty
         return None
 
-    # About half the camp sites are marked by a single ruin near their middle, with fallen
-    # stones about it and a plant or two grown up against it.
-    for name, cx, cy, _ in geo.CAMPS:
-        pool = RUINS.get(str(biome_of[int(cy), int(cx)]))
-        if pool and rng.random() < 0.5:
-            spot = place_near(pool, cx, cy, 0.0, 4.0)
-            if spot:
-                stones(spot[0], spot[1], int(rng.integers(1, 4)), 0.8, 1.4, downhill=False)
-                clump(str(biome_of[int(cy), int(cx)]), spot[0] + rng.uniform(-0.8, 0.8), spot[1] + rng.uniform(-0.8, 0.8), 2)
-    # Clutter by the buildings it belongs to: hay and carts by the barns, hitching posts by the
-    # inn, a barrow by a cottage, racks and a brazier by the square; fire pits in the cold towns
-    # and totems in the camps. Elven towns are kept clear.
-    homes = [p for p in city_parts if p['id'] in HOUSE_KIND and p['box'] is not None]
-    for name, cx, cy, _ in geo.TOWNS:
-        b = str(biome_of[int(cy), int(cx)])
-        if b in ('nightelf', 'worldtree', 'crystal'):
-            continue
-        group = 'cold' if B[b]['cold'] else 'camp' if b in ('savanna', 'reddesert', 'needles', 'barren', 'desert', 'amber') \
-            else None
-        here = [p for p in homes if math.hypot((p['x'] - LEFT) / 128 - cx, (p['y'] - BOTTOM) / 128 - cy) < 9]
-        for _ in range(int(rng.integers(0, 3))):
-            if here and rng.random() < 0.75:
-                p = here[int(rng.integers(0, len(here)))]
-                y0, y1, x0, x1 = p['box']
-                pool = CLUTTER[group or HOUSE_KIND[p['id']]]
-                sides = [((x1 / 4 + 0.75), rng.uniform(y0 / 4 + 0.5, y1 / 4 - 0.5)), ((x0 / 4 - 0.75), rng.uniform(y0 / 4 + 0.5, y1 / 4 - 0.5)),
-                         (rng.uniform(x0 / 4 + 0.5, x1 / 4 - 0.5), (y1 / 4 + 0.75)), (rng.uniform(x0 / 4 + 0.5, x1 / 4 - 0.5), (y0 / 4 - 0.75))]
-                for k in rng.permutation(4):
-                    tx, ty = sides[k]
-                    if 0 < tx < MAP_W and 0 < ty < MAP_H and decorate(str(rng.choice(pool)), tx, ty, allow_reserved=True):
-                        break
-            else:
-                place_near(CLUTTER[group or 'square'], cx, cy, 1.8, 3.5, allow_reserved=True)
-
     # Open country: each piece in the kind of place it belongs, with the company it keeps.
     open_country = tile_ok & ~is_tree & ~reserved & ~dilate(occupied, 1) & (T.road_d > 2.5) & ~steep & ~by_cliff
     home_of = {'rock': rugged, 'wood': near_wood, 'bush': near_wood | damp, 'cactus': ~damp & ~rugged,
@@ -501,7 +447,7 @@ def place(T, seed=7):
                'crop': sunny}
     roll = rng.random((n, n))
     lushness = np.vectorize(lambda b: LUSH.get(b, 1.0))(biome_of)
-    for ty, tx in np.argwhere(open_country & (roll < 0.022 * np.maximum(lushness, 1.0))):    # the dry lands keep their cacti and rocks
+    for ty, tx in np.argwhere(open_country & (roll < 0.03 * np.maximum(lushness, 1.0))):    # the dry lands keep their cacti and rocks
         b = str(biome_of[ty, tx])
         pool = SCATTER.get(b)
         if not pool:
@@ -544,19 +490,6 @@ def place(T, seed=7):
         log = LOGS.get(b)
         if log and decorate(log, tx + 0.5, ty + 0.5) and mushrooms_for(b):
             around(mushrooms_for(b), tx + 0.5, ty + 0.5, int(rng.integers(1, 4)), 0.5, 1.2, (0.6, 1.0))
-    # signposts where roads fork, turned to face the junction
-    forks = []
-    for line in T.road_lines:
-        for ex, ey in (line[0], line[-1]):
-            if all(math.hypot(ex - fx, ey - fy) > 5 for fx, fy in forks):
-                forks.append((ex, ey))
-    for ex, ey in forks[::2]:
-        for ox, oy in ((1.6, 1.6), (-1.6, 1.6), (1.6, -1.6), (-1.6, -1.6)):
-            tx, ty = ex + ox, ey + oy
-            if 0 < tx < MAP_W and 0 < ty < MAP_H and tile_ok[int(ty), int(tx)] and not occupied[int(ty), int(tx)] \
-                    and T.road_d[int(ty), int(tx)] > 1.2:
-                add_detail(SIGNPOST, tx, ty, scale=(0.9, 1.1), variations=1, fixed=math.atan2(-oy, -ox) % (2 * math.pi))
-                break
     # Stones line the roads: every few tiles along each road, on one side or the other, a rock
     # with a pebble or two at the edge of the verge (closer together where the land is rough or
     # too harsh for flowers). Each rock blocks its own tile, as the World Editor would make it.
@@ -644,8 +577,8 @@ def place(T, seed=7):
     lush = dilate(occupied | blocked, 1) | (T.road_d < 1.6)
     open_ground = tile_ok & ~is_tree & ~lush & ~steep
     roll = rng.random((n, n))
-    for ty, tx in np.argwhere(open_ground & (roll < np.clip((meadow + 0.05) * 0.3 * lushness, 0.0, 0.3))):
-        clump(str(biome_of[ty, tx]), tx + 0.5, ty + 0.5, int(rng.integers(2, 5)))
+    for ty, tx in np.argwhere(open_ground & (roll < np.clip((meadow + 0.25) * 0.5 * lushness, 0.0, 0.55))):
+        clump(str(biome_of[ty, tx]), tx + 0.5, ty + 0.5, int(rng.integers(3, 7)))
     # Along the roadsides they grow thick, in patches that come and go along the way.
     patches = Field(n, n, seed + 202).fbm(5, 2)
     verge = tile_ok & (road_tile > 1.75) & (road_tile < 4.0) & ~is_tree & ~reserved & ~occupied
@@ -655,11 +588,12 @@ def place(T, seed=7):
         clump(b, tx + 0.5, ty + 0.5, int(rng.integers(1, 3)), 0.3, pool=wild)
     # Under the trees, shrubs and mushrooms gather in the damper hollows between the trunks; here
     # and there in a forest glade a ring of mushrooms.
-    for ty, tx in np.argwhere(is_tree & (beds > 0.1) & (rng.random((n, n)) < 0.06 * lushness)):
+    woods = is_tree | (T.forest & open_ground)                   # under the trees and in the gaps between them
+    for ty, tx in np.argwhere(woods & (beds > -0.15) & (rng.random((n, n)) < 0.14 * lushness)):
         b = str(biome_of[ty, tx])
         if b in FOREST_FLOOR:
             a = rng.uniform(0, 2 * math.pi)
-            clump(b, tx + 0.5 + 0.45 * math.cos(a), ty + 0.5 + 0.45 * math.sin(a), int(rng.integers(2, 4)), 0.2,
+            clump(b, tx + 0.5 + 0.45 * math.cos(a), ty + 0.5 + 0.45 * math.sin(a), int(rng.integers(2, 6)), 0.25,
                   pool=FOREST_FLOOR[b])
     trees_round = sum(np.roll(np.roll(is_tree, dy, 0), dx, 1) for dy in (-1, 0, 1) for dx in (-1, 0, 1))
     glade = ~is_tree & open_ground & (trees_round >= 5) & np.isin(biome_of, ['nightelf', 'worldtree', 'darkforest',
@@ -704,21 +638,6 @@ def place(T, seed=7):
             px, py = tx + 0.5 + rng.normal(0, 0.4), ty + 0.5 + rng.normal(0, 0.4)
             if afloat(px, py):
                 add_detail(SEAWEED, px, py, scale=(1.5, 2.0), z=SEA_Z, variations=5)
-    # a rowboat or two moored off each harbour
-    mooring = T.sea & dilate(T.land, 2) & ~dilate(T.land, 1) & in_map & (T.road_d > 2.5)
-    for name, cx, cy, building in geo.TOWNS:
-        if building != 'nshp':
-            continue
-        y0, x0 = max(int(cy) - 9, 0), max(int(cx) - 9, 0)
-        spots = sorted((math.hypot(x0 + x + 0.5 - cx, y0 + y + 0.5 - cy), x0 + x + 0.5, y0 + y + 0.5)
-                       for y, x in np.argwhere(mooring[y0:int(cy) + 10, x0:int(cx) + 10]))
-        moored = []
-        for _, px, py in spots:
-            if len(moored) >= int(rng.integers(1, 3)):
-                break
-            if afloat(px, py) and all(math.hypot(px - mx, py - my) > 2.5 for mx, my in moored):
-                add_detail('NWrw', px, py, scale=(0.9, 1.1), z=SEA_Z, variations=1)
-                moored.append((px, py))
     for ty, tx in np.argwhere(drift & cold_zone & (meadow > 0.15) & (roll > 0.985)):
         px, py = tx + rng.uniform(0, 1), ty + rng.uniform(0, 1)
         if afloat(px, py):
@@ -732,6 +651,7 @@ def place(T, seed=7):
     for d in detail:
         if d['id'] in rock_ids and d['scale'] >= 0.42:
             boulders[(int((d['x'] - LEFT) / 128), int((d['y'] - BOTTOM) / 128))].append(d)
+    baked = {id(b[0]) for b in blockers}                    # pieces whose footprint is in the pathing map stay
     loose, keep = collections.defaultdict(list), []
     for d in detail:
         tx, ty = (d['x'] - LEFT) / 128.0, (d['y'] - BOTTOM) / 128.0
@@ -742,9 +662,10 @@ def place(T, seed=7):
             continue
         if d['id'] in WATER_VARIATIONS and d['z'] == SEA_Z and T.road_d[min(int(ty), n - 1), min(int(tx), n - 1)] < 1.5:
             continue
-        if d['id'] not in AMBIENT and (d['id'] in rock_ids and d['scale'] < 0.42 or not DOODADS.get(d['id'], (0, 0))[1]):
+        if d['id'] not in AMBIENT and id(d) not in baked:
             cell = (int(tx), int(ty))
-            if any(o['id'] == d['id'] and math.hypot(tx - ox, ty - oy) < (0.2 if d['id'] in rock_ids else 0.12)
+            gap = 0.2 if d['id'] in rock_ids else 0.35 if DOODADS.get(d['id'], (0, 0))[1] else 0.12   # big plants need room
+            if any(o['id'] == d['id'] and math.hypot(tx - ox, ty - oy) < gap
                    for gx in (cell[0] - 1, cell[0], cell[0] + 1) for gy in (cell[1] - 1, cell[1], cell[1] + 1)
                    for o, ox, oy in loose.get((gx, gy), [])):
                 continue
