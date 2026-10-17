@@ -167,15 +167,20 @@ def place(T, seed=7):
         O.units.append(u)
         return u
 
+    ledge = np.zeros((n, n), bool)
+    ledge[:-1, :-1] = T.cliff_tile | T.ramp_tile
+    ledge = dilate(ledge, 1)
+
     def off_the_road(tx, ty, clear):
-        """The nearest point to (tx, ty) on dry land at least `clear` tiles from any road."""
-        for rad in np.arange(0, 8.01, 0.5):
+        """The nearest point to (tx, ty) on dry, level land at least `clear` tiles from any road
+        and off any cliff edge."""
+        for rad in np.arange(0, 12.01, 0.5):
             for k in range(max(1, int(rad * 6))):
                 a = 2 * math.pi * k / max(1, int(rad * 6))
                 x, y = tx + rad * math.cos(a), ty + rad * math.sin(a)
                 ix, iy = int(round(x)), int(round(y))
                 if 0 < ix < MAP_W and 0 < iy < MAP_H and T.land[iy, ix] and not T.water_flag[iy, ix] \
-                        and T.road_d[iy, ix] >= clear:
+                        and T.road_d[iy, ix] >= clear and not ledge[iy, ix]:
                     return x, y
         return tx, ty
 

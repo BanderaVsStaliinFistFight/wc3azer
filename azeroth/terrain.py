@@ -114,14 +114,28 @@ def split_at_sea(lines, open_sea, max_run=3):
     return out
 
 
-def link_networks(lines, ground, rng, reach=16.0):
+def link_networks(lines, ground, rng, reach=28.0):
     """Join road networks left apart to their nearest neighbour by a short new road from a dead end,
-    wherever one can be laid over open ground clear of the great ranges (so not across the sea)."""
+    wherever one can be laid over open ground clear of the great ranges (so not across the sea).
+    Where the straight way would cross water, the road bends round it through a waypoint off to
+    one side, as a road skirts a bay or finds the neck of land between two shores."""
     lines = list(lines)
+
+    def route(p, q):
+        clear = lambda a, b: overland(ground, a, b) and not geo._near_massif(a, b)
+        if clear(p, q):
+            return [p, q]
+        d = math.hypot(q[0] - p[0], q[1] - p[1]) or 1.0
+        nx, ny = -(q[1] - p[1]) / d, (q[0] - p[0]) / d
+        for k in (3, -3, 6, -6, 9, -9, 12, -12):
+            v = ((p[0] + q[0]) / 2 + nx * k, (p[1] + q[1]) / 2 + ny * k)
+            if clear(p, v) and clear(v, q):
+                return [p, v, q]
+        return None
 
     while True:
         nets = road_networks(lines)
-        best = None
+        cands = []
         for a, net in enumerate(nets):
             for p in [lines[i][k] for i in net for k in (0, -1)]:
                 for b, other in enumerate(nets):
@@ -129,12 +143,12 @@ def link_networks(lines, ground, rng, reach=16.0):
                         continue
                     for j in other:
                         q, d = nearest_on(lines[j], p)
-                        if d <= reach and (best is None or d < best[0]) and overland(ground, p, q) \
-                                and not geo._near_massif(p, q):
-                            best = (d, p, q)
-        if best is None:
+                        if d <= reach:
+                            cands.append((d, p, q))
+        way = next((w for w in (route(p, q) for d, p, q in sorted(cands, key=lambda c: c[0])) if w), None)
+        if way is None:
             break
-        lines.append(meander([best[1], best[2]], 0.8, 17, rng))
+        lines.append(meander(way, 0.8, 17, rng))
     # a stray stub of road a few tiles long, meeting no other (a track from an offshore camp down
     # to its shore), is left out
     nets = road_networks(lines)

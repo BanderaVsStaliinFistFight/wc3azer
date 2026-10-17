@@ -169,7 +169,7 @@ class MapTest(unittest.TestCase):
         from azeroth import terrain
         T = terrain.build(1)
         nets = terrain.road_networks(T.road_lines)
-        self.assertLessEqual(len(nets), 4, 'Kalimdor, the Eastern Kingdoms, Northrend and Kul Tiras')
+        self.assertLessEqual(len(nets), 5, 'Kalimdor, the Eastern Kingdoms, Northrend, Kul Tiras and Kezan')
         wet = (T.road_d < 0.8) & T.water_flag
         self.assertEqual(int((wet & (terrain.SEA_Z - T.ground_z > terrain.DEEP_WATER)).sum()), 0)
 

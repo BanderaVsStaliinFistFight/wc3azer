@@ -2,13 +2,19 @@
 
 Coordinates are in tiles with (0, 0) at the south-west corner of the map and
 y growing northwards. The playable area is x 6..474, y 4..472.
-Kalimdor lies to the west and the Eastern Kingdoms to the east; both are drawn
-in tile coordinates and then squashed vertically (SQUASH) to leave the top of
-the map for Northrend, which follows the Wrath of the Lich King continent map
-inside NORTHREND_BOX. The Maelstrom sits in the middle of the Great Sea with the
-goblin isle of Kezan below it and Kul Tiras to the east.
+The layout follows the WoW Reanimated map: Kalimdor is a narrow land down the
+west edge, the Eastern Kingdoms run down the east edge, Northrend (after the
+Wrath of the Lich King continent map, inside NORTHREND_BOX) lies across the top,
+Kul Tiras below the Maelstrom in the middle of the Great Sea and the goblin isle
+of Kezan in the south-west. The zones, roads, rivers and mountains of Kalimdor
+and the Eastern Kingdoms were first drawn on an older layout; the relayout below
+carries them onto the new coastlines (outlines.py).
 """
 import math
+
+import numpy as np
+
+from .outlines import OUTLINES
 
 
 # ---------------------------------------------------------------------------
@@ -55,13 +61,12 @@ LANDMASSES = {
     'Theramore Isle': ('ellipse', 179, 133, 3, 3),
     'Alcaz Island': ('ellipse', 182, 152, 4, 3),
     'Tol Barad': ('ellipse', 352, 292.1, 4, 3.75),
-    'Kezan': ('ellipse', 250, 202, 9, 6),
 }
 
 # The Maelstrom: a whirlpool drawn into the sea floor as spiral arms of shallow water
 # around a bottomless eye: (centre x, centre y), outer radius in tiles.
-MAELSTROM = (247, 246)
-MAELSTROM_RADIUS = 30
+MAELSTROM = (220, 264)
+MAELSTROM_RADIUS = 31
 
 # ---------------------------------------------------------------------------
 # Zones: (name, landmass, cx, cy, rx, ry, biome, extra settings)
@@ -131,8 +136,6 @@ zone('Northern Stranglethorn', 'Eastern Kingdoms', 366, 98, 26, 20, 'jungle')
 zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
 zone('Tol Barad', 'Tol Barad', 352, 292.1, 4, 3.75, 'barren')
 # Northrend
-# Kezan
-zone('Kezan', 'Kezan', 250, 202, 9, 6, 'jungle')
 ZONES = Z
 
 # ---------------------------------------------------------------------------
@@ -278,7 +281,7 @@ TOWNS = [
     ('Morgan\'s Vigil', 418, 190, 'ndrk'), ('Sentinel Hill', 342, 146, 'ntav'), ('Sepulcher', 346, 352, 'nmr2'),
     ('Brill', 370, 384, 'ngme'), ('Chillwind Camp', 404, 360, 'nfoh'), ('Tanaris Caverns of Time', 150, 70, 'ndrz'),
     ('Onyxia\'s Lair', 150, 106, 'ndrk'), ('Feathermoon', 26, 118, 'nshp'), ('Rut\'theran', 44, 404, 'nshp'),
-    ('Splintertree Post', 140, 282, 'nmr5'), ('Razor Hill', 166, 232, 'ngme'), ('Kezan Trade', 250, 202, 'ngad'),
+    ('Splintertree Post', 140, 282, 'nmr5'), ('Razor Hill', 166, 232, 'ngme'),
 ]
 
 CAMPS = [
@@ -301,7 +304,7 @@ CAMPS = [
     ('Shimmering Flats', 116, 116, 1), ('Brackenwall Village', 140, 150, 1), ('Fire Plume Ridge', 82, 82, 2), ('Ahn\'Qiraj', 30, 56, 2),
     ('Zul\'Farrak', 120, 92, 2), ('Lost City of the Tol\'vir', 96, 32, 2), ('Steamwheedle Port', 160, 90, 0), ('Ruins of Ahn\'Qiraj', 46, 52, 1),
     ('Azuremyst Vault', 22, 362, 0), ('Bloodmyst Crash', 16, 386, 0),
-    ('Kezan', 252, 200, 0), ('Tol Barad', 352, 292.1, 1),
+    ('Tol Barad', 352, 292.1, 1),
 ]
 
 # Roads (polylines of tiles). Painted as dirt paths and kept free of trees.
@@ -377,26 +380,34 @@ def _sy(y):
     return round(SQUASH_BASE + (y - SQUASH_BASE) * SQUASH, 2)
 
 
+def _near_shape(shape, x, y, margin=10.0):
+    """True if (x, y) lies on the landmass shape or within `margin` tiles of it."""
+    if shape[0] == 'ellipse':
+        _, cx, cy, rx, ry = shape
+        return ((x - cx) / (rx + margin)) ** 2 + ((y - cy) / (ry + margin)) ** 2 <= 1
+    return _inside(shape, x, y) or _edge_distance(shape, x, y) <= margin
+
+
+def _inside(poly, x, y):
+    inside = False
+    for (ax, ay), (bx, by) in zip(poly, poly[1:] + poly[:1]):
+        if (ay > y) != (by > y) and x < ax + (y - ay) * (bx - ax) / (by - ay):
+            inside = not inside
+    return inside
+
+
+def _edge_distance(poly, x, y):
+    best = 1e9
+    for (ax, ay), (bx, by) in zip(poly, poly[1:] + poly[:1]):
+        dx, dy = bx - ax, by - ay
+        t = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / float(dx * dx + dy * dy or 1e-9)))
+        best = min(best, math.hypot(x - ax - t * dx, y - ay - t * dy))
+    return best
+
+
 def _near_squashed(x, y, margin=10.0):
     """True if (x, y), in pre-squash coordinates, lies on or near Kalimdor, the Eastern Kingdoms or their isles."""
-    for name in _SQUASHED_LANDS:
-        shape = LANDMASSES[name]
-        if shape[0] == 'ellipse':
-            _, cx, cy, rx, ry = shape
-            if ((x - cx) / (rx + margin)) ** 2 + ((y - cy) / (ry + margin)) ** 2 <= 1:
-                return True
-            continue
-        inside = False
-        for (ax, ay), (bx, by) in zip(shape, shape[1:] + shape[:1]):
-            if (ay > y) != (by > y) and x < ax + (y - ay) * (bx - ax) / (by - ay):
-                inside = not inside
-            dx, dy = bx - ax, by - ay
-            t = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / float(dx * dx + dy * dy)))
-            if (x - ax - t * dx) ** 2 + (y - ay - t * dy) ** 2 <= margin * margin:
-                return True
-        if inside:
-            return True
-    return False
+    return any(_near_shape(LANDMASSES[name], x, y, margin) for name in _SQUASHED_LANDS)
 
 
 def _squash_points(points):
@@ -437,10 +448,226 @@ def _squash_everything():
 _squash_everything()
 
 # ---------------------------------------------------------------------------
+# The layout of the WoW Reanimated map. Kalimdor and the Eastern Kingdoms take
+# that map's coastlines (outlines.py) and places: Kalimdor a narrow land down
+# the west edge, the Eastern Kingdoms down the east edge, Lordaeron and Khaz
+# Modan joined by the Thandol Span. Each zone moves to its place below, and
+# everything else on the continent (roads, rivers, lakes, mountains, towns and
+# camps) follows a smooth warp fitted to the zones' moves. The islands move
+# whole to their new places.
+# ---------------------------------------------------------------------------
+def smooth_outline(points, rounds=2):
+    """Round the corners off a traced outline (Chaikin's corner cutting)."""
+    for _ in range(rounds):
+        out = []
+        for (ax, ay), (bx, by) in zip(points, points[1:] + points[:1]):
+            out += [(round(0.75 * ax + 0.25 * bx, 2), round(0.75 * ay + 0.25 * by, 2)),
+                    (round(0.25 * ax + 0.75 * bx, 2), round(0.25 * ay + 0.75 * by, 2))]
+        points = out
+    return points
+
+
+def _extent(poly):
+    """(cx, cy, rx, ry): the middle and half the width and height of an outline."""
+    xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+    return (round((min(xs) + max(xs)) / 2, 2), round((min(ys) + max(ys)) / 2, 2),
+            round((max(xs) - min(xs)) / 2, 2), round((max(ys) - min(ys)) / 2, 2))
+
+
+# zone: (cx, cy, rx, ry) in tiles
+KALIMDOR_LAYOUT = {
+    'Darkshore': (29.3, 285.4, 11.5, 17.3), 'Moonglade': (51.4, 266.2, 8.6, 7.7), 'Winterspring': (76.4, 291.2, 13.4, 11.5),
+    'Mount Hyjal': (78.3, 264.3, 10.6, 9.6), 'Azshara': (93.6, 242.2, 6.7, 19.2), 'Felwood': (36.0, 239.3, 17.3, 13.4),
+    'Ashenvale': (62.9, 229.7, 14.4, 17.3), 'Stonetalon Mountains': (34.1, 208.6, 13.4, 9.6),
+    'Northern Barrens': (62.9, 192.3, 10.6, 16.3), 'Durotar': (91.7, 192.3, 10.6, 14.4), 'Mulgore': (38.9, 176.9, 11.5, 13.4),
+    'Desolace': (24.5, 149.1, 9.6, 11.5), 'Southern Barrens': (61.0, 157.7, 10.6, 11.5),
+    'Dustwallow Marsh': (92.7, 158.7, 10.6, 16.3), 'Thousand Needles': (60.0, 136.0, 13.0, 7.5),
+    'Feralas': (27.4, 125.0, 12.0, 12.5), "Un'Goro Crater": (52.0, 118.0, 8.0, 7.0), 'Tanaris': (82.0, 126.0, 10.0, 9.0),
+    'Silithus': (27.0, 108.0, 9.0, 6.0), 'Uldum': (69.0, 115.0, 8.5, 5.5),
+}
+EK_LAYOUT = {
+    'Eversong Woods': (414.1, 383.3, 19.2, 12.5), 'Ghostlands': (414.1, 354.5, 17.3, 9.6),
+    'Tirisfal Glades': (349.8, 345.9, 28.8, 12.5), 'Western Plaguelands': (386.3, 321.9, 11.5, 11.5),
+    'Eastern Plaguelands': (414.1, 328.6, 13.4, 11.5), 'Silverpine Forest': (325.8, 306.5, 10.6, 17.3),
+    'Alterac Mountains': (366.1, 302.7, 11.5, 14.4), 'Hillsbrad Foothills': (343.1, 282.5, 12.5, 8.6),
+    'The Hinterlands': (414.1, 297.9, 15.4, 12.5), 'Arathi Highlands': (378.6, 261.4, 23.0, 12.5),
+    'Wetlands': (397.8, 213.4, 16.3, 11.5), 'Twilight Highlands': (425.6, 220.1, 8.6, 15.4),
+    'Dun Morogh': (364.2, 189.4, 13.4, 9.6), 'Loch Modan': (407.4, 192.3, 11.5, 7.7), 'Searing Gorge': (375.7, 166.4, 12.5, 7.7),
+    'Badlands': (419.9, 165.4, 11.5, 9.6), 'Burning Steppes': (402.6, 148.1, 19.2, 7.7),
+    'Elwynn Forest': (359.4, 124.1, 13.4, 14.4), 'Redridge Mountains': (396.8, 120.3, 10.6, 8.6),
+    'Swamp of Sorrows': (423.7, 117.4, 8.6, 11.5), 'Westfall': (335.4, 85.7, 12.5, 19.2), 'Duskwood': (378.6, 91.5, 17.3, 8.6),
+    'Deadwind Pass': (408.4, 95.3, 6.7, 6.7), 'Blasted Lands': (417.0, 74.2, 16.3, 8.6),
+    'Northern Stranglethorn': (367.1, 61.7, 13.4, 10.6), 'Cape of Stranglethorn': (364.2, 35.8, 12.5, 14.4),
+}
+# the islands' new shapes: traced outlines, or ellipses (cx, cy, rx, ry)
+ISLE_LAYOUT = {
+    'Teldrassil': OUTLINES['Teldrassil'], 'Azuremyst Isle': (24.4, 443.8, 13.4, 19.2), 'Bloodmyst Isle': (30.0, 400.0, 8.0, 7.0),
+    "Isle of Quel'Danas": (404.5, 410.2, 7.7, 7.7), 'Echo Isles': OUTLINES['Echo Isles'],
+    'Theramore Isle': OUTLINES['Theramore Isle'], 'Alcaz Island': OUTLINES['Alcaz Island'], 'Tol Barad': OUTLINES['Tol Barad'],
+}
+CAPITAL_LAYOUT = {'Orgrimmar': (91.7, 195.2), 'Thunder Bluff': (38.0, 177.9), 'Darnassus': (34.1, 357.4),
+                  'Stormwind': (366.1, 135.6), 'Ironforge': (364.2, 196.1), 'Undercity': (380.5, 344.9),
+                  'Silvermoon City': (417.0, 386.2)}
+
+
+def _tps(src, dst, smooth=50.0):
+    """A thin-plate spline carrying the points src onto dst; returns warp(x, y) -> (x, y)."""
+    src, dst = np.asarray(src, float), np.asarray(dst, float)
+    n = len(src)
+    r = np.hypot(src[:, None, 0] - src[None, :, 0], src[:, None, 1] - src[None, :, 1])
+    k = np.where(r > 0, r * r * np.log(np.maximum(r, 1e-9)), 0.0) + smooth * np.eye(n)
+    p = np.hstack([np.ones((n, 1)), src])
+    a = np.zeros((n + 3, n + 3))
+    a[:n, :n], a[:n, n:], a[n:, :n] = k, p, p.T
+    b = np.zeros((n + 3, 2))
+    b[:n] = dst
+    coef = np.linalg.solve(a, b)
+
+    def warp(x, y):
+        r = np.hypot(src[:, 0] - x, src[:, 1] - y)
+        u = np.where(r > 0, r * r * np.log(np.maximum(r, 1e-9)), 0.0)
+        out = u @ coef[:n] + coef[n] + x * coef[n + 1] + y * coef[n + 2]
+        return float(out[0]), float(out[1])
+    return warp
+
+
+def _relayout():
+    global RIDGES, MASSIFS, LAKES, RIVERS, SHALLOWS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, ROADS
+    global LANDMARKS, DESTRUCTABLE_LANDMARKS
+    old = {name: LANDMASSES[name] for name in _SQUASHED_LANDS}
+    new_land = {'Kalimdor': smooth_outline(OUTLINES['Kalimdor']), 'Eastern Kingdoms': smooth_outline(OUTLINES['Eastern Kingdoms'])}
+    isles = {}                                   # name: (old cx, cy, rx, ry, new cx, cy, rx, ry, new shape)
+    for name, shape in ISLE_LAYOUT.items():
+        if len(shape) == 4 and not isinstance(shape[0], tuple):
+            new_shape = ('ellipse',) + tuple(shape)
+            ext = tuple(shape)
+        else:
+            new_shape = smooth_outline(shape)
+            ext = _extent(new_shape)
+        isles[name] = old[name][1:] + ext + (new_shape,)
+    warps = {}
+    for land, layout in (('Kalimdor', KALIMDOR_LAYOUT), ('Eastern Kingdoms', EK_LAYOUT)):
+        src, dst = [], []
+        for z in ZONES:
+            if z['land'] == land:
+                ncx, ncy, nrx, nry = layout[z['name']]
+                for fx, fy in ((0, 0), (0.7, 0), (-0.7, 0), (0, 0.7), (0, -0.7)):
+                    src.append((z['cx'] + fx * z['rx'], z['cy'] + fy * z['ry']))
+                    dst.append((ncx + fx * nrx, ncy + fy * nry))
+        warps[land] = _tps(src, dst)
+
+    def family(x, y):
+        for name, (cx, cy, rx, ry) in ((n, v[:4]) for n, v in isles.items()):
+            if ((x - cx) / (rx * 1.4 + 1)) ** 2 + ((y - cy) / (ry * 1.4 + 1)) ** 2 <= 1:
+                return name
+        for land in warps:
+            if _near_shape(old[land], x, y):
+                return land
+        return None
+
+    def move(fam, x, y):
+        if fam in isles:
+            cx, cy, rx, ry, ncx, ncy, nrx, nry = isles[fam][:8]
+            return round(ncx + (x - cx) * nrx / rx, 2), round(ncy + (y - cy) * nry / ry, 2)
+        if fam in warps:
+            nx, ny = warps[fam](x, y)
+            return round(nx, 2), round(ny, 2)
+        return x, y
+
+    def stretch(fam, x, y):
+        """How much the move stretches sizes at (x, y): (across, along)."""
+        if fam in isles:
+            cx, cy, rx, ry, ncx, ncy, nrx, nry = isles[fam][:8]
+            return nrx / rx, nry / ry
+        if fam in warps:
+            (ax, ay), (bx, by), (cx_, cy_) = warps[fam](x, y), warps[fam](x + 1, y), warps[fam](x, y + 1)
+            return math.hypot(bx - ax, by - ay), math.hypot(cx_ - ax, cy_ - ay)
+        return 1.0, 1.0
+
+    def line(points):
+        fam = family(*points[0])
+        return [move(fam, x, y) for x, y in points]
+
+    def width(points, w, least):
+        fam = family(*points[0])
+        sx, sy = stretch(fam, *points[0])
+        return round(max(least, w * math.sqrt(sx * sy)), 2) if fam else w
+
+    for z in ZONES:
+        if z['land'] in warps:
+            z['cx'], z['cy'], z['rx'], z['ry'] = (KALIMDOR_LAYOUT if z['land'] == 'Kalimdor' else EK_LAYOUT)[z['name']]
+        elif z['land'] in isles:
+            fam = z['land']
+            sx, sy = stretch(fam, z['cx'], z['cy'])
+            z['cx'], z['cy'] = move(fam, z['cx'], z['cy'])
+            z['rx'], z['ry'] = round(z['rx'] * sx, 2), round(z['ry'] * sy, 2)
+    RIDGES = [(line(l), width(l, w, 1.5), h) for l, w, h in RIDGES]
+    MASSIFS = [(line(l), width(l, w, 2.5), h) for l, w, h in MASSIFS]
+    RIVERS = [line(l) for l in RIVERS]
+    ROADS = [line(l) for l in ROADS]
+    SHALLOWS = []                     # the wading straits are laid anew once everything is in place
+
+    def point(x, y):
+        return move(family(x, y), x, y)
+
+    def lake(x, y, rx, ry):
+        fam = family(x, y)
+        sx, sy = stretch(fam, x, y)
+        return move(fam, x, y) + (round(max(1.5, rx * sx), 2), round(max(1.5, ry * sy), 2))
+
+    def size(x, y, r, least=0.0):
+        sx, sy = stretch(family(x, y), x, y)
+        return round(max(least, r * math.sqrt(sx * sy)), 2)
+
+    LAKES = [lake(*l) for l in LAKES]
+    MESAS = [point(x, y) + (size(x, y, r, 1.2), lv) for x, y, r, lv in MESAS]
+    BASINS = [point(x, y) + (size(x, y, r), d) for x, y, r, d in BASINS]
+    CAPITALS = [(i, n) + (CAPITAL_LAYOUT[n] if n in CAPITAL_LAYOUT else point(x, y)) + (race,) for i, n, x, y, race in CAPITALS]
+    TOWNS = [(n,) + point(x, y) + (b,) for n, x, y, b in TOWNS]
+    CAMPS = [(n,) + point(x, y) + (st,) for n, x, y, st in CAMPS]
+    LANDMARKS = [(d,) + point(x, y) + (sc, a) for d, x, y, sc, a in LANDMARKS]
+    DESTRUCTABLE_LANDMARKS = [(d,) + point(x, y) + (sc,) for d, x, y, sc in DESTRUCTABLE_LANDMARKS]
+    for name, v in isles.items():
+        LANDMASSES[name] = v[8]
+    LANDMASSES.update(new_land)
+
+    # Whatever the warp left in the sea is brought ashore nearby.
+    lands = list(new_land.values())
+    CAPITALS = [(i, n) + _ashore(x, y, 8, lands) + (race,) for i, n, x, y, race in CAPITALS]
+    LANDMARKS = [(d,) + _ashore(x, y, 4, lands) + (sc, a) for d, x, y, sc, a in LANDMARKS]
+    DESTRUCTABLE_LANDMARKS = [(d,) + _ashore(x, y, 4, lands) + (sc,) for d, x, y, sc in DESTRUCTABLE_LANDMARKS]
+    LAKES = [_ashore(x, y, max(rx, ry) + 2, lands) + (rx, ry) for x, y, rx, ry in LAKES]
+    MESAS = [_ashore(x, y, r + 3, lands) + (r, lv) for x, y, r, lv in MESAS]
+
+
+def _ashore(x, y, margin, lands):
+    """(x, y), or if it stands in the sea or too near the shore of the nearest of `lands` (outlines),
+    the nearest point at least `margin` tiles inland on that land (within 24 tiles)."""
+    near = [poly for poly in lands if _near_shape(poly, x, y, 25)]
+    if not near:
+        return x, y
+    poly = min(near, key=lambda p: 0 if _inside(p, x, y) else _edge_distance(p, x, y))
+
+    def firm(px, py):
+        return _inside(poly, px, py) and _edge_distance(poly, px, py) >= margin
+    if firm(x, y):
+        return x, y
+    for r in range(1, 25):
+        for k in range(24):
+            a = 2 * math.pi * k / 24
+            px, py = x + r * math.cos(a), y + r * math.sin(a)
+            if firm(px, py):
+                return round(px, 2), round(py, 2)
+    return x, y
+
+
+_relayout()
+
+# ---------------------------------------------------------------------------
 # Northrend, after the Wrath of the Lich King continent map.
 # Authored in normalised coordinates: u = 0 west .. 1 east, v = 0 south .. 1 north.
 # ---------------------------------------------------------------------------
-NORTHREND_BOX = (178, 376, 352, 468)      # x0, y0, x1, y1 in tiles
+NORTHREND_BOX = (150, 392, 336, 467)      # x0, y0, x1, y1 in tiles
 
 
 def nr(u, v):
@@ -547,7 +774,7 @@ CAMPS += [(name,) + nr(u, v) + (strength,) for name, u, v, strength in [
     ('New Hearthglen', 0.56, 0.22, 1), ('Icemist Village', 0.40, 0.42, 1), ("Drak'Tharon Keep", 0.66, 0.42, 1), ('Grizzlemaw', 0.73, 0.27, 1),
     ('Camp Oneqwah', 0.78, 0.34, 0), ('Gundrak', 0.88, 0.48, 2), ("Drak'Sotra", 0.63, 0.53, 1), ('Ulduar', 0.72, 0.88, 2),
     ('Dun Niffelem', 0.84, 0.74, 1), ('Brunnhildar Village', 0.60, 0.80, 1), ('Utgarde Keep', 0.85, 0.20, 1),
-    ('Utgarde Pinnacle', 0.93, 0.31, 2), ('Kamagua', 0.70, 0.14, 0), ('Westguard Keep', 0.74, 0.18, 0),
+    ('Utgarde Pinnacle', 0.93, 0.31, 2), ('Kamagua', 0.68, 0.20, 0), ('Westguard Keep', 0.74, 0.18, 0),
 ]]
 
 ROADS += [[nr(u, v) for u, v in line] for line in [
@@ -569,40 +796,48 @@ ROADS += [[nr(u, v) for u, v in line] for line in [
 # continues Lordaeron's west coast south of Silverpine, west of Southshore and
 # level with Stromgarde. Its south-western lobe reaches furthest south, a
 # harbour on the east side holds Gilneas City, two islets lie off the west
-# coast and Baradin Bay opens to the south-east. Tile coordinates, added after
-# the squash.
+# coast and Baradin Bay opens to the south-east. Drawn on the old layout and
+# moved whole onto the new west coast of Lordaeron.
 # ---------------------------------------------------------------------------
-LANDMASSES['Gilneas'] = [
-    _fit(325.5, 271), _fit(343, 269), _fit(339.5, 263.5), _fit(337, 260), _fit(337.8, 257.5), _fit(339.5, 255.6), _fit(343.5, 252), _fit(344.5, 248.5),
-    _fit(343.5, 244.5), _fit(340, 241.5), _fit(335.5, 240), _fit(331, 238.5), _fit(327, 236.5), _fit(323, 237.5), _fit(320, 240.5),
-    _fit(318.5, 244.5), _fit(318, 249), _fit(319, 253.5), _fit(320.5, 257.5), _fit(322.5, 261), _fit(324.5, 264), _fit(325.5, 266.5),
-]
-LANDMASSES['Gilneas Isle North'] = ('ellipse',) + _fit(308.5, 248) + (2.8, 2.3 * _FIT)
-LANDMASSES['Gilneas Isle South'] = ('ellipse',) + _fit(310, 241.5) + (2.8, 2.3 * _FIT)
-COAST_NOISE['Gilneas'] = 0.6
-zone('Gilneas', 'Gilneas', *_fit(331, 251), 15, 16 * _FIT, 'darkforest', base=60)
-zone('Gilneas', 'Gilneas Isle North', *_fit(308.5, 248), 2.8, 2.3 * _FIT, 'darkforest')
-zone('Gilneas', 'Gilneas Isle South', *_fit(310, 241.5), 2.8, 2.3 * _FIT, 'darkforest')
+GILNEAS_SHIFT = (-11.5, -26.9)        # from the old layout onto the west coast of Lordaeron
 
-SEA_INLETS += [([_fit(347, 254.5), _fit(341, 254.3), _fit(338.5, 254)], 1.1)]                 # Gilneas City's harbour
-RIDGES += [([_fit(321, 243), _fit(326, 239.5)], 1.6, 260)]                                 # hills above Tempest's Reach
+
+def _gil(x, y):
+    fx, fy = _fit(x, y)
+    return round(fx + GILNEAS_SHIFT[0], 2), round(fy + GILNEAS_SHIFT[1], 2)
+
+
+LANDMASSES['Gilneas'] = [
+    _gil(325.5, 271), _gil(343, 269), _gil(339.5, 263.5), _gil(337, 260), _gil(337.8, 257.5), _gil(339.5, 255.6), _gil(343.5, 252), _gil(344.5, 248.5),
+    _gil(343.5, 244.5), _gil(340, 241.5), _gil(335.5, 240), _gil(331, 238.5), _gil(327, 236.5), _gil(323, 237.5), _gil(320, 240.5),
+    _gil(318.5, 244.5), _gil(318, 249), _gil(319, 253.5), _gil(320.5, 257.5), _gil(322.5, 261), _gil(324.5, 264), _gil(325.5, 266.5),
+]
+LANDMASSES['Gilneas Isle North'] = ('ellipse',) + _gil(308.5, 248) + (2.8, 2.3 * _FIT)
+LANDMASSES['Gilneas Isle South'] = ('ellipse',) + _gil(310, 241.5) + (2.8, 2.3 * _FIT)
+COAST_NOISE['Gilneas'] = 0.6
+zone('Gilneas', 'Gilneas', *_gil(331, 251), 15, 16 * _FIT, 'darkforest', base=60)
+zone('Gilneas', 'Gilneas Isle North', *_gil(308.5, 248), 2.8, 2.3 * _FIT, 'darkforest')
+zone('Gilneas', 'Gilneas Isle South', *_gil(310, 241.5), 2.8, 2.3 * _FIT, 'darkforest')
+
+SEA_INLETS += [([_gil(347, 254.5), _gil(341, 254.3), _gil(338.5, 254)], 1.1)]                 # Gilneas City's harbour
+RIDGES += [([_gil(321, 243), _gil(326, 239.5)], 1.6, 260)]                                 # hills above Tempest's Reach
 
 # Gilneas City: a ring road around Greymane's statue, at the head of the harbour
-_CITY, _CITY_R = _fit(333.3, 253.6), 3.2
+_CITY, _CITY_R = _gil(333.3, 253.6), 3.2
 _ring = [(round(_CITY[0] + _CITY_R * math.cos(a), 1), round(_CITY[1] + _CITY_R * math.sin(a), 1))
          for a in [2 * math.pi * k / 16 for k in range(17)]]
-_NECK = _fit(333.5, 265.5)                  # where the road crosses the neck of the peninsula
+_NECK = _gil(333.5, 265.5)                  # where the road crosses the neck of the peninsula
 ROADS += [
     _ring,
-    [(_CITY[0], _CITY[1] + _CITY_R), _NECK, _fit(334, 272), _fit(346, 282.8)],   # north over the neck to Silverpine
-    [(_CITY[0] - _CITY_R, _CITY[1]), _fit(321.5, 250)],                        # west to Duskhaven
-    [(_CITY[0], _CITY[1] - _CITY_R), _fit(329, 241.5)],                        # south to Stormglen
+    [(_CITY[0], _CITY[1] + _CITY_R), _NECK, _gil(334, 272), _gil(346, 282.8)],   # north over the neck to Silverpine
+    [(_CITY[0] - _CITY_R, _CITY[1]), _gil(321.5, 250)],                        # west to Duskhaven
+    [(_CITY[0], _CITY[1] - _CITY_R), _gil(329, 241.5)],                        # south to Stormglen
 ]
 LANDMARKS += [('YOst',) + _CITY + (0.9, 4.71)]                              # Greymane's statue
 
 
-TOWNS += [('Duskhaven',) + _fit(321.5, 250) + ('ntav',), ('Keel Harbor',) + _fit(323.5, 259.5) + ('nshp',)]
-CAMPS += [('The Blackwald',) + _fit(339, 245) + (2,), ('Stormglen Village',) + _fit(327, 241) + (0,)]
+TOWNS += [('Duskhaven',) + _gil(321.5, 250) + ('ntav',), ('Keel Harbor',) + _gil(323.5, 259.5) + ('nshp',)]
+CAMPS += [('The Blackwald',) + _gil(339, 245) + (2,), ('Stormglen Village',) + _gil(327, 241) + (0,)]
 
 # ---------------------------------------------------------------------------
 # Kul Tiras, traced from the Battle for Azeroth zone map (without Mechagon and
@@ -612,7 +847,7 @@ CAMPS += [('The Blackwald',) + _fit(339, 245) + (2,), ('Stormglen Village',) + _
 # harbour between Drustvar and Tiragarde, and an inlet cuts in from the west.
 # Authored in that map's pixel coordinates and fitted into KUL_TIRAS_BOX.
 # ---------------------------------------------------------------------------
-KUL_TIRAS_BOX = (276, 160, 320, 210)       # x0, y0, x1, y1 in tiles
+KUL_TIRAS_BOX = (255, 157, 299, 207)       # x0, y0, x1, y1 in tiles
 _KT_PX = (470, 110, 1430, 1200)            # the zone map's islands: left, top, right, bottom
 
 
@@ -651,6 +886,7 @@ RIDGES += [([kt(px, py) for px, py in line], w, h) for line, w, h in [
     ([(640, 780), (760, 900), (800, 1080)], 2.0, 380),                                # Drustvar's peaks
     ([(1100, 1060), (1250, 1030)], 1.5, 260),                                         # Tiragarde's southern hills
 ]]
+CAPITALS = [c if c[1] != 'Boralus' else c[:2] + kt(1160, 720) + c[4:] for c in CAPITALS]   # on its harbour
 TOWNS += [('Brennadam',) + kt(1050, 300) + ('ntav',)]
 CAMPS += [(name,) + kt(px, py) + (strength,) for name, px, py, strength in [
     ('Shrine of the Storm', 1360, 280, 1), ('Waycrest Manor', 600, 690, 1),
@@ -662,25 +898,69 @@ ROADS += [[kt(px, py) for px, py in line] for line in [
 ]]
 
 # ---------------------------------------------------------------------------
+# Kezan, the goblins' isle, in the south-west of the Great Sea as on the
+# reference map, with the Lost Isles off its north-east coast.
+# ---------------------------------------------------------------------------
+LANDMASSES['Kezan'] = smooth_outline(OUTLINES['Kezan'])
+LANDMASSES['Lost Isle North'] = smooth_outline(OUTLINES['Lost Isle North'])
+LANDMASSES['Lost Isle East'] = smooth_outline(OUTLINES['Lost Isle East'])
+zone('Kezan', 'Kezan', 114.6, 39.8, 43.2, 26.9, 'jungle')
+zone('Mount Kajaro', 'Kezan', 162.6, 44.6, 11.5, 19.2, 'volcanic', base=60)
+zone('The Lost Isles', 'Lost Isle North', *_extent(LANDMASSES['Lost Isle North']), 'jungle')
+zone('The Lost Isles', 'Lost Isle East', *_extent(LANDMASSES['Lost Isle East']), 'jungle')
+TOWNS += [('Bilgewater Harbor', 100.2, 60.9, 'nshp'), ('Kezan Trade', 181.8, 51.3, 'ngad')]
+CAMPS += [('Kezan', 129.0, 47.5, 0), ('Kajaro Mine', 160.0, 40.0, 1)]
+ROADS += [[(100.2, 60.9), (114, 52), (129.0, 47.5), (146, 46), (160, 46), (181.8, 51.3)]]
+
+# ---------------------------------------------------------------------------
 # Coasts. Shores are cliffs, as on the classic hand-made Azeroth maps; beaches
 # (land sloping into shallow water) are kept where units must reach the water:
 # along the wading straits and rivers, at every shipyard, all round the small
 # islands, and at the spots listed in BEACHES (x, y, radius).
 # ---------------------------------------------------------------------------
-BEACH_ISLANDS = {'Kezan', 'Tol Barad', 'Azuremyst Isle', 'Bloodmyst Isle', 'Gilneas Isle North', 'Gilneas Isle South',
-                 'Echo Isles', 'Theramore Isle', 'Alcaz Island'}
+BEACH_ISLANDS = {'Tol Barad', 'Azuremyst Isle', 'Bloodmyst Isle', 'Gilneas Isle North', 'Gilneas Isle South',
+                 'Echo Isles', 'Theramore Isle', 'Alcaz Island', 'Lost Isle North', 'Lost Isle East'}
 BEACHES = []
 
 # ---------------------------------------------------------------------------
 # Getting about on foot: wading straits out to the small islands, and a track
 # from every camp and town to the nearest road (never over a massif).
 # ---------------------------------------------------------------------------
-SHALLOWS += [
-    [_fit(29, 297), _fit(36, 296.5), _fit(43, 295.5)],          # Azuremyst Isle to Darkshore
-    [_fit(17, 306), _fit(20, 302)],                             # Bloodmyst Isle to Azuremyst
-    [_fit(342, 243), _fit(346, 240.5), _fit(349.5, 238)],       # Tol Barad to Gilneas
-    [_fit(165, 116), _fit(171, 118.5), _fit(177, 121.5), _fit(181, 124)],   # Alcaz Island to Dustwallow
-]
+def _outline_points(shape, n=64):
+    if shape[0] == 'ellipse':
+        _, cx, cy, rx, ry = shape
+        return [(cx + rx * math.cos(2 * math.pi * k / n), cy + ry * math.sin(2 * math.pi * k / n)) for k in range(n)]
+    return list(shape)
+
+
+def _strait(a, b):
+    """A wading strait across the narrowest water between two landmasses (None if they touch)."""
+    p, q = min(((p, q) for p in _outline_points(LANDMASSES[a]) for q in _outline_points(LANDMASSES[b])),
+               key=lambda pq: math.hypot(pq[0][0] - pq[1][0], pq[0][1] - pq[1][1]))
+    d = math.hypot(q[0] - p[0], q[1] - p[1])
+    if d < 1.0:
+        return None
+    ux, uy = (q[0] - p[0]) / d, (q[1] - p[1]) / d
+    return [(round(p[0] - 2 * ux, 1), round(p[1] - 2 * uy, 1)), (round(q[0] + 2 * ux, 1), round(q[1] + 2 * uy, 1))]
+
+
+STRAITS = [('Teldrassil', 'Kalimdor'), ('Bloodmyst Isle', 'Teldrassil'), ('Azuremyst Isle', 'Bloodmyst Isle'),
+           ('Echo Isles', 'Kalimdor'), ('Theramore Isle', 'Kalimdor'), ('Alcaz Island', 'Kalimdor'), ('Tol Barad', 'Gilneas'),
+           ("Isle of Quel'Danas", 'Eastern Kingdoms'), ('Lost Isle North', 'Kezan'), ('Lost Isle East', 'Kezan')]
+SHALLOWS += [s for s in (_strait(a, b) for a, b in STRAITS) if s]
+
+
+# Every town and camp stands on firm ground, clear of the shore.
+_OUTLINED = [shape for shape in LANDMASSES.values() if shape[0] != 'ellipse']
+TOWNS = [(n,) + _ashore(x, y, 4, _OUTLINED) + (b,) for n, x, y, b in TOWNS]
+CAMPS = [(n,) + _ashore(x, y, 4, _OUTLINED) + (st,) for n, x, y, st in CAMPS]
+
+
+def _site(name):
+    return next((x, y) for n, x, y, _ in TOWNS + CAMPS if n == name)
+
+
+ROADS += [[_site('Tarren Mill'), _site('Dalaran Crater')]]          # up into the Alterac Mountains
 
 
 def _segment_point(p, a, b):
