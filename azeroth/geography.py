@@ -84,17 +84,17 @@ zone('Teldrassil', 'Teldrassil', 37, 413, 15, 14, 'worldtree', base=90)
 zone('Azuremyst Isle', 'Azuremyst Isle', 22, 366, 8, 12, 'nightelf')
 zone('Bloodmyst Isle', 'Bloodmyst Isle', 16, 386, 6, 6, 'fel')
 zone('Darkshore', 'Kalimdor', 50, 348, 10, 44, 'nightelf', hills=90)
-zone('Moonglade', 'Kalimdor', 88, 385, 13, 10, 'nightelf', base=110)
-zone('Felwood', 'Kalimdor', 78, 340, 14, 30, 'fel')
-zone('Winterspring', 'Kalimdor', 146, 380, 24, 20, 'snow', base=50, level=1)
+zone('Moonglade', 'Kalimdor', 88, 385, 13, 10, 'nightelf', base=110, level=2)
+zone('Felwood', 'Kalimdor', 78, 340, 14, 30, 'fel', level=1)
+zone('Winterspring', 'Kalimdor', 146, 380, 24, 20, 'snow', base=50)
 zone('Mount Hyjal', 'Kalimdor', 136, 338, 18, 15, 'worldtree', base=60, hills=110, level=1)
 zone('Azshara', 'Kalimdor', 182, 318, 16, 22, 'autumn', hills=90)
 zone('Ashenvale', 'Kalimdor', 100, 290, 55, 17, 'nightelf')
-zone('Stonetalon Mountains', 'Kalimdor', 46, 240, 22, 24, 'rocky', base=30, mountains=360, level=1)
+zone('Stonetalon Mountains', 'Kalimdor', 46, 240, 22, 24, 'rocky', base=30, mountains=360, level=2)
 zone('Northern Barrens', 'Kalimdor', 120, 232, 26, 24, 'savanna')
 zone('Durotar', 'Kalimdor', 164, 238, 13, 32, 'reddesert')
 zone('Desolace', 'Kalimdor', 38, 180, 22, 24, 'barren')
-zone('Mulgore', 'Kalimdor', 80, 182, 18, 21, 'plains', base=60, level=1)
+zone('Mulgore', 'Kalimdor', 80, 182, 18, 21, 'plains', base=60, level=2)
 zone('Southern Barrens', 'Kalimdor', 124, 176, 25, 21, 'savanna')
 zone('Feralas', 'Kalimdor', 42, 122, 24, 24, 'jungle', hills=120)
 zone('Thousand Needles', 'Kalimdor', 98, 128, 24, 15, 'needles', base=10, hills=20)
@@ -117,16 +117,16 @@ zone('Silverpine Forest', 'Eastern Kingdoms', 346, 346, 9, 20, 'darkforest')
 zone('Hillsbrad Foothills', 'Eastern Kingdoms', 368, 322, 15, 11, 'temperate')
 zone('Alterac Mountains', 'Eastern Kingdoms', 390, 343, 12, 10, 'snow', base=40, level=1)
 zone('The Hinterlands', 'Eastern Kingdoms', 434, 330, 28, 13, 'highland', base=20, level=1)
-zone('Arathi Highlands', 'Eastern Kingdoms', 410, 302, 24, 13, 'farmland', base=50, level=1)
+zone('Arathi Highlands', 'Eastern Kingdoms', 410, 302, 24, 13, 'farmland', base=50)
 zone('Wetlands', 'Eastern Kingdoms', 394, 270, 18, 14, 'swamp', base=20)
-zone('Twilight Highlands', 'Eastern Kingdoms', 452, 272, 17, 22, 'highland', level=1)
-zone('Dun Morogh', 'Eastern Kingdoms', 368, 236, 18, 16, 'snow', base=40, level=1)
-zone('Loch Modan', 'Eastern Kingdoms', 420, 240, 14, 13, 'highland', base=90, mountains=100)
-zone('Badlands', 'Eastern Kingdoms', 434, 212, 17, 13, 'reddesert')
-zone('Searing Gorge', 'Eastern Kingdoms', 392, 210, 14, 9, 'volcanic', base=20, level=1)
+zone('Twilight Highlands', 'Eastern Kingdoms', 452, 272, 17, 22, 'highland')
+zone('Dun Morogh', 'Eastern Kingdoms', 368, 236, 18, 16, 'snow', base=40, level=2)
+zone('Loch Modan', 'Eastern Kingdoms', 420, 240, 14, 13, 'highland', base=90, mountains=100, level=1)
+zone('Badlands', 'Eastern Kingdoms', 434, 212, 17, 13, 'reddesert', level=1)
+zone('Searing Gorge', 'Eastern Kingdoms', 392, 210, 14, 9, 'volcanic', base=20)
 zone('Burning Steppes', 'Eastern Kingdoms', 404, 191, 22, 8, 'volcanic', base=90)
 zone('Redridge Mountains', 'Eastern Kingdoms', 434, 172, 17, 10, 'highland', base=70)
-zone('Elwynn Forest', 'Eastern Kingdoms', 378, 170, 22, 10, 'temperate')
+zone('Elwynn Forest', 'Eastern Kingdoms', 378, 170, 22, 10, 'temperate', level=1)
 zone('Westfall', 'Eastern Kingdoms', 342, 146, 14, 18, 'farmland')
 zone('Duskwood', 'Eastern Kingdoms', 382, 141, 22, 11, 'darkforest')
 zone('Deadwind Pass', 'Eastern Kingdoms', 418, 140, 9, 9, 'rocky', base=100)
@@ -137,6 +137,15 @@ zone('Cape of Stranglethorn', 'Eastern Kingdoms', 364, 50, 22, 26, 'jungle')
 zone('Tol Barad', 'Tol Barad', 352, 292.1, 4, 3.75, 'barren')
 # Northrend
 ZONES = Z
+
+# Raised ground, after the reference map: the share of each zone's land that stands a cliff level
+# above the rest of the zone, in broad plateaus.
+RISE = {'Bloodmyst Isle': 0.24, 'Darkshore': 0.2, 'Winterspring': 0.15, 'Azshara': 0.35, 'Durotar': 0.26, 'Desolace': 0.17,
+        'Southern Barrens': 0.2, 'Feralas': 0.2, 'Dustwallow Marsh': 0.15, 'Tanaris': 0.2, 'Alcaz Island': 0.3,
+        'Ghostlands': 0.17, 'Tirisfal Glades': 0.35, 'Western Plaguelands': 0.15, 'Eastern Plaguelands': 0.15,
+        'Silverpine Forest': 0.24, 'Arathi Highlands': 0.3, 'Wetlands': 0.25, 'Twilight Highlands': 0.33,
+        'Burning Steppes': 0.35, 'Deadwind Pass': 0.3, 'Swamp of Sorrows': 0.35, 'Blasted Lands': 0.24, 'Kezan': 0.24,
+        'Mount Kajaro': 0.16, 'The Lost Isles': 0.35, 'The Hinterlands': 0.35, 'Badlands': 0.25}
 
 # ---------------------------------------------------------------------------
 # Relief features
@@ -911,6 +920,9 @@ zone('The Lost Isles', 'Lost Isle East', *_extent(LANDMASSES['Lost Isle East']),
 TOWNS += [('Bilgewater Harbor', 100.2, 60.9, 'nshp'), ('Kezan Trade', 181.8, 51.3, 'ngad')]
 CAMPS += [('Kezan', 129.0, 47.5, 0), ('Kajaro Mine', 160.0, 40.0, 1)]
 ROADS += [[(100.2, 60.9), (114, 52), (129.0, 47.5), (146, 46), (160, 46), (181.8, 51.3)]]
+
+for _z in ZONES:
+    _z.setdefault('rise', RISE.get(_z['name'], 0.0))
 
 # ---------------------------------------------------------------------------
 # Coasts. Shores are cliffs, as on the classic hand-made Azeroth maps; beaches

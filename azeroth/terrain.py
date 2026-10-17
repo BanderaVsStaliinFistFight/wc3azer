@@ -463,6 +463,21 @@ def build(seed=1):
     # ---- 5. cliff levels ------------------------------------------------------
     level = zone_prop('level', 0).astype(np.int32)
     level = np.where(level < 0, np.where(dc > 6, level, 0), level)     # sunken zones keep a rim
+    wet_d = distance_field(lake | river, 6)
+    level = np.where((level > 0) & (wet_d < 3), 0, level)              # water in a raised zone lies in a sunken basin
+    # Raised ground: a share of many zones' land (their 'rise') stands a cliff level up in broad
+    # plateaus, clear of the roads, the shores, the water and the settlements.
+    bumps = f.fbm(14, 3)
+    room = land & (dc > 5) & (road_d > 5) & (wet_d > 4) & (massif_d > 1.6)
+    for tx, ty, r in flat_spots:
+        room &= f.distance(tx, ty) > r + 3
+    up = np.zeros((n, n), bool)
+    for zi, zd in enumerate(geo.ZONES):
+        sel = room & (zone_of == zi)
+        if zd.get('rise', 0) > 0 and sel.sum() > 40:
+            up |= sel & (bumps > np.quantile(bumps[sel], 1 - zd['rise']))
+    up = dilate(erode(up, 2), 2) & room
+    level = level + up.astype(np.int32)
     layer = np.where(land, 2 + level + terrace, 2)
     layer = np.where(sea & ~T.beach, 1, layer)
     for cx, cy, r, lv in geo.MESAS:
