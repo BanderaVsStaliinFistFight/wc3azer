@@ -449,6 +449,19 @@ def build(seed=1):
     # fords: wherever a road crosses a river, a lake or a strait, the bed rises to wading depth
     ford = water & (road_d < 1.8)
     z = np.where(ford, np.maximum(z, -28.0), z)
+    # Every landmass stands apart: wherever the shallows round two of them would meet, a channel of
+    # deep water runs between, so no island can be reached on foot from another shore.
+    owner, _ = label_regions(land | lake | river)
+    for _ in range(12):                                   # each stretch of sea goes to its nearest shore
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nb = shift(owner, dx, dy, -1)
+            owner = np.where((owner < 0) & (nb >= 0), nb, owner)
+    between = np.zeros((n, n), bool)
+    for dx, dy in ((1, 0), (0, 1)):
+        nb = shift(owner, dx, dy, -1)
+        between |= (owner >= 0) & (nb >= 0) & (nb != owner)
+    channel = dilate(between, 1) & sea
+    z = np.where(channel, np.minimum(z, -(DEEP_WATER + 30)), z)
     # The Maelstrom: spiral arms of shallows wheeling round a bottomless eye
     mx, my = geo.MAELSTROM
     R = geo.MAELSTROM_RADIUS

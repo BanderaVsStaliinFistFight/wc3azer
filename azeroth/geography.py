@@ -228,13 +228,9 @@ RIVERS = [
     [(380, 176), (372, 168), (360, 166), (344, 170)],                        # Elwynn river
 ]
 
-# Shallow straits that ground units can wade across: polyline, half-width.
-SHALLOWS = [
-    [(38, 410), (46, 400), (54, 392)],   # Teldrassil to Darkshore
-    [(170, 210), (174, 206)],        # Echo Isles to Durotar
-    [(173, 134), (178, 133)],        # Theramore
-    [(436, 448), (434, 440)],        # Quel'Danas to Eversong
-]
+# Shallow straits that ground units can wade across (polylines). There are none: the islands are
+# reached only by sea.
+SHALLOWS = []
 
 # Cliff plateaus (mesas): (cx, cy, radius, extra cliff levels).
 MESAS = [
@@ -512,7 +508,8 @@ EK_LAYOUT = {
 ISLE_LAYOUT = {
     'Teldrassil': OUTLINES['Teldrassil'], 'Azuremyst Isle': (24.4, 443.8, 13.4, 19.2), 'Bloodmyst Isle': (30.0, 400.0, 8.0, 7.0),
     "Isle of Quel'Danas": (404.5, 410.2, 7.7, 7.7), 'Echo Isles': OUTLINES['Echo Isles'],
-    'Theramore Isle': OUTLINES['Theramore Isle'], 'Alcaz Island': OUTLINES['Alcaz Island'], 'Tol Barad': OUTLINES['Tol Barad'],
+    'Theramore Isle': [(x + 10, y) for x, y in OUTLINES['Theramore Isle']],    # clear of Dustwallow's shore
+    'Alcaz Island': OUTLINES['Alcaz Island'], 'Tol Barad': OUTLINES['Tol Barad'],
 }
 CAPITAL_LAYOUT = {'Orgrimmar': (91.7, 195.2), 'Thunder Bluff': (38.0, 177.9), 'Darnassus': (34.1, 357.4),
                   'Stormwind': (366.1, 135.6), 'Ironforge': (364.2, 196.1), 'Undercity': (380.5, 344.9),
@@ -541,7 +538,7 @@ def _tps(src, dst, smooth=50.0):
 
 
 def _relayout():
-    global RIDGES, MASSIFS, LAKES, RIVERS, SHALLOWS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, ROADS
+    global RIDGES, MASSIFS, LAKES, RIVERS, MESAS, BASINS, CAPITALS, TOWNS, CAMPS, ROADS
     global LANDMARKS, DESTRUCTABLE_LANDMARKS
     old = {name: LANDMASSES[name] for name in _SQUASHED_LANDS}
     new_land = {'Kalimdor': smooth_outline(OUTLINES['Kalimdor']), 'Eastern Kingdoms': smooth_outline(OUTLINES['Eastern Kingdoms'])}
@@ -614,7 +611,6 @@ def _relayout():
     MASSIFS = [(line(l), width(l, w, 2.5), h) for l, w, h in MASSIFS]
     RIVERS = [line(l) for l in RIVERS]
     ROADS = [line(l) for l in ROADS]
-    SHALLOWS = []                     # the wading straits are laid anew once everything is in place
 
     def point(x, y):
         return move(family(x, y), x, y)
@@ -640,13 +636,21 @@ def _relayout():
         LANDMASSES[name] = v[8]
     LANDMASSES.update(new_land)
 
-    # Whatever the warp left in the sea is brought ashore nearby.
-    lands = list(new_land.values())
+    # Whatever the warp left in the sea is brought ashore nearby, on its own land.
+    lands = [_as_polygon(shape) for shape in LANDMASSES.values()]
     CAPITALS = [(i, n) + _ashore(x, y, 8, lands) + (race,) for i, n, x, y, race in CAPITALS]
     LANDMARKS = [(d,) + _ashore(x, y, 4, lands) + (sc, a) for d, x, y, sc, a in LANDMARKS]
     DESTRUCTABLE_LANDMARKS = [(d,) + _ashore(x, y, 4, lands) + (sc,) for d, x, y, sc in DESTRUCTABLE_LANDMARKS]
     LAKES = [_ashore(x, y, max(rx, ry) + 2, lands) + (rx, ry) for x, y, rx, ry in LAKES]
     MESAS = [_ashore(x, y, r + 3, lands) + (r, lv) for x, y, r, lv in MESAS]
+
+
+def _as_polygon(shape, n=48):
+    """A landmass shape as a polygon (an ellipse traced round with n points)."""
+    if shape[0] != 'ellipse':
+        return shape
+    _, cx, cy, rx, ry = shape
+    return [(cx + rx * math.cos(2 * math.pi * k / n), cy + ry * math.sin(2 * math.pi * k / n)) for k in range(n)]
 
 
 def _ashore(x, y, margin, lands):
@@ -935,37 +939,15 @@ BEACH_ISLANDS = {'Tol Barad', 'Azuremyst Isle', 'Bloodmyst Isle', 'Gilneas Isle 
 BEACHES = []
 
 # ---------------------------------------------------------------------------
-# Getting about on foot: wading straits out to the small islands, and a track
-# from every camp and town to the nearest road (never over a massif).
+# Getting about on foot: a track from every camp and town to the nearest road
+# (never over a massif). The islands are reached only by sea.
 # ---------------------------------------------------------------------------
-def _outline_points(shape, n=64):
-    if shape[0] == 'ellipse':
-        _, cx, cy, rx, ry = shape
-        return [(cx + rx * math.cos(2 * math.pi * k / n), cy + ry * math.sin(2 * math.pi * k / n)) for k in range(n)]
-    return list(shape)
-
-
-def _strait(a, b):
-    """A wading strait across the narrowest water between two landmasses (None if they touch)."""
-    p, q = min(((p, q) for p in _outline_points(LANDMASSES[a]) for q in _outline_points(LANDMASSES[b])),
-               key=lambda pq: math.hypot(pq[0][0] - pq[1][0], pq[0][1] - pq[1][1]))
-    d = math.hypot(q[0] - p[0], q[1] - p[1])
-    if d < 1.0:
-        return None
-    ux, uy = (q[0] - p[0]) / d, (q[1] - p[1]) / d
-    return [(round(p[0] - 2 * ux, 1), round(p[1] - 2 * uy, 1)), (round(q[0] + 2 * ux, 1), round(q[1] + 2 * uy, 1))]
-
-
-STRAITS = [('Teldrassil', 'Kalimdor'), ('Bloodmyst Isle', 'Teldrassil'), ('Azuremyst Isle', 'Bloodmyst Isle'),
-           ('Echo Isles', 'Kalimdor'), ('Theramore Isle', 'Kalimdor'), ('Alcaz Island', 'Kalimdor'), ('Tol Barad', 'Gilneas'),
-           ("Isle of Quel'Danas", 'Eastern Kingdoms'), ('Lost Isle North', 'Kezan'), ('Lost Isle East', 'Kezan')]
-SHALLOWS += [s for s in (_strait(a, b) for a, b in STRAITS) if s]
 
 
 # Every town and camp stands on firm ground, clear of the shore.
-_OUTLINED = [shape for shape in LANDMASSES.values() if shape[0] != 'ellipse']
-TOWNS = [(n,) + _ashore(x, y, 4, _OUTLINED) + (b,) for n, x, y, b in TOWNS]
-CAMPS = [(n,) + _ashore(x, y, 4, _OUTLINED) + (st,) for n, x, y, st in CAMPS]
+_LANDS = [_as_polygon(shape) for shape in LANDMASSES.values()]
+TOWNS = [(n,) + _ashore(x, y, 4, _LANDS) + (b,) for n, x, y, b in TOWNS]
+CAMPS = [(n,) + _ashore(x, y, 4, _LANDS) + (st,) for n, x, y, st in CAMPS]
 
 
 def _site(name):

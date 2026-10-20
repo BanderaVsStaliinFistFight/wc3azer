@@ -27,7 +27,7 @@ class MapTest(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
         cls.path = os.path.join(cls.tmp, 'Azeroth.w3x')
-        build.build(1, cls.path, None)
+        cls.T, cls.O, _ = build.build(1, cls.path, None)
         with open(cls.path, 'rb') as fh:
             cls.raw = fh.read()
         cls.mpq = MPQ(cls.raw)
@@ -167,11 +167,29 @@ class MapTest(unittest.TestCase):
         """The roads form one network on each landmass, and wherever a road goes through water it is
         a ford shallow enough to wade."""
         from azeroth import terrain
-        T = terrain.build(1)
-        nets = terrain.road_networks(T.road_lines)
-        self.assertLessEqual(len(nets), 5, 'Kalimdor, the Eastern Kingdoms, Northrend, Kul Tiras and Kezan')
+        T = self.T
+        homes = []
+        for net in terrain.road_networks(T.road_lines):
+            on = [int(T.land_id[int(round(y)), int(round(x))]) for i in net for x, y in T.road_lines[i]
+                  if T.land[int(round(y)), int(round(x))]]
+            homes.append(max(set(on), key=on.count))
+        self.assertEqual(len(homes), len(set(homes)), 'a landmass with more than one road network')
         wet = (T.road_d < 0.8) & T.water_flag
         self.assertEqual(int((wet & (terrain.SEA_Z - T.ground_z > terrain.DEEP_WATER)).sum()), 0)
+
+    def test_islands_apart(self):
+        """No island can be reached on foot from another landmass: deep water parts every landmass
+        from the rest (Gilneas being part of the Eastern Kingdoms)."""
+        from azeroth.raster import label_regions
+        T = self.T
+        walk = ((T.pathing.reshape(480, 4, 480, 4) & 0x02) == 0).mean(axis=(1, 3)) >= 0.5
+        area, _ = label_regions(walk)
+        land, lid = T.land[:480, :480], T.land_id[:480, :480]
+        group = [('Eastern Kingdoms' if name == 'Gilneas' else name) for name in T.land_names]
+        reaches = {}
+        for a, l in zip(area[walk & land].tolist(), lid[walk & land].tolist()):
+            reaches.setdefault(a, set()).add(group[l])
+        self.assertEqual([sorted(v) for v in reaches.values() if len(v) > 1], [])
 
     def test_no_melee_content(self):
         """Terrain only: no gold mines, creeps, shops, waygates or item drops, and no melee setup."""
